@@ -19,7 +19,7 @@ const SettingsModal = () => {
       icon: Wifi,
       description: 'API keys and database connections',
       component: ConnectionsTab,
-      badge: connectionStatus ? Object.values(connectionStatus).filter(Boolean).length : 0,
+      badge: connectionStatus && Object.values(connectionStatus).filter(Boolean).length > 0 ? Object.values(connectionStatus).filter(Boolean).length : null,
       badgeTotal: 6,
     },
     {
