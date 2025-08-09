@@ -739,7 +739,7 @@ async function searchContent(searchQuery, limit = 50) {
                     id, airtable_id, url, title, summary, chunk_text, chunk_id, chunk_index,
                     sentiment, emotions, category, content_type, technical_level, main_topics,
                     key_concepts, tags, key_entities, embedding_status, processing_status,
-                    created_time, processed_date, sent_to_li, source,
+                    created_time, processed_date, sent_to_li, source, contextual_summary, uses_contextual_embedding,
                     -- Use full-text search for better performance
                     ts_rank(to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(summary, '') || ' ' || COALESCE(tags, '')), plainto_tsquery('english', $1)) as rank,
                     ROW_NUMBER() OVER (PARTITION BY url ORDER BY created_time DESC) as rn
@@ -758,7 +758,7 @@ async function searchContent(searchQuery, limit = 50) {
                 sentiment, emotions, category, content_type, technical_level, main_topics,
                 key_concepts, tags, key_entities, 
                 embedding_status as "embeddingStatus",
-                processing_status, created_time, processed_date, sent_to_li, source
+                processing_status, created_time, processed_date, sent_to_li, source, contextual_summary, uses_contextual_embedding
             FROM search_results
             WHERE rn = 1
             ORDER BY rank DESC, 
@@ -794,7 +794,9 @@ async function searchContent(searchQuery, limit = 50) {
             chunkText: row.chunk_text,
             chunkId: row.chunk_id,
             chunkIndex: row.chunk_index,
-            airtableId: row.airtable_id
+            airtableId: row.airtable_id,
+            contextualSummary: row.contextual_summary,
+            usesContextualEmbedding: row.uses_contextual_embedding
         }));
     } catch (error) {
         console.error('❌ Error searching content:', error.message);
@@ -1030,6 +1032,8 @@ async function searchContentGrouped(searchQuery, limit = 50) {
                     processing_status,
                     created_time,
                     processed_date,
+                    contextual_summary,
+                    uses_contextual_embedding,
                     CASE 
                         WHEN title ILIKE $1 THEN 1
                         WHEN summary ILIKE $1 THEN 2
