@@ -35,6 +35,27 @@ const StatsPanel = () => {
   const [detailedStats, setDetailedStats] = useState({});
   const [showDetails, setShowDetails] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Helper function to filter out positive/informational recommendations
+  const getActualIssuesCount = (recommendations) => {
+    if (!recommendations || recommendations.length === 0) return 0;
+    
+    const positiveMessages = [
+      'Memory usage appears normal',
+      'System running smoothly', 
+      'All services healthy',
+      'Performance is optimal',
+      'No issues detected'
+    ];
+    
+    const actualIssues = recommendations.filter(rec => 
+      !positiveMessages.some(positive => 
+        rec.toLowerCase().includes(positive.toLowerCase())
+      )
+    );
+    
+    return actualIssues.length;
+  };
   
   // Admin state
   const [adminData, setAdminData] = useState({
@@ -295,7 +316,7 @@ const StatsPanel = () => {
           
           <CleanupStatusDisplay
             lastCleanup={adminData.cleanupStatus?.timestamp}
-            recommendationsCount={adminData.systemHealth?.recommendations?.length || 0}
+            recommendationsCount={getActualIssuesCount(adminData.systemHealth?.recommendations)}
             onCleanup={() => handleCleanupAction('safe')}
           />
         </div>

@@ -192,6 +192,29 @@ export const SystemHealthSummary = ({ healthData, onDetails }) => {
     return 'error';
   };
 
+  // Filter out positive/informational recommendations - only show alerts for actual issues
+  const getActualIssuesCount = () => {
+    if (!healthData.recommendations || healthData.recommendations.length === 0) return 0;
+    
+    const positiveMessages = [
+      'Memory usage appears normal',
+      'System running smoothly', 
+      'All services healthy',
+      'Performance is optimal',
+      'No issues detected'
+    ];
+    
+    const actualIssues = healthData.recommendations.filter(rec => 
+      !positiveMessages.some(positive => 
+        rec.toLowerCase().includes(positive.toLowerCase())
+      )
+    );
+    
+    return actualIssues.length;
+  };
+
+  const actualIssuesCount = getActualIssuesCount();
+
   return (
     <AdminCard
       title="System Health"
@@ -199,7 +222,7 @@ export const SystemHealthSummary = ({ healthData, onDetails }) => {
       icon={Activity}
       description={healthData.status}
       status={getHealthStatus()}
-      badge={healthData.recommendations?.length > 0 ? healthData.recommendations.length : null}
+      badge={actualIssuesCount > 0 ? actualIssuesCount : null}
       onClick={onDetails}
     />
   );
