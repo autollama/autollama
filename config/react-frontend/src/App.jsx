@@ -14,6 +14,8 @@ import { SettingsModal } from './components/Settings';
 import { DocumentViewer } from './components/Document';
 import ProcessingManager from './components/Processing';
 import RAGChat from './components/Chat';
+import ChunkInspector from './components/Document/ChunkInspector';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
 // Global App Context
 const AppContext = createContext();
@@ -793,7 +795,30 @@ function App() {
           {/* Settings Modal */}
           {showSettings && <SettingsModal />}
           
-          {/* Chunk Inspector Modal - Removed: Managed by DocumentViewer component */}
+          {/* Global Chunk Inspector Modal - For search results and other views */}
+          {selectedChunk && currentView !== 'document' && (
+            <ErrorBoundary 
+              onClose={() => {
+                setSelectedChunk(null);
+                setSelectedChunks([]);
+                setChunkIndex(0);
+              }}
+              fallbackTitle="Chunk Inspector Error"
+            >
+              <ChunkInspector
+                chunk={selectedChunk}
+                document={{ url: selectedChunk.url || selectedChunk.source }} // Provide document context from chunk
+                chunkIndex={chunkIndex}
+                totalChunks={selectedChunks.length || 1}
+                onClose={() => {
+                  setSelectedChunk(null);
+                  setSelectedChunks([]);
+                  setChunkIndex(0);
+                }}
+                onNavigate={handleChunkNavigate}
+              />
+            </ErrorBoundary>
+          )}
           
           {/* Footer */}
           <Footer />
