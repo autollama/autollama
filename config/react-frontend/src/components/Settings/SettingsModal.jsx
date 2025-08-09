@@ -212,7 +212,7 @@ const SettingsModal = () => {
         {/* Footer */}
         <div className="flex items-center justify-between p-6 border-t border-gray-700 bg-gray-800 bg-opacity-30">
           <div className="flex items-center gap-4 text-sm text-gray-400">
-            <span>AutoLlama v2.0</span>
+            <span>AutoLlama v2.3</span>
             <span>•</span>
             <span>Use Ctrl+S to save</span>
             <span>•</span>
