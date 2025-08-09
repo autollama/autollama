@@ -844,7 +844,6 @@ const Header = () => {
             onClick={() => setCurrentView('dashboard')}
             className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-none"
           >
-            <span className="text-6xl">🦙</span>
             <span className="text-gradient">AutoLlama.io</span>
           </button>
         </h1>
