@@ -1,0 +1,31 @@
+# Environment and secrets
+.env
+*.key
+*.pem
+*.cert
+
+# Tailscale state directories (contain sensitive VPN data)
+tailscale-state/
+api/tailscale-state/
+*/tailscale-state/
+
+# Docker volumes and data directories
+postgres-data/
+node_modules/
+logs/
+uploads/
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+.vscode/
+.idea/
+
+# Docker build context
+.dockerignore
+
+# Development files
+debug.log
+test-output/

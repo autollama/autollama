@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoLlama Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@2.0.1/dist/chartjs-chart-treemap.min.js"></script>
+    
+    <!-- React Libraries -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <!-- Babel to transpile JSX in the browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Chosen Palette: Mempool.space Inspired (Dark blues/grays with green/yellow/blue accents) -->
+    <!-- Application Structure Plan: A two-view SPA (Dashboard & File Detail) with a modal for chunk details. The Dashboard provides a high-level overview, while the File view allows deep exploration of a single file's chunk composition via an interactive treemap. This structure directly maps to the user flow described in the source prompt, prioritizing a clear path from overview to detail, which is excellent for data exploration usability. -->
+    <!-- Visualization & Content Choices: Report Info: File processing queue -> Goal: Overview -> Viz: Horizontal scrolling list of cards -> Interaction: Click to drill-down -> Justification: Familiar pattern for browsing items. | Report Info: Chunks within a file -> Goal: Show composition and status -> Viz: Treemap Chart -> Interaction: Click chunk to see details -> Justification: Treemaps are ideal for showing part-to-whole relationships and using color/size to encode multiple variables (status/data size). Library: Chart.js with chartjs-chart-treemap plugin (Canvas-based). | Report Info: Chunk details -> Goal: Inspect -> Viz: Modal window -> Interaction: View details, close modal -> Justification: Modals are effective for displaying contextual information without losing the main view's context. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+        .file-card-grid {
+            scrollbar-width: thin;
+            scrollbar-color: #4a5568 #2d3748;
+        }
+        .file-card-grid::-webkit-scrollbar {
+            width: 8px;
+        }
+        .file-card-grid::-webkit-scrollbar-track {
+            background: #2d3748;
+            border-radius: 10px;
+        }
+        .file-card-grid::-webkit-scrollbar-thumb {
+            background-color: #4a5568;
+            border-radius: 10px;
+            border: 2px solid #2d3748;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 60vh;
+            max-height: 500px;
+        }
+    </style>
+</head>
+<body class="text-gray-200">
+
+    <div id="app" class="min-h-screen p-4 sm:p-6 lg:p-8">
+        <header class="mb-8 flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-center text-white">AutoLlama Visualizer</h1>
+                <p class="text-center text-gray-400">Visualizing File & Chunk Processing</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <!-- Add New Content Button -->
+                <button id="addNewBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    New Content
+                </button>
+                <!-- Settings Button -->
+                <button id="settingsBtn" class="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-lg transition-colors duration-200">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Tab Navigation -->
+        <nav class="mb-6">
+            <div class="flex border-b border-gray-700">
+                <button id="dashboard-tab" class="tab-btn px-6 py-3 text-sm font-medium text-white bg-blue-600 border-b-2 border-blue-600">
+                    📊 Dashboard
+                </button>
+            </div>
+        </nav>
+
+        <main>
+            <!-- Dashboard View -->
+            <div id="dashboard-view">
+                <div class="mb-8 p-4 bg-gray-800/50 rounded-lg shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4 text-white">System Vitals</h2>
+                    
+                    <!-- Responsive proportional layout -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 h-auto">
+                        
+                        <!-- Left Half: AutoLlama Stats Section -->
+                        <div class="p-4 border-2 border-blue-500/30 rounded-lg bg-blue-900/10 flex flex-col">
+                            <h3 class="text-lg font-semibold mb-3 text-blue-400 flex items-center gap-2">
+                                <span>🦙</span> AutoLlama Stats
+                            </h3>
+                            <div class="grid grid-cols-2 gap-3 text-center mb-4 flex-grow">
+                                <div>
+                                    <p class="text-gray-400 text-sm">Queue Depth</p>
+                                    <p id="queue-depth" class="text-xl font-bold text-blue-400">0</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400 text-sm">Avg. Processing Time</p>
+                                    <p id="avg-time" class="text-xl font-bold text-green-400">0s</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400 text-sm">Total Chunks</p>
+                                    <p id="total-chunks" class="text-xl font-bold text-yellow-400">0</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400 text-sm">Total Documents</p>
+                                    <p id="total-documents" class="text-xl font-bold text-purple-400">0</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Database Statistics Subsection -->
+                            <div class="border-t border-blue-500/20 pt-3 mt-auto">
+                                <h4 class="text-sm font-medium text-blue-300 mb-2 flex items-center gap-1">
+                                    <span>🗃️</span> PostgreSQL Database
+                                </h4>
+                                <div class="grid grid-cols-2 gap-3 text-center">
+                                    <div>
+                                        <p class="text-gray-400 text-sm">Total Embeddings</p>
+                                        <p id="total-embeddings" class="text-lg font-bold text-cyan-400">0</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-400 text-sm">DB Tables</p>
+                                        <p id="db-tables" class="text-lg font-bold text-blue-300">--</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-400 text-sm">Total Records</p>
+                                        <p id="db-records" class="text-lg font-bold text-green-300">--</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-400 text-sm">DB Size</p>
+                                        <p id="db-size" class="text-lg font-bold text-yellow-300">--</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Right Half: Qdrant and Open WebUI stacked -->
+                        <div class="flex flex-col gap-4">
+                            
+                            <!-- Qdrant Stats Section (Top of right half) -->
+                            <div class="p-4 border-2 border-green-500/30 rounded-lg bg-green-900/10 flex-1">
+                                <h3 class="text-lg font-semibold mb-3 text-green-400 flex items-center gap-2">
+                                    <span>🔍</span> Qdrant Vector Database
+                                </h3>
+                                <div class="grid grid-cols-1 gap-4 text-center h-full">
+                                    <div class="flex flex-col justify-center">
+                                        <p class="text-gray-400 text-sm mb-1">Total Search Operations</p>
+                                        <p id="qdrant-searches" class="text-2xl font-bold text-green-400">--</p>
+                                    </div>
+                                    <div class="flex flex-col justify-center">
+                                        <p class="text-gray-400 text-sm mb-1">Total Query Operations</p>
+                                        <p id="qdrant-queries" class="text-2xl font-bold text-green-400">--</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Open WebUI Stats Section (Bottom of right half) -->
+                            <div class="p-4 border-2 border-purple-500/30 rounded-lg bg-purple-900/10 flex-1">
+                                <h3 class="text-lg font-semibold mb-3 text-purple-400 flex items-center gap-2">
+                                    <span>🤖</span> Open WebUI Pipeline
+                                </h3>
+                                <div class="grid grid-cols-1 gap-4 text-center h-full">
+                                    <div class="flex flex-col justify-center">
+                                        <p class="text-gray-400 text-sm mb-1">Connection Status</p>
+                                        <p id="openwebui-status" class="text-2xl font-bold text-red-400">Checking...</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+
+            <div id="root"></div>
+
+            <!-- File Detail View -->
+            <div id="file-view" class="hidden">
+                <button id="back-to-dashboard" class="mb-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
+                    &larr; Back to Dashboard
+                </button>
+                <div class="bg-gray-800/50 rounded-lg shadow-lg p-4 sm:p-6">
+                    <h2 id="file-view-title" class="text-2xl font-bold mb-1 text-white"></h2>
+                    <p id="file-view-status" class="mb-4 text-gray-400"></p>
+                    <div class="chart-container mx-auto max-w-4xl mb-6">
+                        <canvas id="treemap-canvas"></canvas>
+                    </div>
+                    <div id="file-stats" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-center border-t border-gray-700 pt-4">
+                         <div>
+                            <p class="text-gray-400 text-sm">Total Chunks</p>
+                            <p id="file-total-chunks" class="text-2xl font-bold text-blue-400"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-sm">Processing Time</p>
+                            <p id="file-processing-time" class="text-2xl font-bold text-green-400"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-sm">Context Enhanced</p>
+                            <p id="file-context-enhanced" class="text-2xl font-bold text-purple-400"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-sm">Processing Chunk</p>
+                            <p id="file-processing-chunks" class="text-2xl font-bold text-cyan-400"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-sm">Overall Progress</p>
+                            <p id="file-overall-progress" class="text-2xl font-bold text-pink-400"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-sm">Original Source</p>
+                            <p id="file-original-source" class="text-lg font-bold text-orange-400 break-all" title=""></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Chunk Detail Modal -->
+    <div id="chunk-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-gray-800 rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="flex justify-between items-center p-6 border-b border-gray-700">
+                <h3 id="modal-title" class="text-xl font-bold text-white">Chunk Details</h3>
+                <button id="modal-close" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div id="modal-content" class="p-6 overflow-y-auto flex-1">
+            </div>
+        </div>
+    </div>
+
+    <!-- Add New Content Modal -->
+    <div id="new-content-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-gray-800 rounded-lg shadow-2xl w-full max-w-lg p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-white">Add New Content</h3>
+                <button id="new-modal-close" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            
+            <!-- Content Type Tabs -->
+            <div class="flex border-b border-gray-700 mb-4">
+                <button id="url-tab" class="px-4 py-2 text-sm font-medium text-white border-b-2 border-blue-500 bg-blue-900/20">
+                    🔗 URL
+                </button>
+                <button id="file-tab" class="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white">
+                    📁 File Upload
+                </button>
+            </div>
+            
+            <!-- URL Input Section -->
+            <div id="url-section" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Enter URL</label>
+                    <input type="text" id="content-input" 
+                           class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                           placeholder="https://example.com/article">
+                </div>
+                <div class="text-center text-gray-400 text-sm">
+                    <p>Enter a URL to process and analyze</p>
+                </div>
+            </div>
+            
+            <!-- File Upload Section -->
+            <div id="file-section" class="space-y-4 hidden">
+                <!-- Drag and Drop Area -->
+                <div id="drop-zone" class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center bg-gray-900/50 hover:border-blue-500 hover:bg-blue-900/20 transition-colors duration-200 cursor-pointer">
+                    <div class="space-y-3">
+                        <div class="text-4xl text-gray-500">📁</div>
+                        <div>
+                            <p class="text-lg font-medium text-white">Drop files here or click to browse</p>
+                            <p class="text-sm text-gray-400">Supports PDF, DOCX, EPUB, TXT, CSV files up to 500MB</p>
+                        </div>
+                        <input type="file" id="file-input" class="hidden" accept=".pdf,.docx,.doc,.epub,.txt,.csv,.html">
+                    </div>
+                </div>
+                
+                <!-- Selected File Display -->
+                <div id="selected-file" class="hidden p-3 bg-gray-900/50 border border-gray-700 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="text-2xl">📄</div>
+                            <div>
+                                <p id="file-name" class="text-white font-medium"></p>
+                                <p id="file-size" class="text-sm text-gray-400"></p>
+                            </div>
+                        </div>
+                        <button id="remove-file" class="text-red-400 hover:text-red-300 text-xl">&times;</button>
+                    </div>
+                </div>
+            </div>
+                
+                <!-- Processing Status -->
+                <div id="modal-status" class="hidden p-3 bg-blue-900/20 border border-blue-700 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                        <span id="modal-status-text" class="text-sm text-blue-200">Processing...</span>
+                    </div>
+                </div>
+                
+                <!-- Progress Display -->
+                <div id="modal-progress" class="hidden space-y-3">
+                    <div class="bg-gray-900 rounded-lg p-3">
+                        <div class="flex justify-between text-sm mb-2">
+                            <span class="text-gray-400">Progress</span>
+                            <span id="modal-progress-percent" class="text-gray-400">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-2">
+                            <div id="modal-progress-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div id="modal-progress-steps" class="max-h-32 overflow-y-auto space-y-1 text-sm text-blue-200 bg-gray-900/50 rounded-lg p-2">
+                    </div>
+                </div>
+                
+                <div class="flex gap-3">
+                    <button id="cancel-btn" class="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors">
+                        Cancel
+                    </button>
+                    <button id="process-btn" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                        Process
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-gray-800 rounded-lg shadow-2xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-white">Settings</h3>
+                <button id="settings-modal-close" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Refresh Interval</label>
+                    <select id="refresh-interval" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="1000">1 second</option>
+                        <option value="2000" selected>2 seconds</option>
+                        <option value="5000">5 seconds</option>
+                        <option value="10000">10 seconds</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="flex items-center gap-2 text-sm font-medium text-gray-300">
+                        <input type="checkbox" id="auto-refresh" checked class="rounded bg-gray-900 border-gray-700 text-blue-600">
+                        Auto-refresh data
+                    </label>
+                </div>
+                <div>
+                    <label class="flex items-center gap-2 text-sm font-medium text-gray-300">
+                        <input type="checkbox" id="show-animations" checked class="rounded bg-gray-900 border-gray-700 text-blue-600">
+                        Show animations
+                    </label>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button id="settings-cancel" class="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors">
+                        Cancel
+                    </button>
+                    <button id="settings-save" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+        // --- MOCK DATA GENERATION ---
+        const generateMockData = () => {
+            const sources = ['FILE_UPLOAD', 'URL_PASTE', 'N8N_WEBHOOK'];
+            const topics = ['AI Ethics', 'Corporate Finance', 'Web Development', 'Quantum Computing', 'Medical Research', 'History', 'Productivity'];
+            const fileNames = ['Q2_Report.pdf', 'research_paper.docx', 'project_brief.pdf', 'legal_document.pdf'];
+            const urls = ['https://www.theverge.com/2023/10/26/23933423/ai-image-generation-midjourney-dalle-3-stability-ai', 'https://react.dev/learn', 'https://www.nature.com/articles/d41586-023-03276-8'];
+            const n8nWorkflows = ['Perplexity Research', 'Daily News Briefing', 'Market Analysis'];
+
+            let transactions = [];
+            for (let i = 0; i < 25; i++) {
+                const source = sources[Math.floor(Math.random() * sources.length)];
+                const timestamp = new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString();
+                const docCount = source === 'N8N_WEBHOOK' ? Math.floor(Math.random() * 10) + 2 : 1;
+                const totalChunks = Math.floor(Math.random() * 200) + (docCount * 15);
+
+                let transactionTitle = '';
+                if (source === 'FILE_UPLOAD') transactionTitle = fileNames[Math.floor(Math.random() * fileNames.length)];
+                if (source === 'URL_PASTE') transactionTitle = urls[Math.floor(Math.random() * urls.length)];
+                if (source === 'N8N_WEBHOOK') transactionTitle = n8nWorkflows[Math.floor(Math.random() * n8nWorkflows.length)];
+
+                transactions.push({
+                    transaction_id: `txn_${Math.random().toString(36).substr(2, 9)}`,
+                    source: source,
+                    title: transactionTitle,
+                    timestamp: timestamp,
+                    document_count: docCount,
+                    total_chunks: totalChunks,
+                    main_topics: [topics[Math.floor(Math.random() * topics.length)], topics[Math.floor(Math.random() * topics.length)]].filter((v, i, a) => a.indexOf(v) === i),
+                    status: 'completed'
+                });
+            }
+            return transactions;
+        };
+
+        // --- ICONS ---
+        const SourceIcon = ({ source }) => {
+            const icons = {
+                FILE_UPLOAD: ( React.createElement('svg', {xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5 text-blue-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor"}, React.createElement('path', {strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"})) ),
+                URL_PASTE: ( React.createElement('svg', {xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5 text-green-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor"}, React.createElement('path', {strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"})) ),
+                N8N_WEBHOOK: ( React.createElement('svg', {xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5 text-purple-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor"}, React.createElement('path', {strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M8 9l4-4 4 4m0 6l-4 4-4-4"})) )
+            };
+            return icons[source] || null;
+        };
+
+        // --- HELPERS ---
+        const formatSourceText = (source) => {
+            return source.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+        };
+        // --- COMPONENTS ---
+        const FilterBar = ({ activeSource, setActiveSource, activeSort, setActiveSort, activeTopic, clearTopicFilter }) => {
+            const sources = ['ALL', 'FILE_UPLOAD', 'URL_PASTE', 'N8N_WEBHOOK'];
+            const sorts = ['Newest', 'Size', 'Topics'];
+            return (
+                React.createElement('div', {className: "flex flex-col gap-4 mb-6 px-1"},
+                    React.createElement('div', {className: "flex flex-col sm:flex-row justify-between items-center"},
+                        React.createElement('div', {className: "flex items-center gap-2 mb-4 sm:mb-0"},
+                            React.createElement('span', {className: "text-sm text-gray-400"}, "Filter by Source:"),
+                            React.createElement('div', {className: "bg-gray-800 p-1 rounded-lg flex gap-1"},
+                                sources.map(source =>
+                                    React.createElement('button', {
+                                        key: source,
+                                        onClick: () => setActiveSource(source),
+                                        className: `px-3 py-1 text-sm rounded-md transition-colors ${activeSource === source ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-300 hover:bg-gray-700'}`
+                                    }, formatSourceText(source))
+                                )
+                            )
+                        ),
+                        React.createElement('div', {className: "flex items-center gap-2"},
+                            React.createElement('span', {className: "text-sm text-gray-400"}, "Sort by:"),
+                            React.createElement('div', {className: "bg-gray-800 p-1 rounded-lg flex gap-1"},
+                                sorts.map(sort =>
+                                    React.createElement('button', {
+                                        key: sort,
+                                        onClick: () => setActiveSort(sort),
+                                        className: `px-3 py-1 text-sm rounded-md transition-colors ${activeSort === sort ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-300 hover:bg-gray-700'}`
+                                    }, sort)
+                                )
+                            )
+                        )
+                    ),
+                    activeTopic !== 'ALL' && 
+                        React.createElement('div', {className: "flex justify-center items-center"},
+                            React.createElement('div', {className: "bg-gray-800 p-1 rounded-lg flex gap-2 items-center text-sm text-gray-300 px-3"},
+                                React.createElement('span', {}, "Filtering on topic: ", React.createElement('span', {className: "font-semibold text-white"}, activeTopic)),
+                                React.createElement('button', {onClick: clearTopicFilter, className: "text-gray-500 hover:text-white text-lg"}, "×")
+                            )
+                        )
+                )
+            );
+        };
+
+
+        const TransactionCard = ({ transaction, onTopicClick, onChunksClick }) => {
+            const { source, title, timestamp, document_count, total_chunks, main_topics } = transaction;
+            const sourceDisplay = { FILE_UPLOAD: 'File Upload', URL_PASTE: 'URL Paste', N8N_WEBHOOK: 'N8N Webhook' };
+            const timeAgo = (date) => {
+                const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+                let interval = seconds / 31536000;
+                if (interval > 1) return Math.floor(interval) + " years ago";
+                interval = seconds / 2592000;
+                if (interval > 1) return Math.floor(interval) + " months ago";
+                interval = seconds / 86400;
+                if (interval > 1) return Math.floor(interval) + " days ago";
+                interval = seconds / 3600;
+                if (interval > 1) return Math.floor(interval) + " hours ago";
+                interval = seconds / 60;
+                if (interval > 1) return Math.floor(interval) + " minutes ago";
+                return "Just now";
+            };
+            return (
+                React.createElement('div', {className: "bg-gray-800/50 border border-gray-700/50 rounded-lg p-4 flex flex-col gap-3 hover:bg-gray-800/80 hover:border-blue-500/50 transition-all duration-200"},
+                    React.createElement('div', {className: "flex justify-between items-start"},
+                        React.createElement('div', {className: "flex items-center gap-3"},
+                            React.createElement(SourceIcon, {source: source}),
+                            React.createElement('div', {},
+                                React.createElement('p', {className: "font-semibold text-white truncate", title: title}, title),
+                                React.createElement('p', {className: "text-xs text-gray-400"}, sourceDisplay[source])
+                            )
+                        ),
+                        React.createElement('p', {className: "text-xs text-gray-500 flex-shrink-0"}, timeAgo(timestamp))
+                    ),
+                    React.createElement('div', {className: "flex justify-around items-center text-center bg-gray-900/50 p-2 rounded-md"},
+                        React.createElement('div', {},
+                            React.createElement('p', {className: "text-lg font-bold text-white"}, document_count),
+                            React.createElement('p', {className: "text-xs text-gray-400"}, "Documents")
+                        ),
+                        React.createElement('div', {className: "border-l border-gray-700 h-8"}),
+                        React.createElement('button', {onClick: onChunksClick, className: "w-full text-center hover:bg-gray-700/50 rounded-md py-1 transition-colors"},
+                            React.createElement('p', {className: "text-lg font-bold text-white"}, total_chunks.toLocaleString()),
+                            React.createElement('p', {className: "text-xs text-gray-400"}, "Chunks")
+                        )
+                    ),
+                    React.createElement('div', {className: "flex flex-wrap gap-2 items-center"},
+                        main_topics.map(topic =>
+                            React.createElement('button', {
+                                key: topic,
+                                onClick: () => onTopicClick(topic),
+                                className: "text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded-full hover:bg-blue-600 hover:text-white transition-colors"
+                            }, topic)
+                        )
+                    )
+                )
+            );
+        };
+
+        const App = () => {
+            const [transactions, setTransactions] = useState([]);
+            const [activeSource, setActiveSource] = useState('ALL');
+            const [activeSort, setActiveSort] = useState('Newest');
+            const [activeTopic, setActiveTopic] = useState('ALL');
+            const [isLoading, setIsLoading] = useState(true);
+
+            useEffect(() => {
+                setTimeout(() => {
+                    setTransactions(generateMockData());
+                    setIsLoading(false);
+                }, 1000);
+            }, []);
+
+            const filteredAndSortedTransactions = useMemo(() => {
+                let processed = [...transactions];
+                if (activeSource !== 'ALL') {
+                    processed = processed.filter(t => t.source === activeSource);
+                }
+                if (activeTopic !== 'ALL') {
+                    processed = processed.filter(t => t.main_topics.includes(activeTopic));
+                }
+                switch (activeSort) {
+                    case 'Size': processed.sort((a, b) => b.total_chunks - a.total_chunks); break;
+                    case 'Topics': processed.sort((a, b) => b.main_topics.length - a.main_topics.length); break;
+                    default: processed.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); break;
+                }
+                return processed;
+            }, [transactions, activeSource, activeSort, activeTopic]);
+
+            const handleTopicClick = (topic) => setActiveTopic(topic);
+            const clearTopicFilter = () => setActiveTopic('ALL');
+            const handleSortByChunks = () => setActiveSort('Size');
+
+            return (
+                React.createElement('div', {className: "max-w-7xl mx-auto p-4 sm:p-6 lg:p-8"},
+                    React.createElement('header', {className: "mb-8"},
+                        React.createElement('h1', {className: "text-3xl font-bold text-white"}, "Documents"),
+                        React.createElement('p', {className: "text-gray-400 mt-1"}, "Browse and manage your ingestion history.")
+                    ),
+                    React.createElement(FilterBar, {
+                        activeSource: activeSource,
+                        setActiveSource: setActiveSource,
+                        activeSort: activeSort,
+                        setActiveSort: setActiveSort,
+                        activeTopic: activeTopic,
+                        clearTopicFilter: clearTopicFilter
+                    }),
+                    isLoading ? 
+                        React.createElement('div', {className: "text-center py-10 text-gray-500"}, "Loading transactions...") :
+                        React.createElement('main', {className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"},
+                            filteredAndSortedTransactions.map(transaction =>
+                                React.createElement(TransactionCard, {
+                                    key: transaction.transaction_id,
+                                    transaction: transaction,
+                                    onTopicClick: handleTopicClick,
+                                    onChunksClick: handleSortByChunks
+                                })
+                            )
+                        )
+                )
+            );
+        };
+
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(React.createElement(App));
+    </script>
+</body>
+</html>

@@ -1,0 +1,1708 @@
+openapi: 3.0.3
+info:
+  title: AutoLlama v2.2 - Intelligent Context API
+  description: |
+    **AutoLlama v2.2 "Intelligent Context Llama"** - Enhanced RAG platform with intelligent contextual retrieval and advanced document understanding.
+    
+    ## 🚀 Enhanced Features v2.2
+    - **35-60% Better Retrieval** through intelligent contextual processing
+    - **Document Intelligence**: Automatic type detection and structural analysis
+    - **Semantic Chunking**: Boundary-aware segmentation with hierarchical understanding
+    - **Advanced Context Generation**: Document-aware prompts with retry logic
+    - **Enhanced Metadata**: 11 new contextual fields for performance analysis
+    - **Production-Ready**: Ultra-safe processing with comprehensive error handling
+    
+    ## Processing Capabilities
+    - **Multi-format Processing**: PDF, DOCX, EPUB, CSV, URL fetching
+    - **Hybrid Search**: Vector similarity + BM25 text search  
+    - **Real-time Processing**: SSE streaming with progress updates
+    - **Intelligent Chunking**: Semantic, structural, and hierarchical strategies
+    - **Contextual Analysis**: Sentiment, topics, emotions, categories + document structure
+    
+    ## Authentication
+    This API is designed for secure homelab deployment behind Tailscale VPN.
+    
+    ## Rate Limiting & Error Handling
+    - **Search endpoints**: 100 requests/minute
+    - **Processing endpoints**: 10 requests/5 minutes  
+    - **Health endpoints**: No limits
+    - Consistent error responses with detailed messages and timestamps
+  version: 2.2.0
+  termsOfService: https://autollama.io/terms
+  contact:
+    name: AutoLlama API Support
+    url: https://autollama.io/support
+    email: support@autollama.io
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080/api
+    description: Local development server
+  - url: https://api.autollama.io/v2
+    description: Production server
+  - url: https://staging-api.autollama.io/v2
+    description: Staging server
+
+tags:
+  - name: Content Processing
+    description: URL and file processing endpoints with real-time streaming
+  - name: Search & Retrieval
+    description: Hybrid search combining vector similarity and BM25 text search
+  - name: Document Management
+    description: Document CRUD operations and metadata management
+  - name: Health & Monitoring
+    description: System health checks and performance monitoring
+  - name: Session Management
+    description: Upload session tracking and cleanup operations
+  - name: Settings
+    description: System configuration and user preferences
+  - name: Pipeline
+    description: Processing pipeline monitoring and data streaming
+
+paths:
+  # Health Endpoints
+  /health:
+    get:
+      tags: [Health & Monitoring]
+      summary: Basic health check
+      description: Simple endpoint to verify API availability
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                success: true
+                status: "healthy"
+                timestamp: "2024-01-15T10:30:00.000Z"
+                uptime: 86400
+
+  /health/comprehensive:
+    get:
+      tags: [Health & Monitoring]
+      summary: Comprehensive health check
+      description: Detailed health status including all system components
+      responses:
+        '200':
+          description: Detailed health information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComprehensiveHealthResponse'
+
+  /system/status:
+    get:
+      tags: [Health & Monitoring]
+      summary: System status and metrics
+      description: Current system performance metrics and resource usage
+      responses:
+        '200':
+          description: System status information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemStatusResponse'
+
+  # Search Endpoints
+  /search:
+    get:
+      tags: [Search & Retrieval]
+      summary: Hybrid search
+      description: |
+        Perform hybrid search combining vector similarity and BM25 text search.
+        Returns ranked results with similarity scores and contextual information.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: "🔍 Search query text - Try: 'machine learning', 'python tutorial', or any topic"
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 1000
+          example: "machine learning tutorial"
+        - name: limit
+          in: query
+          description: Maximum number of results to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of results to skip for pagination
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: includeChunks
+          in: query
+          description: Include related chunks in results
+          schema:
+            type: boolean
+            default: false
+        - name: threshold
+          in: query
+          description: Minimum similarity threshold (0.0-1.0)
+          schema:
+            type: number
+            minimum: 0.0
+            maximum: 1.0
+            default: 0.7
+      responses:
+        '200':
+          description: Search results with similarity scores
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /search/vector:
+    post:
+      tags: [Search & Retrieval]
+      summary: Vector similarity search
+      description: |
+        Perform pure vector similarity search using embeddings.
+        Query text is converted to embedding and matched against stored vectors.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VectorSearchRequest'
+            example:
+              query: "neural networks deep learning"
+              limit: 10
+              threshold: 0.8
+      responses:
+        '200':
+          description: Vector search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VectorSearchResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /search/documents:
+    get:
+      tags: [Search & Retrieval]
+      summary: Document search
+      description: Search documents by title, content, and metadata
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query
+          schema:
+            type: string
+        - name: sortBy
+          in: query
+          description: Sort field
+          schema:
+            type: string
+            enum: [created_at, updated_at, title, relevance]
+            default: relevance
+        - name: sortOrder
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Document search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentSearchResponse'
+
+  /search/similar/{chunkId}:
+    get:
+      tags: [Search & Retrieval]
+      summary: Find similar chunks
+      description: Find chunks similar to a given chunk using vector similarity
+      parameters:
+        - name: chunkId
+          in: path
+          required: true
+          description: Source chunk ID
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Similar chunks found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimilarChunksResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Document Management
+  /documents:
+    get:
+      tags: [Document Management]
+      summary: List documents
+      description: Get paginated list of documents with optional filtering
+      parameters:
+        - name: page
+          in: query
+          description: Page number (1-based)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: search
+          in: query
+          description: Search term for filtering
+          schema:
+            type: string
+        - name: sortBy
+          in: query
+          description: Sort field
+          schema:
+            type: string
+            enum: [created_at, updated_at, title, chunk_count]
+            default: created_at
+        - name: sortOrder
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Paginated document list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentListResponse'
+
+  /documents/{id}:
+    get:
+      tags: [Document Management]
+      summary: Get document details
+      description: Retrieve specific document with chunks and metadata
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Document ID
+          schema:
+            type: string
+            format: uuid
+        - name: chunkLimit
+          in: query
+          description: Maximum chunks to include
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+            default: 50
+        - name: chunkOffset
+          in: query
+          description: Chunk offset for pagination
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Document details with chunks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentDetailsResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Document Management]
+      summary: Update document
+      description: Update document metadata and properties
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Document ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentUpdateRequest'
+      responses:
+        '200':
+          description: Document updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentUpdateResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags: [Document Management]
+      summary: Delete document
+      description: |
+        Delete document and all associated chunks and vector data.
+        This operation is irreversible and performed atomically.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Document ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Document deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentDeleteResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /documents/{id}/chunks:
+    get:
+      tags: [Document Management]
+      summary: Get document chunks
+      description: Retrieve paginated chunks for a specific document
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Document ID
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: includeEmbeddings
+          in: query
+          description: Include embedding vectors in response
+          schema:
+            type: boolean
+            default: false
+        - name: search
+          in: query
+          description: Search within chunks
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Document chunks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentChunksResponse'
+
+  /documents/{id}/stats:
+    get:
+      tags: [Document Management]
+      summary: Get document statistics
+      description: Retrieve processing statistics and analytics for a document
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Document ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Document statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentStatsResponse'
+
+  /documents/{id}/reprocess:
+    post:
+      tags: [Document Management]
+      summary: Reprocess document
+      description: |
+        Trigger reprocessing of a document with new parameters.
+        Useful for applying updated chunking strategies or embedding models.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Document ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReprocessRequest'
+      responses:
+        '200':
+          description: Reprocessing initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReprocessResponse'
+        '409':
+          description: Document already being processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Content Processing
+  /process-url:
+    post:
+      tags: [Content Processing]
+      summary: Process URL synchronously
+      description: |
+        📄 Process content from a URL and return when complete.
+        
+        **Supported Content:**
+        - Articles, blog posts, documentation
+        - PDF documents, research papers  
+        - Wikipedia pages, news articles
+        
+        **Try these example URLs:**
+        - https://docs.python.org/3/tutorial/
+        - https://en.wikipedia.org/wiki/Machine_learning
+        - Any public webpage or PDF URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/URLProcessRequest'
+            example:
+              url: "https://docs.python.org/3/tutorial/introduction.html"
+              chunkSize: 1000
+              overlap: 100
+              enableContextualEmbeddings: true
+      responses:
+        '200':
+          description: URL processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessingResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ProcessingError'
+
+  /process-url-stream:
+    post:
+      tags: [Content Processing]
+      summary: Process URL with streaming
+      description: |
+        Process URL content with real-time progress updates via Server-Sent Events.
+        Returns immediately with session ID for progress tracking.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/URLProcessRequest'
+      responses:
+        '200':
+          description: Processing started, use SSE for progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StreamingResponse'
+
+  /process-file:
+    post:
+      tags: [Content Processing]
+      summary: Process file synchronously
+      description: |
+        Upload and process a file. Supports PDF, DOCX, EPUB, CSV, and text files.
+        Maximum file size: 100MB.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FileProcessRequest'
+            encoding:
+              file:
+                contentType: application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/epub+zip, text/csv, text/plain
+      responses:
+        '200':
+          description: File processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessingResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '413':
+          description: File size exceeds limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /process-file-stream:
+    post:
+      tags: [Content Processing]
+      summary: Process file with streaming
+      description: Process file with real-time progress updates via SSE
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FileProcessRequest'
+      responses:
+        '200':
+          description: Processing started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StreamingResponse'
+
+  /pre-upload-check:
+    post:
+      tags: [Content Processing]
+      summary: Pre-upload validation
+      description: |
+        Validate system readiness before starting upload.
+        Checks for stuck sessions, resource availability, and system health.
+      responses:
+        '200':
+          description: System ready for upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreUploadResponse'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  # Session Management
+  /processing/status/{sessionId}:
+    get:
+      tags: [Session Management]
+      summary: Get processing status
+      description: Check the status of a processing session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          description: Processing session ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session status information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionStatusResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /processing/queue:
+    get:
+      tags: [Session Management]
+      summary: Get processing queue status
+      description: View current processing queue with active, waiting, and completed sessions
+      responses:
+        '200':
+          description: Processing queue status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessingQueueResponse'
+
+  /processing/cleanup:
+    post:
+      tags: [Session Management]
+      summary: Cleanup stuck sessions
+      description: |
+        Clean up stuck or orphaned processing sessions.
+        Automatically identifies and resolves stuck uploads.
+      responses:
+        '200':
+          description: Cleanup completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CleanupResponse'
+
+  # Settings
+  /settings:
+    get:
+      tags: [Settings]
+      summary: Get all settings
+      description: Retrieve current system configuration
+      responses:
+        '200':
+          description: Current settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsResponse'
+
+    post:
+      tags: [Settings]
+      summary: Update settings
+      description: Update system configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsUpdateRequest'
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsResponse'
+
+  /settings/{key}:
+    get:
+      tags: [Settings]
+      summary: Get specific setting
+      description: Retrieve a specific configuration value
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Setting key
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Setting value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "⚠️ NOT IMPLEMENTED - Leave empty for local development"
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: "⚠️ NOT IMPLEMENTED - Leave empty for local development"
+
+  responses:
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              message: "Validation failed"
+              code: "VALIDATION_ERROR"
+              details:
+                - field: "chunkSize"
+                  message: "Must be between 100 and 5000"
+            statusCode: 400
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              message: "Document not found"
+              code: "NOT_FOUND"
+              timestamp: "2024-01-15T10:30:00.000Z"
+            statusCode: 404
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              message: "Internal server error"
+              code: "INTERNAL_ERROR"
+              timestamp: "2024-01-15T10:30:00.000Z"
+            statusCode: 500
+
+    ServiceUnavailable:
+      description: Service temporarily unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              message: "Vector service not available"
+              code: "SERVICE_UNAVAILABLE"
+              timestamp: "2024-01-15T10:30:00.000Z"
+            statusCode: 503
+
+    ProcessingError:
+      description: Processing failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              message: "Failed to process content"
+              code: "PROCESSING_ERROR"
+              details: "Unable to parse PDF content"
+            statusCode: 500
+
+  schemas:
+    # Core Response Schemas
+    HealthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          example: "healthy"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00.000Z"
+        uptime:
+          type: number
+          description: Server uptime in seconds
+          example: 86400
+
+    ComprehensiveHealthResponse:
+      allOf:
+        - $ref: '#/components/schemas/HealthResponse'
+        - type: object
+          properties:
+            services:
+              type: object
+              properties:
+                database:
+                  $ref: '#/components/schemas/ServiceHealth'
+                vector:
+                  $ref: '#/components/schemas/ServiceHealth'
+                embedding:
+                  $ref: '#/components/schemas/ServiceHealth'
+                openai:
+                  $ref: '#/components/schemas/ServiceHealth'
+            metrics:
+              type: object
+              properties:
+                memory:
+                  type: object
+                  properties:
+                    used:
+                      type: number
+                      description: Memory usage in MB
+                    total:
+                      type: number
+                      description: Total memory in MB
+                cpu:
+                  type: object
+                  properties:
+                    usage:
+                      type: number
+                      description: CPU usage percentage
+                requests:
+                  type: object
+                  properties:
+                    total:
+                      type: number
+                    rate:
+                      type: number
+                      description: Requests per second
+
+    ServiceHealth:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        responseTime:
+          type: number
+          description: Response time in milliseconds
+        lastCheck:
+          type: string
+          format: date-time
+        error:
+          type: string
+          nullable: true
+
+    SystemStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        system:
+          type: object
+          properties:
+            version:
+              type: string
+              example: "2.2.0"
+            environment:
+              type: string
+              example: "production"
+            nodeVersion:
+              type: string
+              example: "18.17.0"
+        performance:
+          type: object
+          properties:
+            averageResponseTime:
+              type: number
+            requestsPerSecond:
+              type: number
+            memoryUsage:
+              type: number
+        features:
+          type: object
+          properties:
+            contextualEmbeddings:
+              type: boolean
+            streamingProcessing:
+              type: boolean
+            hybridSearch:
+              type: boolean
+
+    # Search Schemas
+    SearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        query:
+          type: string
+          example: "artificial intelligence"
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'
+        total:
+          type: integer
+          description: Total number of results
+        limit:
+          type: integer
+        offset:
+          type: integer
+        searchType:
+          type: string
+          enum: [hybrid, vector, text]
+          example: "hybrid"
+        processingTime:
+          type: number
+          description: Search processing time in milliseconds
+
+    SearchResult:
+      type: object
+      properties:
+        chunk_id:
+          type: string
+          format: uuid
+        chunk_text:
+          type: string
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+        chunk_index:
+          type: integer
+        similarity_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        sentiment:
+          type: string
+          enum: [positive, negative, neutral]
+        contextual_summary:
+          type: string
+        main_topics:
+          type: array
+          items:
+            type: string
+        category:
+          type: string
+        chunks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChunkData'
+          description: Related chunks (if includeChunks=true)
+
+    VectorSearchRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          example: "neural networks deep learning"
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+        threshold:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.7
+          description: Minimum similarity threshold
+
+    VectorSearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        query:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/VectorSearchResult'
+        searchType:
+          type: string
+          example: "vector"
+        threshold:
+          type: number
+        limit:
+          type: integer
+        processingTime:
+          type: number
+
+    VectorSearchResult:
+      type: object
+      properties:
+        id:
+          type: string
+        score:
+          type: number
+          minimum: 0
+          maximum: 1
+        content:
+          type: object
+          properties:
+            chunk_text:
+              type: string
+            title:
+              type: string
+            url:
+              type: string
+            metadata:
+              type: object
+
+    DocumentSearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        query:
+          type: string
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentSummary'
+        total:
+          type: integer
+        searchType:
+          type: string
+          example: "document"
+
+    SimilarChunksResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        sourceChunk:
+          $ref: '#/components/schemas/ChunkData'
+        similarChunks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChunkData'
+        total:
+          type: integer
+        limit:
+          type: integer
+
+    # Document Schemas
+    DocumentListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentSummary'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    DocumentSummary:
+      type: object
+      properties:
+        document_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+          nullable: true
+        chunk_count:
+          type: integer
+        status:
+          type: string
+          enum: [processing, completed, failed]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+
+    DocumentDetailsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        document:
+          $ref: '#/components/schemas/Document'
+        chunks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChunkData'
+        chunksPagination:
+          type: object
+          properties:
+            total:
+              type: integer
+            returned:
+              type: integer
+
+    Document:
+      type: object
+      properties:
+        document_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+          nullable: true
+        filename:
+          type: string
+          nullable: true
+        chunk_count:
+          type: integer
+        status:
+          type: string
+          enum: [processing, completed, failed]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          properties:
+            contentType:
+              type: string
+            wordCount:
+              type: integer
+            language:
+              type: string
+            fileSize:
+              type: integer
+            processingTime:
+              type: number
+
+    DocumentUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+        metadata:
+          type: object
+          properties:
+            category:
+              type: string
+            tags:
+              type: array
+              items:
+                type: string
+            priority:
+              type: string
+              enum: [low, medium, high]
+            notes:
+              type: string
+
+    DocumentUpdateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        document:
+          $ref: '#/components/schemas/Document'
+        message:
+          type: string
+
+    DocumentDeleteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        deletedChunks:
+          type: integer
+        vectorEntriesDeleted:
+          type: integer
+
+    DocumentChunksResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        documentId:
+          type: string
+          format: uuid
+        chunks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChunkData'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    DocumentStatsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        documentId:
+          type: string
+          format: uuid
+        stats:
+          type: object
+          properties:
+            totalChunks:
+              type: integer
+            completedChunks:
+              type: integer
+            failedChunks:
+              type: integer
+            avgChunkSize:
+              type: number
+            totalTokens:
+              type: integer
+            sentimentDistribution:
+              type: object
+              properties:
+                positive:
+                  type: integer
+                neutral:
+                  type: integer
+                negative:
+                  type: integer
+            categoryDistribution:
+              type: object
+              additionalProperties:
+                type: integer
+            processingTime:
+              type: number
+            lastProcessed:
+              type: string
+              format: date-time
+
+    ChunkData:
+      type: object
+      properties:
+        chunk_id:
+          type: string
+          format: uuid
+        chunk_text:
+          type: string
+        chunk_index:
+          type: integer
+        sentiment:
+          type: string
+          enum: [positive, negative, neutral]
+        emotions:
+          type: array
+          items:
+            type: string
+        category:
+          type: string
+        main_topics:
+          type: array
+          items:
+            type: string
+        contextual_summary:
+          type: string
+        similarity_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        embedding:
+          type: array
+          items:
+            type: number
+          description: Embedding vector (only if requested)
+
+    # Processing Schemas
+    URLProcessRequest:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+          example: "https://docs.python.org/3/tutorial/introduction.html"
+          description: "🔗 Any public URL - Try Wikipedia, documentation sites, or blog posts"
+        chunkSize:
+          type: integer
+          minimum: 100
+          maximum: 5000
+          default: 1000
+          description: "📝 Text chunk size (1000 = ~2-3 paragraphs, good default)"
+        overlap:
+          type: integer
+          minimum: 0
+          maximum: 500
+          default: 100
+          description: "🔄 Character overlap between chunks (100 = ~1 sentence, prevents context loss)"
+        enableContextualEmbeddings:
+          type: boolean
+          default: true
+          description: "🧠 Generate smarter embeddings with context (recommended: true)"
+
+    FileProcessRequest:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: File to process (PDF, DOCX, EPUB, CSV, TXT)
+        chunkSize:
+          type: integer
+          minimum: 100
+          maximum: 5000
+          default: 1000
+        overlap:
+          type: integer
+          minimum: 0
+          maximum: 500
+          default: 100
+        enableContextualEmbeddings:
+          type: boolean
+          default: true
+
+    ReprocessRequest:
+      type: object
+      properties:
+        chunkSize:
+          type: integer
+          minimum: 100
+          maximum: 5000
+        overlap:
+          type: integer
+          minimum: 0
+          maximum: 500
+        enableContextualEmbeddings:
+          type: boolean
+
+    ProcessingResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        sessionId:
+          type: string
+          format: uuid
+        message:
+          type: string
+        results:
+          type: object
+          properties:
+            documentsCreated:
+              type: integer
+            chunksProcessed:
+              type: integer
+            totalTokensUsed:
+              type: integer
+            processingTime:
+              type: number
+
+    StreamingResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        sessionId:
+          type: string
+          format: uuid
+        message:
+          type: string
+        sseEndpoint:
+          type: string
+          description: Server-Sent Events endpoint for progress updates
+
+    ReprocessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        document:
+          $ref: '#/components/schemas/Document'
+
+    PreUploadResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        ready:
+          type: boolean
+        checks:
+          type: object
+          properties:
+            systemHealth:
+              type: boolean
+            stuckSessions:
+              type: boolean
+            resourceAvailability:
+              type: boolean
+        recommendations:
+          type: array
+          items:
+            type: string
+
+    # Session Schemas
+    SessionStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        session:
+          type: object
+          properties:
+            session_id:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum: [pending, processing, completed, failed]
+            processed_chunks:
+              type: integer
+            total_chunks:
+              type: integer
+            document_id:
+              type: string
+              format: uuid
+              nullable: true
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+            error_message:
+              type: string
+              nullable: true
+        isActive:
+          type: boolean
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+
+    ProcessingQueueResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        queue:
+          type: object
+          properties:
+            active:
+              type: array
+              items:
+                $ref: '#/components/schemas/QueueItem'
+            waiting:
+              type: array
+              items:
+                $ref: '#/components/schemas/QueueItem'
+            completed:
+              type: array
+              items:
+                $ref: '#/components/schemas/QueueItem'
+            failed:
+              type: array
+              items:
+                $ref: '#/components/schemas/QueueItem'
+        summary:
+          type: object
+          properties:
+            active:
+              type: integer
+            waiting:
+              type: integer
+            completed:
+              type: integer
+            failed:
+              type: integer
+            total:
+              type: integer
+
+    QueueItem:
+      type: object
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        progress:
+          type: number
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    CleanupResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        cleanedSessions:
+          type: integer
+        details:
+          type: object
+          properties:
+            stuck:
+              type: integer
+            orphaned:
+              type: integer
+            expired:
+              type: integer
+
+    # Settings Schemas
+    SettingsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        settings:
+          type: object
+          properties:
+            processing:
+              type: object
+              properties:
+                defaultChunkSize:
+                  type: integer
+                defaultOverlap:
+                  type: integer
+                enableContextualEmbeddings:
+                  type: boolean
+                maxFileSize:
+                  type: integer
+            search:
+              type: object
+              properties:
+                defaultLimit:
+                  type: integer
+                maxLimit:
+                  type: integer
+                defaultThreshold:
+                  type: number
+            performance:
+              type: object
+              properties:
+                requestTimeout:
+                  type: integer
+                maxConcurrentProcessing:
+                  type: integer
+
+    SettingsUpdateRequest:
+      type: object
+      properties:
+        processing:
+          type: object
+          properties:
+            defaultChunkSize:
+              type: integer
+              minimum: 100
+              maximum: 5000
+            defaultOverlap:
+              type: integer
+              minimum: 0
+              maximum: 500
+            enableContextualEmbeddings:
+              type: boolean
+        search:
+          type: object
+          properties:
+            defaultLimit:
+              type: integer
+              minimum: 1
+              maximum: 100
+            defaultThreshold:
+              type: number
+              minimum: 0.0
+              maximum: 1.0
+
+    SettingResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        key:
+          type: string
+        value:
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+            - type: object
+
+    # Common Schemas
+    Pagination:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrev:
+          type: boolean
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            code:
+              type: string
+            timestamp:
+              type: string
+              format: date-time
+            requestId:
+              type: string
+              nullable: true
+            details:
+              oneOf:
+                - type: string
+                - type: object
+                - type: array
+              nullable: true
+        statusCode:
+          type: integer
+
+# No global security required - this is a local development API

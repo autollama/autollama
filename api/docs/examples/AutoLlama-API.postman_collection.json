@@ -1,0 +1,1244 @@
+{
+  "info": {
+    "name": "AutoLlama Context Llama API",
+    "description": "Complete collection for AutoLlama v2.1 Context Llama API with contextual embeddings.\n\n## Features\n- 35-60% better retrieval with contextual embeddings\n- Multi-format processing (PDF, DOCX, EPUB, CSV, URLs)\n- Hybrid search (Vector + BM25)\n- Real-time streaming with SSE\n- Smart chunking with sentence awareness\n\n## Setup\n1. Set the `baseUrl` variable to your API endpoint\n2. Set the `apiKey` variable if authentication is enabled\n3. Run the health check to verify connectivity",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "autollama-api-collection",
+    "version": {
+      "major": 2,
+      "minor": 1,
+      "patch": 0
+    }
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api",
+      "description": "Base URL for AutoLlama API"
+    },
+    {
+      "key": "apiKey",
+      "value": "",
+      "description": "API key for authentication (if required)"
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "description": "Current processing session ID"
+    },
+    {
+      "key": "documentId",
+      "value": "",
+      "description": "Current document ID"
+    },
+    {
+      "key": "chunkId",
+      "value": "",
+      "description": "Current chunk ID"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{apiKey}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health & Monitoring",
+      "description": "System health checks and monitoring endpoints",
+      "item": [
+        {
+          "name": "Basic Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"API is healthy\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response.status).to.eql(\"healthy\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Simple health check to verify API availability"
+          }
+        },
+        {
+          "name": "Comprehensive Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Health data structure is valid\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('services');",
+                  "    pm.expect(response).to.have.property('metrics');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/comprehensive",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "comprehensive"]
+            },
+            "description": "Detailed health status including all system components"
+          }
+        },
+        {
+          "name": "System Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/system/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "status"]
+            },
+            "description": "Current system performance metrics and resource usage"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Content Processing",
+      "description": "URL and file processing endpoints with real-time streaming",
+      "item": [
+        {
+          "name": "Pre-Upload Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 or 503\", function () {",
+                  "    pm.expect([200, 503]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"System readiness check\", function () {",
+                  "        const response = pm.response.json();",
+                  "        pm.expect(response).to.have.property('ready');",
+                  "        pm.expect(response).to.have.property('checks');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pre-upload-check",
+              "host": ["{{baseUrl}}"],
+              "path": ["pre-upload-check"]
+            },
+            "description": "Check if system is ready for upload. Validates system health, checks for stuck sessions, and verifies resource availability."
+          }
+        },
+        {
+          "name": "Process URL (Synchronous)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Processing successful\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response).to.have.property('sessionId');",
+                  "    ",
+                  "    // Store session ID for later use",
+                  "    pm.collectionVariables.set('sessionId', response.sessionId);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://example.com/article\",\n  \"chunkSize\": 1000,\n  \"overlap\": 100,\n  \"enableContextualEmbeddings\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/process-url",
+              "host": ["{{baseUrl}}"],
+              "path": ["process-url"]
+            },
+            "description": "Process content from a URL synchronously. Returns when processing is complete."
+          }
+        },
+        {
+          "name": "Process URL (Streaming)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Streaming started\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response).to.have.property('sessionId');",
+                  "    ",
+                  "    // Store session ID for monitoring",
+                  "    pm.collectionVariables.set('sessionId', response.sessionId);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://arxiv.org/abs/2301.00001\",\n  \"chunkSize\": 1200,\n  \"overlap\": 150,\n  \"enableContextualEmbeddings\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/process-url-stream",
+              "host": ["{{baseUrl}}"],
+              "path": ["process-url-stream"]
+            },
+            "description": "Process URL with real-time progress updates via Server-Sent Events."
+          }
+        },
+        {
+          "name": "Process File (Upload)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"File processing successful\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response).to.have.property('sessionId');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/your/document.pdf",
+                  "description": "File to upload (PDF, DOCX, EPUB, CSV, TXT)"
+                },
+                {
+                  "key": "chunkSize",
+                  "value": "1200",
+                  "type": "text"
+                },
+                {
+                  "key": "overlap",
+                  "value": "150",
+                  "type": "text"
+                },
+                {
+                  "key": "enableContextualEmbeddings",
+                  "value": "true",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/process-file",
+              "host": ["{{baseUrl}}"],
+              "path": ["process-file"]
+            },
+            "description": "Upload and process a file. Supports PDF, DOCX, EPUB, CSV, and text files. Maximum size: 100MB."
+          }
+        },
+        {
+          "name": "Process File (Streaming)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/your/document.pdf"
+                },
+                {
+                  "key": "chunkSize",
+                  "value": "800",
+                  "type": "text"
+                },
+                {
+                  "key": "overlap",
+                  "value": "100",
+                  "type": "text"
+                },
+                {
+                  "key": "enableContextualEmbeddings",
+                  "value": "true",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/process-file-stream",
+              "host": ["{{baseUrl}}"],
+              "path": ["process-file-stream"]
+            },
+            "description": "Upload and process file with real-time progress updates."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search & Retrieval",
+      "description": "Hybrid search combining vector similarity and BM25 text search",
+      "item": [
+        {
+          "name": "Hybrid Search",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Search results structure\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response).to.have.property('results');",
+                  "    pm.expect(response).to.have.property('total');",
+                  "    pm.expect(response).to.have.property('processingTime');",
+                  "});",
+                  "",
+                  "pm.test(\"Search performance\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.processingTime).to.be.below(5000); // Under 5 seconds",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search?q=artificial intelligence machine learning&limit=10&includeChunks=true&threshold=0.8",
+              "host": ["{{baseUrl}}"],
+              "path": ["search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "artificial intelligence machine learning",
+                  "description": "Search query text"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Maximum results to return"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Results to skip for pagination",
+                  "disabled": true
+                },
+                {
+                  "key": "includeChunks",
+                  "value": "true",
+                  "description": "Include related chunks in results"
+                },
+                {
+                  "key": "threshold",
+                  "value": "0.8",
+                  "description": "Minimum similarity threshold (0.0-1.0)"
+                }
+              ]
+            },
+            "description": "Perform hybrid search combining vector similarity and BM25 text search for optimal results."
+          }
+        },
+        {
+          "name": "Vector Search",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Vector search results\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response.searchType).to.eql('vector');",
+                  "    pm.expect(response).to.have.property('results');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"neural networks deep learning algorithms\",\n  \"limit\": 10,\n  \"threshold\": 0.85\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/search/vector",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "vector"]
+            },
+            "description": "Pure vector similarity search using embeddings. Query text is converted to embedding and matched against stored vectors."
+          }
+        },
+        {
+          "name": "Document Search",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/documents?q=research papers&sortBy=relevance&sortOrder=desc&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "documents"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "research papers",
+                  "description": "Search query"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "relevance",
+                  "description": "Sort field: created_at, updated_at, title, relevance"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "Sort order: asc, desc"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Maximum results"
+                }
+              ]
+            },
+            "description": "Search documents by title, content, and metadata"
+          }
+        },
+        {
+          "name": "Find Similar Chunks",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Set a sample chunk ID if not already set",
+                  "if (!pm.collectionVariables.get('chunkId')) {",
+                  "    pm.collectionVariables.set('chunkId', 'sample-chunk-id');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/similar/{{chunkId}}?limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "similar", "{{chunkId}}"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5",
+                  "description": "Maximum similar chunks to return"
+                }
+              ]
+            },
+            "description": "Find chunks similar to a given chunk using vector similarity"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Document Management",
+      "description": "Document CRUD operations and metadata management",
+      "item": [
+        {
+          "name": "List Documents",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Document list structure\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response).to.have.property('documents');",
+                  "    pm.expect(response).to.have.property('pagination');",
+                  "    ",
+                  "    // Store first document ID if available",
+                  "    if (response.documents.length > 0) {",
+                  "        pm.collectionVariables.set('documentId', response.documents[0].document_id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/documents?page=1&limit=20&sortBy=created_at&sortOrder=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["documents"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (1-based)"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Items per page"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search term for filtering",
+                  "disabled": true
+                },
+                {
+                  "key": "sortBy",
+                  "value": "created_at",
+                  "description": "Sort field: created_at, updated_at, title, chunk_count"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "Sort order: asc, desc"
+                }
+              ]
+            },
+            "description": "Get paginated list of documents with optional filtering and sorting"
+          }
+        },
+        {
+          "name": "Get Document Details",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Set a sample document ID if not already set",
+                  "if (!pm.collectionVariables.get('documentId')) {",
+                  "    pm.collectionVariables.set('documentId', 'sample-document-id');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/documents/{{documentId}}?chunkLimit=20&chunkOffset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["documents", "{{documentId}}"],
+              "query": [
+                {
+                  "key": "chunkLimit",
+                  "value": "20",
+                  "description": "Maximum chunks to include"
+                },
+                {
+                  "key": "chunkOffset",
+                  "value": "0",
+                  "description": "Chunk offset for pagination"
+                }
+              ]
+            },
+            "description": "Retrieve specific document with chunks and metadata"
+          }
+        },
+        {
+          "name": "Update Document",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('documentId')) {",
+                  "    pm.collectionVariables.set('documentId', 'sample-document-id');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Research Paper Title\",\n  \"metadata\": {\n    \"category\": \"research\",\n    \"tags\": [\"ai\", \"machine-learning\", \"neural-networks\"],\n    \"priority\": \"high\",\n    \"notes\": \"Important paper on latest AI developments\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/documents/{{documentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["documents", "{{documentId}}"]
+            },
+            "description": "Update document metadata and properties"
+          }
+        },
+        {
+          "name": "Get Document Chunks",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('documentId')) {",
+                  "    pm.collectionVariables.set('documentId', 'sample-document-id');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/documents/{{documentId}}/chunks?page=1&limit=10&includeEmbeddings=false",
+              "host": ["{{baseUrl}}"],
+              "path": ["documents", "{{documentId}}", "chunks"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Chunks per page"
+                },
+                {
+                  "key": "includeEmbeddings",
+                  "value": "false",
+                  "description": "Include embedding vectors (large response)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search within chunks",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Retrieve paginated chunks for a specific document"
+          }
+        },
+        {
+          "name": "Get Document Statistics",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('documentId')) {",
+                  "    pm.collectionVariables.set('documentId', 'sample-document-id');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/documents/{{documentId}}/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["documents", "{{documentId}}", "stats"]
+            },
+            "description": "Retrieve processing statistics and analytics for a document"
+          }
+        },
+        {
+          "name": "Reprocess Document",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('documentId')) {",
+                  "    pm.collectionVariables.set('documentId', 'sample-document-id');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chunkSize\": 1200,\n  \"overlap\": 150,\n  \"enableContextualEmbeddings\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/documents/{{documentId}}/reprocess",
+              "host": ["{{baseUrl}}"],
+              "path": ["documents", "{{documentId}}", "reprocess"]
+            },
+            "description": "Trigger reprocessing of a document with new parameters"
+          }
+        },
+        {
+          "name": "Delete Document",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('documentId')) {",
+                  "    pm.collectionVariables.set('documentId', 'sample-document-id');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/documents/{{documentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["documents", "{{documentId}}"]
+            },
+            "description": "Delete document and all associated chunks and vector data (irreversible)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Session Management",
+      "description": "Upload session tracking and cleanup operations",
+      "item": [
+        {
+          "name": "Get Processing Status",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('sessionId')) {",
+                  "    pm.collectionVariables.set('sessionId', 'sample-session-id');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 or 404\", function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Session status structure\", function () {",
+                  "        const response = pm.response.json();",
+                  "        pm.expect(response).to.have.property('session');",
+                  "        pm.expect(response).to.have.property('progress');",
+                  "        pm.expect(response).to.have.property('isActive');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/status/{{sessionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "status", "{{sessionId}}"]
+            },
+            "description": "Check the status of a processing session"
+          }
+        },
+        {
+          "name": "Get Processing Queue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Queue structure is valid\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response).to.have.property('queue');",
+                  "    pm.expect(response).to.have.property('summary');",
+                  "    ",
+                  "    const queue = response.queue;",
+                  "    pm.expect(queue).to.have.property('active');",
+                  "    pm.expect(queue).to.have.property('waiting');",
+                  "    pm.expect(queue).to.have.property('completed');",
+                  "    pm.expect(queue).to.have.property('failed');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/queue",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "queue"]
+            },
+            "description": "View current processing queue with active, waiting, and completed sessions"
+          }
+        },
+        {
+          "name": "Cleanup Stuck Sessions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Cleanup results\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response).to.have.property('cleanedSessions');",
+                  "    pm.expect(response).to.have.property('details');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/processing/cleanup",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "cleanup"]
+            },
+            "description": "Clean up stuck or orphaned processing sessions"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Settings",
+      "description": "System configuration and user preferences",
+      "item": [
+        {
+          "name": "Get All Settings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Settings structure\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response).to.have.property('settings');",
+                  "    ",
+                  "    const settings = response.settings;",
+                  "    pm.expect(settings).to.have.property('processing');",
+                  "    pm.expect(settings).to.have.property('search');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings"]
+            },
+            "description": "Retrieve current system configuration"
+          }
+        },
+        {
+          "name": "Update Settings",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"processing\": {\n    \"defaultChunkSize\": 1200,\n    \"defaultOverlap\": 150,\n    \"enableContextualEmbeddings\": true\n  },\n  \"search\": {\n    \"defaultLimit\": 25,\n    \"defaultThreshold\": 0.75\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings"]
+            },
+            "description": "Update system configuration"
+          }
+        },
+        {
+          "name": "Get Specific Setting",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/settings/processing.defaultChunkSize",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings", "processing.defaultChunkSize"]
+            },
+            "description": "Retrieve a specific configuration value"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workflows",
+      "description": "Complete workflows demonstrating common usage patterns",
+      "item": [
+        {
+          "name": "Complete Processing Workflow",
+          "item": [
+            {
+              "name": "1. Check System Health",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"System is healthy\", function () {",
+                      "    const response = pm.response.json();",
+                      "    pm.expect(response.success).to.be.true;",
+                      "    pm.expect(response.status).to.eql(\"healthy\");",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/health",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["health"]
+                }
+              }
+            },
+            {
+              "name": "2. Pre-Upload Check",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"System ready for upload\", function () {",
+                      "    const response = pm.response.json();",
+                      "    if (response.ready) {",
+                      "        console.log(\"System is ready for processing\");",
+                      "    } else {",
+                      "        console.log(\"System not ready:\", response.recommendations);",
+                      "    }",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/pre-upload-check",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["pre-upload-check"]
+                }
+              }
+            },
+            {
+              "name": "3. Start URL Processing",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Processing started\", function () {",
+                      "    const response = pm.response.json();",
+                      "    pm.expect(response.success).to.be.true;",
+                      "    pm.expect(response).to.have.property('sessionId');",
+                      "    ",
+                      "    // Store session ID for monitoring",
+                      "    pm.collectionVariables.set('sessionId', response.sessionId);",
+                      "    console.log(\"Processing started with session:\", response.sessionId);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"url\": \"https://example.com/workflow-test\",\n  \"chunkSize\": 1000,\n  \"enableContextualEmbeddings\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/process-url-stream",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["process-url-stream"]
+                }
+              }
+            },
+            {
+              "name": "4. Monitor Processing",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Can check processing status\", function () {",
+                      "    const response = pm.response.json();",
+                      "    if (response.success) {",
+                      "        console.log(\"Status:\", response.session.status);",
+                      "        console.log(\"Progress:\", response.progress + \"%\");",
+                      "    }",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/processing/status/{{sessionId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["processing", "status", "{{sessionId}}"]
+                }
+              }
+            },
+            {
+              "name": "5. Search Processed Content",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Search works\", function () {",
+                      "    const response = pm.response.json();",
+                      "    pm.expect(response.success).to.be.true;",
+                      "    console.log(\"Found\", response.total, \"results\");",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/search?q=test content&limit=5",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["search"],
+                  "query": [
+                    {
+                      "key": "q",
+                      "value": "test content"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "5"
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "description": "Complete workflow from health check to content processing and search"
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-set authorization header if API key is provided",
+          "const apiKey = pm.collectionVariables.get('apiKey');",
+          "if (apiKey && apiKey.trim() !== '') {",
+          "    pm.request.headers.add({",
+          "        key: 'Authorization',",
+          "        value: 'Bearer ' + apiKey",
+          "    });",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test for response time",
+          "pm.test(\"Response time is reasonable\", function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(10000); // 10 seconds",
+          "});",
+          "",
+          "// Log response time",
+          "console.log(\"Response time:\", pm.response.responseTime + \"ms\");"
+        ]
+      }
+    }
+  ]
+}

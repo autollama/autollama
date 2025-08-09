@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoLlama Pipeline Monitor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        pipeline: {
+                            bg: '#0a0e27',
+                            primary: '#00d4ff',
+                            secondary: '#1a1f3a',
+                            accent: '#00ff7f',
+                            text: '#e2e8f0',
+                            muted: '#64748b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .pipeline-stage {
+            @apply bg-pipeline-secondary border-2 border-pipeline-primary/30 rounded-xl p-4 min-w-[200px] relative;
+        }
+        .processing {
+            @apply border-yellow-400 shadow-lg;
+            animation: pulse 2s infinite;
+        }
+        .completed {
+            @apply border-green-400;
+        }
+        .chunk-dot {
+            width: 12px;
+            height: 12px;
+            background: linear-gradient(45deg, #00ff7f, #00d4ff);
+            border-radius: 50%;
+            position: absolute;
+            animation: moveChunk 3s linear infinite;
+            box-shadow: 0 0 10px rgba(0, 255, 127, 0.8);
+        }
+        @keyframes moveChunk {
+            0% { left: -10px; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { left: calc(100% + 10px); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="bg-pipeline-bg text-pipeline-text min-h-screen">
+    <!-- Header -->
+    <header class="bg-pipeline-secondary border-b border-pipeline-primary/30 px-4 py-3">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-gradient-to-br from-pipeline-primary to-pipeline-accent rounded-lg flex items-center justify-center">
+                    <span class="text-pipeline-bg font-bold">🦙</span>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-pipeline-text">AutoLlama Pipeline Monitor</h1>
+                    <p class="text-sm text-pipeline-muted">Real-time RAG processing visualization</p>
+                </div>
+            </div>
+            <div id="connectionStatus" class="px-3 py-1 rounded-lg text-xs font-medium border bg-green-500/20 border-green-500 text-green-500">
+                🟢 Connected
+            </div>
+        </div>
+    </header>
+
+    <div class="flex h-[calc(100vh-4rem)]">
+        <!-- File Selector Sidebar -->
+        <div class="w-80 bg-pipeline-secondary border-r border-pipeline-primary/30 p-4">
+            <h2 class="text-lg font-semibold mb-4">Processing Files</h2>
+            <div id="filesList" class="space-y-2">
+                <!-- Files will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Pipeline Visualization -->
+        <div class="flex-1 p-6">
+            <div id="selectedFileInfo" class="mb-6 p-4 bg-pipeline-secondary/50 rounded-lg">
+                <p class="text-pipeline-muted">Select a file to view its pipeline status</p>
+            </div>
+
+            <!-- Pipeline Stages -->
+            <div class="flex items-center gap-6 overflow-x-auto pb-4">
+                <div class="pipeline-stage" id="stage-queue">
+                    <h3 class="font-semibold mb-2">🗂️ Queue</h3>
+                    <p class="text-sm text-pipeline-muted mb-2">Files waiting to be processed</p>
+                    <div class="text-2xl font-bold text-pipeline-primary" id="queue-count">0</div>
+                </div>
+                
+                <div class="flex-shrink-0 w-16 h-1 bg-pipeline-primary/30 relative">
+                    <div class="chunk-dot" style="animation-delay: 0s;"></div>
+                </div>
+
+                <div class="pipeline-stage" id="stage-context">
+                    <h3 class="font-semibold mb-2">🧠 Context Generation</h3>
+                    <p class="text-sm text-pipeline-muted mb-2">AI analysis with GPT-4o mini</p>
+                    <div class="text-2xl font-bold text-pipeline-primary" id="context-count">0</div>
+                </div>
+
+                <div class="flex-shrink-0 w-16 h-1 bg-pipeline-primary/30 relative">
+                    <div class="chunk-dot" style="animation-delay: 1s;"></div>
+                </div>
+
+                <div class="pipeline-stage" id="stage-prepend">
+                    <h3 class="font-semibold mb-2">📝 Context Storage</h3>
+                    <p class="text-sm text-pipeline-muted mb-2">PostgreSQL metadata storage</p>
+                    <div class="text-2xl font-bold text-pipeline-primary" id="prepend-count">0</div>
+                </div>
+
+                <div class="flex-shrink-0 w-16 h-1 bg-pipeline-primary/30 relative">
+                    <div class="chunk-dot" style="animation-delay: 2s;"></div>
+                </div>
+
+                <div class="pipeline-stage" id="stage-embeddings">
+                    <h3 class="font-semibold mb-2">🔮 Embeddings</h3>
+                    <p class="text-sm text-pipeline-muted mb-2">Vector generation</p>
+                    <div class="text-2xl font-bold text-pipeline-primary" id="embeddings-count">0</div>
+                </div>
+
+                <div class="flex-shrink-0 w-16 h-1 bg-pipeline-primary/30 relative">
+                    <div class="chunk-dot" style="animation-delay: 3s;"></div>
+                </div>
+
+                <div class="pipeline-stage" id="stage-bm25">
+                    <h3 class="font-semibold mb-2">🔍 BM25 Index</h3>
+                    <p class="text-sm text-pipeline-muted mb-2">Ultrafast text search</p>
+                    <div class="text-2xl font-bold text-pipeline-primary" id="bm25-count">0</div>
+                </div>
+
+                <div class="flex-shrink-0 w-16 h-1 bg-pipeline-primary/30 relative">
+                    <div class="chunk-dot" style="animation-delay: 4s;"></div>
+                </div>
+
+                <div class="pipeline-stage completed" id="stage-available">
+                    <h3 class="font-semibold mb-2">✅ Available</h3>
+                    <p class="text-sm text-pipeline-muted mb-2">Ready for RAG queries</p>
+                    <div class="text-2xl font-bold text-green-400" id="available-count">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        let ws = null;
+
+        // Initialize WebSocket connection
+        function connectWebSocket() {
+            try {
+                ws = new WebSocket('ws://localhost:3003');
+                
+                ws.onopen = function() {
+                    console.log('WebSocket connected');
+                    document.getElementById('connectionStatus').innerHTML = '🟢 Connected';
+                    document.getElementById('connectionStatus').className = 'px-3 py-1 rounded-lg text-xs font-medium border bg-green-500/20 border-green-500 text-green-500';
+                };
+                
+                ws.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    console.log('WebSocket message:', data);
+                    updatePipelineVisualization(data);
+                };
+                
+                ws.onclose = function() {
+                    console.log('WebSocket disconnected');
+                    document.getElementById('connectionStatus').innerHTML = '🔴 Disconnected';
+                    document.getElementById('connectionStatus').className = 'px-3 py-1 rounded-lg text-xs font-medium border bg-red-500/20 border-red-500 text-red-500';
+                    
+                    // Reconnect after 3 seconds
+                    setTimeout(connectWebSocket, 3000);
+                };
+                
+                ws.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                };
+            } catch (error) {
+                console.error('Failed to connect WebSocket:', error);
+                // Fallback to HTTP polling
+                setTimeout(loadFiles, 1000);
+            }
+        }
+
+        // Load files from API
+        async function loadFiles() {
+            try {
+                const response = await fetch('/api/recent-records');
+                const files = await response.json();
+                
+                displayFiles(files);
+                
+                // If no WebSocket, poll every 5 seconds
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                    setTimeout(loadFiles, 5000);
+                }
+            } catch (error) {
+                console.error('Failed to load files:', error);
+                setTimeout(loadFiles, 10000);
+            }
+        }
+
+        // Display files in sidebar
+        function displayFiles(files) {
+            const filesList = document.getElementById('filesList');
+            
+            // Group files by status
+            const processing = files.filter(f => f.processing_status === 'processing' || f.processing_status === 'pending');
+            const completed = files.filter(f => f.processing_status === 'completed');
+            
+            let html = '';
+            
+            if (processing.length > 0) {
+                html += '<h3 class="text-sm font-medium text-pipeline-muted mb-2">🟡 Processing</h3>';
+                processing.forEach(file => {
+                    const fileName = getFileName(file.url || file.title || 'Unknown');
+                    const isSelected = selectedFile && selectedFile.id === file.id;
+                    
+                    html += `
+                        <div class="file-item p-3 rounded-lg border cursor-pointer transition-all ${isSelected ? 'bg-pipeline-primary/20 border-pipeline-primary' : 'bg-pipeline-bg/50 border-pipeline-primary/20 hover:border-pipeline-primary/40'}" 
+                             onclick="selectFile(${JSON.stringify(file).replace(/"/g, '&quot;')})">
+                            <div class="flex items-center gap-2 mb-1">
+                                <div class="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                                <span class="text-sm font-medium text-pipeline-text truncate">${fileName}</span>
+                            </div>
+                            <div class="text-xs text-pipeline-muted">Processing...</div>
+                        </div>
+                    `;
+                });
+            }
+            
+            if (completed.length > 0) {
+                html += '<h3 class="text-sm font-medium text-pipeline-muted mb-2 mt-4">🟢 Completed</h3>';
+                completed.slice(0, 10).forEach(file => {
+                    const fileName = getFileName(file.url || file.title || 'Unknown');
+                    const isSelected = selectedFile && selectedFile.id === file.id;
+                    
+                    html += `
+                        <div class="file-item p-3 rounded-lg border cursor-pointer transition-all ${isSelected ? 'bg-pipeline-primary/20 border-pipeline-primary' : 'bg-pipeline-bg/50 border-pipeline-primary/20 hover:border-pipeline-primary/40'}" 
+                             onclick="selectFile(${JSON.stringify(file).replace(/"/g, '&quot;')})">
+                            <div class="flex items-center gap-2 mb-1">
+                                <div class="w-2 h-2 bg-green-400 rounded-full"></div>
+                                <span class="text-sm font-medium text-pipeline-text truncate">${fileName}</span>
+                            </div>
+                            <div class="text-xs text-pipeline-muted">Complete</div>
+                        </div>
+                    `;
+                });
+            }
+            
+            filesList.innerHTML = html;
+        }
+
+        // Select a file and update pipeline view
+        function selectFile(file) {
+            selectedFile = file;
+            updateSelectedFileInfo(file);
+            updatePipelineForFile(file);
+            
+            // Re-render files to update selection
+            loadFiles();
+        }
+
+        // Update selected file info
+        function updateSelectedFileInfo(file) {
+            const info = document.getElementById('selectedFileInfo');
+            const fileName = getFileName(file.url || file.title || 'Unknown');
+            
+            info.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="font-semibold text-pipeline-text">${fileName}</h3>
+                        <p class="text-sm text-pipeline-muted">
+                            Status: <span class="capitalize">${file.processing_status || 'Unknown'}</span>
+                        </p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-2xl font-bold text-pipeline-primary">84%</div>
+                        <div class="text-sm text-pipeline-muted">7956/9508 chunks</div>
+                    </div>
+                </div>
+                <div class="w-full bg-pipeline-bg rounded-full h-2 mt-3">
+                    <div class="bg-gradient-to-r from-pipeline-primary to-pipeline-accent h-2 rounded-full transition-all duration-300" style="width: 84%"></div>
+                </div>
+            `;
+        }
+
+        // Update pipeline visualization for selected file
+        function updatePipelineForFile(file) {
+            // Simulate pipeline stages for the processing file
+            if (file.processing_status === 'processing') {
+                // Show processing animation
+                document.getElementById('stage-queue').classList.add('completed');
+                document.getElementById('stage-context').classList.add('processing');
+                document.getElementById('stage-prepend').classList.add('completed');
+                document.getElementById('stage-embeddings').classList.add('processing');
+                document.getElementById('stage-bm25').classList.remove('completed', 'processing');
+                document.getElementById('stage-available').classList.remove('completed', 'processing');
+                
+                // Update counts
+                document.getElementById('queue-count').textContent = '0';
+                document.getElementById('context-count').textContent = '1564';
+                document.getElementById('prepend-count').textContent = '7956';
+                document.getElementById('embeddings-count').textContent = '7956';
+                document.getElementById('bm25-count').textContent = '0';
+                document.getElementById('available-count').textContent = '0';
+            } else {
+                // Show completed state
+                ['queue', 'context', 'prepend', 'embeddings', 'bm25', 'available'].forEach(stage => {
+                    document.getElementById(`stage-${stage}`).classList.add('completed');
+                    document.getElementById(`stage-${stage}`).classList.remove('processing');
+                });
+                
+                document.getElementById('available-count').textContent = '9508';
+            }
+        }
+
+        // Update pipeline from WebSocket data
+        function updatePipelineVisualization(data) {
+            if (data.type === 'pipeline_update' && selectedFile) {
+                // Handle real-time updates
+                console.log('Pipeline update:', data);
+            }
+        }
+
+        // Utility function to get filename
+        function getFileName(name) {
+            if (name.startsWith('http')) {
+                try {
+                    const url = new URL(name);
+                    return url.pathname.split('/').pop() || url.hostname;
+                } catch {
+                    return name.slice(-30);
+                }
+            }
+            return name.length > 30 ? '...' + name.slice(-30) : name;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            connectWebSocket();
+            loadFiles();
+        });
+    </script>
+</body>
+</html>

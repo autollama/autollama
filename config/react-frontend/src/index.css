@@ -1,0 +1,312 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  body {
+    @apply bg-gray-900 text-white min-h-screen;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+  
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #4b5563 #1f2937;
+  }
+  
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  *::-webkit-scrollbar-track {
+    @apply bg-gray-800 rounded;
+  }
+  
+  *::-webkit-scrollbar-thumb {
+    @apply bg-gray-600 rounded;
+  }
+  
+  *::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-500 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 flex items-center gap-2;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 flex items-center gap-2;
+  }
+  
+  .input-primary {
+    @apply bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-full;
+  }
+  
+  .card {
+    @apply bg-gray-800 bg-opacity-50 rounded-xl backdrop-blur-sm border border-gray-700 p-6;
+  }
+  
+  .modal-overlay {
+    @apply fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center p-4 z-50;
+    animation: fadeIn 0.3s ease;
+  }
+  
+  .modal-content {
+    @apply bg-gray-900 text-white rounded-2xl shadow-2xl border border-gray-700 max-h-[90vh] overflow-hidden;
+    animation: slideUp 0.3s ease;
+  }
+  
+  .document-block {
+    @apply transition-all duration-300 cursor-pointer;
+  }
+  
+  .document-block:hover {
+    @apply transform -translate-y-1 shadow-lg shadow-primary-500/20;
+  }
+  
+  .chunk-cell {
+    @apply transition-all duration-200 cursor-pointer;
+  }
+  
+  .chunk-cell:hover {
+    @apply transform scale-110 z-10;
+  }
+  
+  .vector-heatmap {
+    @apply flex h-10 bg-gray-800 rounded-lg overflow-hidden;
+  }
+  
+  .vector-dimension {
+    @apply flex-grow min-w-[1px] transition-all duration-100;
+  }
+}
+
+@layer utilities {
+  .bg-pattern {
+    background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23374151' fill-opacity='0.05' fill-rule='evenodd'%3E%3Cpath d='m0 40l40-40h-40v40zm40 0v-40h-40l40 40z'/%3E%3C/g%3E%3C/svg%3E");
+  }
+  
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent;
+  }
+  
+  .glass {
+    @apply bg-white bg-opacity-5 backdrop-blur-md border border-white border-opacity-10;
+  }
+  
+  /* Custom grid columns for chunk display */
+  .grid-cols-15 {
+    grid-template-columns: repeat(15, minmax(0, 1fr));
+  }
+  .grid-cols-16 {
+    grid-template-columns: repeat(16, minmax(0, 1fr));
+  }
+  .grid-cols-20 {
+    grid-template-columns: repeat(20, minmax(0, 1fr));
+  }
+  .grid-cols-24 {
+    grid-template-columns: repeat(24, minmax(0, 1fr));
+  }
+
+  /* Chunk glow and animation effects */
+  .chunk-glow {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 
+                0 1px 3px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    animation: breathe 4s ease-in-out infinite;
+  }
+
+  .chunk-glow:hover {
+    transform: scale(1.08) translateY(-1px);
+    box-shadow: 0 0 20px currentColor, 
+                0 0 40px rgba(255, 255, 255, 0.1),
+                0 4px 12px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    z-index: 20;
+  }
+
+  .chunk-completed {
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.3),
+                0 1px 3px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .chunk-completed:hover {
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.6),
+                0 0 40px rgba(34, 197, 94, 0.3),
+                0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  .chunk-processing {
+    box-shadow: 0 0 8px rgba(251, 191, 36, 0.4),
+                0 1px 3px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .chunk-pulse {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  .chunk-error {
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.4),
+                0 1px 3px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .chunk-error:hover {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.6),
+                0 0 40px rgba(239, 68, 68, 0.3),
+                0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  .chunk-queued {
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.3),
+                0 1px 3px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .chunk-queued:hover {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.5),
+                0 0 40px rgba(59, 130, 246, 0.2),
+                0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  @keyframes breathe {
+    0%, 100% { 
+      opacity: 0.9;
+      transform: scale(1);
+    }
+    50% { 
+      opacity: 1;
+      transform: scale(1.02);
+    }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { 
+      box-shadow: 0 0 8px rgba(251, 191, 36, 0.4),
+                  0 1px 3px rgba(0, 0, 0, 0.3),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    50% { 
+      box-shadow: 0 0 20px rgba(251, 191, 36, 0.8),
+                  0 0 40px rgba(251, 191, 36, 0.4),
+                  0 1px 3px rgba(0, 0, 0, 0.3),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  @keyframes slide-in-from-left {
+    0% {
+      transform: translateX(-100%) scale(0.9);
+      opacity: 0;
+    }
+    60% {
+      transform: translateX(0) scale(1.05);
+      opacity: 0.9;
+    }
+    100% {
+      transform: translateX(0) scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes highlight-new-document {
+    0% {
+      border-color: #3b82f6;
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.8),
+                  0 0 40px rgba(59, 130, 246, 0.4),
+                  0 1px 3px rgba(0, 0, 0, 0.3);
+      background-color: rgba(59, 130, 246, 0.1);
+    }
+    50% {
+      border-color: #2563eb;
+      box-shadow: 0 0 30px rgba(37, 99, 235, 1),
+                  0 0 60px rgba(37, 99, 235, 0.6),
+                  0 1px 3px rgba(0, 0, 0, 0.3);
+      background-color: rgba(37, 99, 235, 0.15);
+    }
+    100% {
+      border-color: #3b82f6;
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.8),
+                  0 0 40px rgba(59, 130, 246, 0.4),
+                  0 1px 3px rgba(0, 0, 0, 0.3);
+      background-color: rgba(59, 130, 246, 0.1);
+    }
+  }
+
+  @keyframes fade-to-normal {
+    0% {
+      border-color: #3b82f6;
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.8),
+                  0 0 40px rgba(59, 130, 246, 0.4);
+      background-color: rgba(59, 130, 246, 0.1);
+    }
+    100% {
+      border-color: var(--normal-border, #4b5563);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      background-color: var(--normal-bg, #374151);
+    }
+  }
+
+  @keyframes shift-right {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(4px);
+    }
+  }
+
+  @keyframes mempool-glow {
+    0% {
+      box-shadow: 0 0 10px rgba(34, 197, 94, 0.6),
+                  0 0 20px rgba(34, 197, 94, 0.4),
+                  0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.8),
+                  0 0 40px rgba(34, 197, 94, 0.6),
+                  0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+    100% {
+      box-shadow: 0 0 10px rgba(34, 197, 94, 0.6),
+                  0 0 20px rgba(34, 197, 94, 0.4),
+                  0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  /* Animation utility classes */
+  .animate-slide-in-from-left {
+    animation: slide-in-from-left 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  }
+
+  .animate-highlight-new {
+    animation: highlight-new-document 1.5s ease-in-out infinite;
+  }
+
+  .animate-fade-to-normal {
+    animation: fade-to-normal 1s ease-out forwards;
+  }
+
+  .animate-shift-right {
+    animation: shift-right 0.3s ease-out forwards;
+  }
+
+  .animate-mempool-glow {
+    animation: mempool-glow 2s ease-in-out infinite;
+  }
+
+  .animate-processing {
+    animation: breathe 2s ease-in-out infinite;
+  }
+}
