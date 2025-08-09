@@ -1,0 +1,38 @@
+{
+  "name": "autollama",
+  "version": "2.3.0",
+  "description": "Intelligent RAG platform for document processing and contextual search with advanced AI analysis",
+  "keywords": [
+    "rag",
+    "llm",
+    "embeddings",
+    "vector-search", 
+    "openai",
+    "document-processing",
+    "semantic-search",
+    "ai",
+    "contextual-embeddings",
+    "qdrant"
+  ],
+  "homepage": "https://github.com/your-username/autollama#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/autollama.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/autollama/issues"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "AutoLlama Team",
+    "url": "https://github.com/your-username/autollama"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.57.0",
+    "dotenv": "^17.2.1",
+    "pg": "^8.16.3"
+  }
+}

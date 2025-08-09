@@ -1,0 +1,1002 @@
+version: '3.8'
+
+# Production Docker Compose Configuration for AutoLlama v2.1
+# This configuration provides high availability, security, and performance
+# optimizations for production deployments.
+
+services:
+  # Nginx Load Balancer
+  nginx-lb:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/nginx/production.conf:/etc/nginx/nginx.conf:ro
+      - ./config/nginx/ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+      - ./config/nginx/cache:/var/cache/nginx
+    depends_on:
+      - autollama-frontend-1
+      - autollama-frontend-2
+    restart: unless-stopped
+    networks:
+      - autollama-frontend
+      - autollama-monitoring
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # React Frontend Instances (High Availability)
+  autollama-frontend-1:
+    build: 
+      context: ./config/react-frontend
+      dockerfile: Dockerfile.prod
+      args:
+        - NODE_ENV=production
+        - BUILD_VERSION=${BUILD_VERSION:-latest}
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_API_URL=${REACT_APP_API_URL:-/api}
+      - REACT_APP_VERSION=${BUILD_VERSION:-2.1.0}
+    volumes:
+      - ./logs/frontend:/var/log/nginx
+    restart: unless-stopped
+    networks:
+      - autollama-frontend
+      - autollama-backend
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+      update_config:
+        parallelism: 1
+        delay: 30s
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  autollama-frontend-2:
+    build: 
+      context: ./config/react-frontend
+      dockerfile: Dockerfile.prod
+      args:
+        - NODE_ENV=production
+        - BUILD_VERSION=${BUILD_VERSION:-latest}
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_API_URL=${REACT_APP_API_URL:-/api}
+      - REACT_APP_VERSION=${BUILD_VERSION:-2.1.0}
+    volumes:
+      - ./logs/frontend:/var/log/nginx
+    restart: unless-stopped
+    networks:
+      - autollama-frontend
+      - autollama-backend
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+      update_config:
+        parallelism: 1
+        delay: 30s
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # API Services (High Availability with Load Balancing)
+  autollama-api-1:
+    build: 
+      context: ./api
+      dockerfile: Dockerfile.prod
+      args:
+        - NODE_ENV=production
+        - BUILD_VERSION=${BUILD_VERSION:-latest}
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - WS_PORT=3003
+      - INSTANCE_ID=api-1
+      - CLUSTER_MODE=true
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - QDRANT_URL=${QDRANT_URL}
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+      - ENABLE_CONTEXTUAL_EMBEDDINGS=${ENABLE_CONTEXTUAL_EMBEDDINGS:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - PROMETHEUS_ENABLED=true
+      - PROMETHEUS_PORT=9090
+    volumes:
+      - ./logs/api:/app/logs
+      - /opt/autollama/secrets:/run/secrets:ro
+    restart: unless-stopped
+    networks:
+      - autollama-backend
+      - autollama-data
+      - autollama-monitoring
+    depends_on:
+      - postgres-primary
+      - redis-primary
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+      update_config:
+        parallelism: 1
+        delay: 60s
+        failure_action: rollback
+        monitor: 60s
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 90s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  autollama-api-2:
+    build: 
+      context: ./api
+      dockerfile: Dockerfile.prod
+      args:
+        - NODE_ENV=production
+        - BUILD_VERSION=${BUILD_VERSION:-latest}
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - WS_PORT=3003
+      - INSTANCE_ID=api-2
+      - CLUSTER_MODE=true
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - QDRANT_URL=${QDRANT_URL}
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+      - ENABLE_CONTEXTUAL_EMBEDDINGS=${ENABLE_CONTEXTUAL_EMBEDDINGS:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - PROMETHEUS_ENABLED=true
+      - PROMETHEUS_PORT=9090
+    volumes:
+      - ./logs/api:/app/logs
+      - /opt/autollama/secrets:/run/secrets:ro
+    restart: unless-stopped
+    networks:
+      - autollama-backend
+      - autollama-data
+      - autollama-monitoring
+    depends_on:
+      - postgres-primary
+      - redis-primary
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+      update_config:
+        parallelism: 1
+        delay: 60s
+        failure_action: rollback
+        monitor: 60s
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 90s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  autollama-api-3:
+    build: 
+      context: ./api
+      dockerfile: Dockerfile.prod
+      args:
+        - NODE_ENV=production
+        - BUILD_VERSION=${BUILD_VERSION:-latest}
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - WS_PORT=3003
+      - INSTANCE_ID=api-3
+      - CLUSTER_MODE=true
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - QDRANT_URL=${QDRANT_URL}
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+      - ENABLE_CONTEXTUAL_EMBEDDINGS=${ENABLE_CONTEXTUAL_EMBEDDINGS:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - PROMETHEUS_ENABLED=true
+      - PROMETHEUS_PORT=9090
+    volumes:
+      - ./logs/api:/app/logs
+      - /opt/autollama/secrets:/run/secrets:ro
+    restart: unless-stopped
+    networks:
+      - autollama-backend
+      - autollama-data
+      - autollama-monitoring
+    depends_on:
+      - postgres-primary
+      - redis-primary
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+      update_config:
+        parallelism: 1
+        delay: 60s
+        failure_action: rollback
+        monitor: 60s
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 90s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # BM25 Search Services (High Availability)
+  autollama-bm25-1:
+    build: 
+      context: ./bm25-service
+      dockerfile: Dockerfile.prod
+    environment:
+      - PORT=3002
+      - PYTHONPATH=/app
+      - REDIS_URL=${REDIS_URL}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - INSTANCE_ID=bm25-1
+    volumes:
+      - autollama-bm25-data:/app/data/bm25_indices
+      - ./logs/bm25:/app/logs
+    restart: unless-stopped
+    networks:
+      - autollama-backend
+      - autollama-data
+      - autollama-monitoring
+    depends_on:
+      - redis-primary
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+      update_config:
+        parallelism: 1
+        delay: 30s
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:3002/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  autollama-bm25-2:
+    build: 
+      context: ./bm25-service
+      dockerfile: Dockerfile.prod
+    environment:
+      - PORT=3002
+      - PYTHONPATH=/app
+      - REDIS_URL=${REDIS_URL}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - INSTANCE_ID=bm25-2
+    volumes:
+      - autollama-bm25-data:/app/data/bm25_indices
+      - ./logs/bm25:/app/logs
+    restart: unless-stopped
+    networks:
+      - autollama-backend
+      - autollama-data
+      - autollama-monitoring
+    depends_on:
+      - redis-primary
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+      update_config:
+        parallelism: 1
+        delay: 30s
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:3002/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # PostgreSQL Primary Database
+  postgres-primary:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-autollama_prod}
+      - POSTGRES_USER=${POSTGRES_USER:-autollama_user}
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
+      - POSTGRES_INITDB_ARGS=--auth-host=md5 --encoding=UTF8 --locale=en_US.UTF-8
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-primary-data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+      - ./database/config/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./logs/postgres:/var/log/postgresql
+      - /opt/autollama/secrets/db-password:/run/secrets/db-password:ro
+    restart: unless-stopped
+    networks:
+      - autollama-data
+      - autollama-monitoring
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+          cpus: '4.0'
+        reservations:
+          memory: 4G
+          cpus: '2.0'
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-autollama_user} -d ${POSTGRES_DB:-autollama_prod}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    command: >
+      postgres
+      -c config_file=/etc/postgresql/postgresql.conf
+      -c shared_preload_libraries=pg_stat_statements
+      -c pg_stat_statements.track=all
+      -c max_connections=200
+      -c shared_buffers=2GB
+      -c effective_cache_size=6GB
+      -c maintenance_work_mem=512MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=32MB
+      -c min_wal_size=2GB
+      -c max_wal_size=8GB
+      -c log_min_duration_statement=1000
+      -c log_line_prefix='%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
+      -c log_checkpoints=on
+      -c log_connections=on
+      -c log_disconnections=on
+      -c log_lock_waits=on
+      -c log_temp_files=0
+      -c track_activities=on
+      -c track_counts=on
+      -c track_io_timing=on
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # PostgreSQL Read Replica
+  postgres-replica:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-autollama_prod}
+      - POSTGRES_USER=${POSTGRES_USER:-autollama_user}
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
+      - PGUSER=postgres
+      - PGPASSWORD_FILE=/run/secrets/db-password
+    volumes:
+      - postgres-replica-data:/var/lib/postgresql/data
+      - ./database/config/recovery.conf:/var/lib/postgresql/data/recovery.conf:ro
+      - ./logs/postgres-replica:/var/log/postgresql
+      - /opt/autollama/secrets/db-password:/run/secrets/db-password:ro
+    restart: unless-stopped
+    networks:
+      - autollama-data
+      - autollama-monitoring
+    depends_on:
+      - postgres-primary
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+          cpus: '2.0'
+        reservations:
+          memory: 3G
+          cpus: '1.0'
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-autollama_user} -d ${POSTGRES_DB:-autollama_prod}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis Primary
+  redis-primary:
+    image: redis:7-alpine
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 4gb
+      --maxmemory-policy allkeys-lru
+      --tcp-keepalive 60
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --slowlog-log-slower-than 10000
+      --slowlog-max-len 128
+      --latency-monitor-threshold 100
+      --notify-keyspace-events Ex
+      --client-output-buffer-limit normal 0 0 0
+      --client-output-buffer-limit replica 256mb 64mb 60
+      --client-output-buffer-limit pubsub 32mb 8mb 60
+    volumes:
+      - redis-primary-data:/data
+      - ./logs/redis:/var/log/redis
+      - ./config/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    restart: unless-stopped
+    networks:
+      - autollama-data
+      - autollama-monitoring
+    deploy:
+      resources:
+        limits:
+          memory: 5G
+          cpus: '2.0'
+        reservations:
+          memory: 4G
+          cpus: '1.0'
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ["CMD", "redis-cli", "--latency-history", "-i", "1", "-c", "1", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis Sentinel (for automatic failover)
+  redis-sentinel:
+    image: redis:7-alpine
+    command: redis-sentinel /usr/local/etc/redis/sentinel.conf
+    volumes:
+      - ./config/redis/sentinel.conf:/usr/local/etc/redis/sentinel.conf:ro
+      - ./logs/redis-sentinel:/var/log/redis
+    restart: unless-stopped
+    networks:
+      - autollama-data
+      - autollama-monitoring
+    depends_on:
+      - redis-primary
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "26379", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # Tailscale VPN (Production)
+  autollama-tailscale:
+    image: tailscale/tailscale:latest
+    hostname: ${TAILSCALE_HOSTNAME:-autollama-prod}
+    environment:
+      - TS_EXTRA_ARGS=--auth-key file:/run/secrets/tsauthkey --hostname ${TAILSCALE_HOSTNAME:-autollama-prod} --accept-routes
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+      - TS_ACCEPT_DNS=true
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+      - /opt/autollama/secrets/tsauthkey:/run/secrets/tsauthkey:ro
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - net_admin
+    restart: unless-stopped
+    networks:
+      - autollama-vpn
+      - autollama-monitoring
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD", "tailscale", "status"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # Monitoring & Observability
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.size=50GB'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+      - '--web.enable-remote-write-receiver'
+    restart: unless-stopped
+    networks:
+      - autollama-monitoring
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD_FILE=/run/secrets/grafana-password
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana:/etc/grafana/provisioning:ro
+      - /opt/autollama/secrets/grafana-password:/run/secrets/grafana-password:ro
+    restart: unless-stopped
+    networks:
+      - autollama-monitoring
+    depends_on:
+      - prometheus
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Node Exporter (System Metrics)
+  node-exporter:
+    image: prom/node-exporter:latest
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
+    networks:
+      - autollama-monitoring
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # Log Aggregation
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.0
+    environment:
+      - node.name=elasticsearch
+      - cluster.name=autollama-logs
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+      - ./logs/elasticsearch:/usr/share/elasticsearch/logs
+    restart: unless-stopped
+    networks:
+      - autollama-monitoring
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.10.0
+    volumes:
+      - ./config/logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./config/logstash/config:/usr/share/logstash/config:ro
+      - ./logs:/var/log/autollama:ro
+    restart: unless-stopped
+    networks:
+      - autollama-monitoring
+    depends_on:
+      - elasticsearch
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9600/_node/stats"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.10.0
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - SERVER_NAME=autollama-kibana
+      - SERVER_PUBLICBASEURL=http://localhost:5601
+    volumes:
+      - kibana-data:/usr/share/kibana/data
+    restart: unless-stopped
+    networks:
+      - autollama-monitoring
+    depends_on:
+      - elasticsearch
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5601/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Persistent Volumes
+volumes:
+  postgres-primary-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/autollama/data/postgres-primary
+  postgres-replica-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/autollama/data/postgres-replica
+  redis-primary-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/autollama/data/redis-primary
+  autollama-bm25-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/autollama/data/bm25
+  tailscale-state:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/autollama/data/tailscale
+  prometheus-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/autollama/data/prometheus
+  grafana-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/autollama/data/grafana
+  elasticsearch-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/autollama/data/elasticsearch
+  kibana-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/autollama/data/kibana
+
+# Networks
+networks:
+  autollama-frontend:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.1.0/24
+  autollama-backend:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.2.0/24
+  autollama-data:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.20.3.0/24
+  autollama-vpn:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.4.0/24
+  autollama-monitoring:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.5.0/24
+
+# Configuration for Docker Swarm (optional)
+configs:
+  nginx_config:
+    file: ./config/nginx/production.conf
+  postgres_config:
+    file: ./database/config/postgresql.conf
+  prometheus_config:
+    file: ./config/prometheus/prometheus.yml
+  grafana_config:
+    file: ./config/grafana/grafana.ini
+
+# Secrets for production deployment
+secrets:
+  db-password:
+    file: /opt/autollama/secrets/db-password
+  grafana-password:
+    file: /opt/autollama/secrets/grafana-password
+  tsauthkey:
+    file: /opt/autollama/secrets/tsauthkey

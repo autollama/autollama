@@ -1,0 +1,136 @@
+[{
+    "createdAt": "2025-07-12T13:00:01.932Z",
+    "updatedAt": "2025-07-14T10:00:00.000Z",
+    "id": "E7Ln37qRBNr0jaii",
+    "name": "autollama.io",
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "parameters": { "url": "={{ $json.body.url }}", "options": {} },
+            "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [-320, 0],
+            "id": "5996ab02-796e-4d9c-845c-a439b18fff27", "name": "HTTP Request"
+        },
+        {
+            "parameters": { "html": "={{ $json.data }}", "options": {} },
+            "type": "n8n-nodes-base.markdown", "typeVersion": 1, "position": [-40, 0],
+            "id": "df074304-51a8-47ad-8f64-1d672510d5e2", "name": "Markdown"
+        },
+        {
+            "parameters": {
+                "jsCode": "const content = $input.item.json.data;\nconst chunkSize = 1200;\nconst overlap = 200;\nconst chunks = [];\nif (!content || content.length === 0) {\n  return [{ json: { error: \"No content to chunk\" } }];\n}\nconst cleanContent = content.replace(/\\s+/g, ' ').trim();\nfunction generateUUID() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\nfor (let i = 0; i < cleanContent.length; i += chunkSize - overlap) {\n  const chunk = cleanContent.slice(i, i + chunkSize);\n  const chunkId = generateUUID();\n  chunks.push({\n    chunk_text: chunk.trim(),\n    chunk_id: chunkId,\n    chunk_index: Math.floor(i / (chunkSize - overlap)),\n    original_url: $('Webhook').item.json.body.url,\n    total_chunks: Math.ceil(cleanContent.length / (chunkSize - overlap))\n  });\n}\nreturn chunks.map(chunk => ({ json: chunk }));"
+            },
+            "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [220, 0],
+            "id": "106a703a-b316-4e07-bada-88f11cc5a473", "name": "Text Chunker"
+        },
+        {
+            "parameters": {
+                "modelId": { "__rl": true, "value": "gpt-4o-mini", "mode": "list" },
+                "messages": { "values": [
+                    { "content": "You are a RAG content analyzer...", "role": "system" },
+                    { "content": "Process this text chunk: {{ $('Text Chunker').item.json.chunk_text }}", "role": "user" }
+                ]},
+                "jsonOutput": true, "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.openAi", "typeVersion": 1.8, "position": [400, 0],
+            "id": "3cc9b5e7-75e3-45c2-b727-79ffb323f53a", "name": "Message a model",
+            "credentials": { "openAiApi": { "id": "ch5f5peXcVJq7Hem", "name": "OpenAi account" } }
+        },
+        {
+            "parameters": {
+                "method": "POST", "url": "https://api.openai.com/v1/embeddings", "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "openAiApi", "sendHeaders": true, "headerParameters": { "parameters": [{"name": "Content-Type", "value": "application/json"}] },
+                "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify({ model: \"text-embedding-3-small\", input: $('Text Chunker').item.json.chunk_text }) }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [-80, 320],
+            "id": "176c3804-c38f-4192-8cb7-15557b4b413a", "name": "Generate Embedding",
+            "credentials": { "openAiApi": { "id": "ch5f5peXcVJq7Hem", "name": "OpenAi account" } }
+        },
+        {
+            "parameters": {
+                const embedding = $input.item.json.data[0].embedding;
+const chunkData = $('Text Chunker').item.json;
+const analysisData = $('Message a model').item.json.message.content;
+return [{ 
+  json: {
+    ...chunkData,
+    ...analysisData,
+    embedding: embedding
+  }
+}];
+            },
+            "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [120, 320],
+            "id": "262a7874-daad-45d6-a93a-74ee367c337b", "name": "Extract Embedding"
+        },
+        {
+            "parameters": {
+                "method": "PUT", "url": "https://c4c8ee46-d9dd-4c0f-a00e-9215675351da.us-west-1-0.aws.cloud.qdrant.io/collections/autollama-content/points",
+                "sendHeaders": true, "headerParameters": { "parameters": [{"name": "api-key", "value": "[QDRANT_API_KEY_REMOVED]"}, {"name": "Content-Type", "value": "application/json"}] },
+                "sendBody": true, "contentType": "raw",
+                "body": "={{ JSON.stringify({ points: [{ id: $json.chunk_id, vector: $json.embedding, payload: { url: $json.original_url, title: $json.title, chunk_text: $json.chunk_text, chunk_index: $json.chunk_index, summary: $json.summary, category: $json.category, tags: $json.tags, key_concepts: $json.key_concepts, content_type: $json.content_type, technical_level: $json.technical_level, processed_date: new Date().toISOString() } }] }) }}",
+                "options": {}, "alwaysOutputData": true
+            },
+            "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [340, 320],
+            "id": "ee844e8a-0d53-48b3-99f2-a48980994f12", "name": "Store in Qdrant"
+        },
+        {
+            "parameters": {
+                "assignments": { "assignments": [
+                    { "id": "0ffd53d8-de29-4c3a-8d14-d26a289f74e9", "name": "url", "value": "={{ $input.item.json.original_url }}", "type": "string" },
+                    { "id": "4afd2da1-9933-48d1-bf67-6697ea05c6e4", "name": "title", "value": "={{ $input.item.json.title }}", "type": "string" },
+                    { "id": "91d3ed49-f0ce-42b9-937f-15a16778d675", "name": "summary", "value": "={{ $input.item.json.summary }}", "type": "string" },
+                    { "id": "e1490e60-37ef-40a9-abd9-03349b85c4de", "name": "category", "value": "={{ $input.item.json.category }}", "type": "string" },
+                    { "id": "82de3fac-311e-4264-a8ee-d914d4fcd3df", "name": "tags", "value": "={{ $input.item.json.tags.join(', ') }}", "type": "string" },
+                    { "id": "d21b7761-a4a7-49f1-8ac4-384a69eff6f3", "name": "key_concepts", "value": "={{ $input.item.json.key_concepts.join(', ') }}", "type": "string" },
+                    { "id": "8e0a836b-567f-4d64-b22c-adc1a7a18f7f", "name": "content_type", "value": "={{ $input.item.json.content_type }}", "type": "string" },
+                    { "id": "12bf7680-528b-4c1b-8190-b31e19341b72", "name": "technical_level", "value": "={{ $input.item.json.technical_level }}", "type": "string" },
+                    { "id": "02085168-0d38-4309-98ff-24a781561c26", "name": "chunk_id", "value": "={{ $input.item.json.chunk_id }}", "type": "string" },
+                    { "id": "bf4d9c13-adf8-4c99-b255-2d016e61c5c8", "name": "chunk_text", "value": "={{ $input.item.json.chunk_text }}", "type": "string" },
+                    { "id": "173d1480-436c-42d7-b6f9-5293f04ae964", "name": "chunk_index", "value": "={{ $input.item.json.chunk_index }}", "type": "number" },
+                    { "id": "df510c42-b450-460a-8a0e-5d5f189d7eeb", "name": "Processed Date", "value": "={{ new Date().toISOString() }}", "type": "string" },
+                    { "id": "267e19a9-1127-4237-a163-55e3fe717af8", "name": "embedding_status", "value": "={{ $json.data.result.status === 'acknowledged' || $json.data.status === 'ok' ? 'complete' : 'error' }}", "type": "string" }
+                ]}, "options": {}
+            },
+            "type": "n8n-nodes-base.set", "typeVersion": 3.4, "position": [520, 320],
+            "id": "65a1c11a-761f-407f-9cbe-c9c59023ff43", "name": "Prepare Airtable Data"
+        },
+        {
+            "parameters": {
+                "operation": "create", "base": { "__rl": true, "value": "appi5lnDWjvstGsqr", "mode": "id" },
+                "table": { "__rl": true, "value": "tblrO3XjykQIqURb4", "mode": "list" },
+                "columns": { "mappingMode": "defineBelow", "value": {
+                    "Title": "={{ $json.title }}", "Summary": "={{ $json.summary }}", "Source": "autollama.io",
+                    "URL": "={{ $json.url }}", "Select": "Complete", "Category": "={{ $json.category }}",
+                    "Key Concepts": "={{ $json.key_concepts }}", "Tags": "={{ $json.tags }}",
+                    "Content Type": "={{ $json.content_type }}", "Technical Level": "={{ $json.technical_level }}",
+                    "Chunk ID": "={{ $json.chunk_id }}", "Chunk Text": "={{ $json.chunk_text }}",
+                    "Chunk Index": "={{ $json.chunk_index }}", "Date Processed": "={{ $json['Processed Date'] }}",
+                    "Embedding Status": "={{ $json.embedding_status }}"
+                }}, "options": { "typecast": true }
+            },
+            "type": "n8n-nodes-base.airtable", "typeVersion": 2.1, "position": [820, 200],
+            "id": "626ef558-cb54-44fa-a902-0ed4f1b4a9cc", "name": "Create a record",
+            "credentials": { "airtableTokenApi": { "id": "TKqS90WbVlT7DuOZ", "name": "Airtable Personal Access Token account" } }
+        },
+        {
+            "parameters": { "httpMethod": "POST", "path": "8c4cba6c-89aa-4f09-8b51-62d4a422ebba", "options": {} },
+            "type": "n8n-nodes-base.webhook", "typeVersion": 2, "position": [-640, 260],
+            "id": "efdebc26-b4ea-493a-ba32-0afcb01b9421", "name": "Webhook",
+            "webhookId": "8c4cba6c-89aa-4f09-8b51-62d4a422ebba"
+        }
+    ],
+    "connections": {
+        "HTTP Request": { "main": [[{ "node": "Markdown", "type": "main", "index": 0 }]] },
+        "Markdown": { "main": [[{ "node": "Text Chunker", "type": "main", "index": 0 }]] },
+        "Webhook": { "main": [[{ "node": "HTTP Request", "type": "main", "index": 0 }]] },
+        "Text Chunker": { "main": [[{ "node": "Message a model", "type": "main", "index": 0 }, { "node": "Generate Embedding", "type": "main", "index": 0 }]] },
+        "Message a model": { "main": [[{ "node": "Extract Embedding", "type": "main", "index": 0 }]] },
+        "Generate Embedding": { "main": [[{ "node": "Extract Embedding", "type": "main", "index": 0 }]] },
+        "Extract Embedding": { "main": [[{ "node": "Store in Qdrant", "type": "main", "index": 0 }]] },
+        "Store in Qdrant": { "main": [[{ "node": "Prepare Airtable Data", "type": "main", "index": 0 }]] },
+        "Prepare Airtable Data": { "main": [[{ "node": "Create a record", "type": "main", "index": 0 }]] }
+    },
+    "settings": { "executionOrder": "v1" },
+    "staticData": null
+}]

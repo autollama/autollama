@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoLlama File Processing Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@2.0.1/dist/chartjs-chart-treemap.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+        .file-card-grid {
+            scrollbar-width: thin;
+            scrollbar-color: #4a5568 #2d3748;
+        }
+        .file-card-grid::-webkit-scrollbar {
+            height: 8px;
+        }
+        .file-card-grid::-webkit-scrollbar-track {
+            background: #2d3748;
+            border-radius: 10px;
+        }
+        .file-card-grid::-webkit-scrollbar-thumb {
+            background-color: #4a5568;
+            border-radius: 10px;
+            border: 2px solid #2d3748;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 60vh;
+            max-height: 500px;
+        }
+    </style>
+</head>
+<body class="text-gray-200">
+
+    <div id="app" class="min-h-screen p-4 sm:p-6 lg:p-8">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-center text-white">AutoLlama File Processing Dashboard</h1>
+            <p class="text-center text-gray-400">Real-time File & Chunk Processing Visualization</p>
+        </header>
+
+        <main>
+            <!-- Dashboard View -->
+            <div id="dashboard-view">
+                <div class="mb-8 p-6 bg-gray-800/50 rounded-lg shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4 text-white">System Vitals</h2>
+                    <div id="system-vitals" class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                        <div>
+                            <p class="text-gray-400 text-sm">Queue Depth</p>
+                            <p id="queue-depth" class="text-2xl font-bold text-blue-400">0</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-sm">Avg. Processing Time</p>
+                            <p id="avg-time" class="text-2xl font-bold text-green-400">0s</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-sm">Total Chunks Processed</p>
+                            <p id="total-chunks" class="text-2xl font-bold text-yellow-400">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h2 class="text-xl font-semibold mb-4 text-white">File Processing Queue</h2>
+                    <div id="file-card-grid" class="flex overflow-x-auto space-x-4 p-4 file-card-grid">
+                    </div>
+                </div>
+            </div>
+
+            <!-- File Detail View -->
+            <div id="file-view" class="hidden">
+                <button id="back-to-dashboard" class="mb-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200">
+                    &larr; Back to Dashboard
+                </button>
+                <div class="bg-gray-800/50 rounded-lg shadow-lg p-4 sm:p-6">
+                    <h2 id="file-view-title" class="text-2xl font-bold mb-1 text-white"></h2>
+                    <p id="file-view-status" class="mb-4 text-gray-400"></p>
+                    <div class="chart-container mx-auto max-w-4xl mb-6">
+                        <canvas id="treemap-canvas"></canvas>
+                    </div>
+                    <div id="file-stats" class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center border-t border-gray-700 pt-4">
+                         <div>
+                            <p class="text-gray-400 text-sm">Total Chunks</p>
+                            <p id="file-total-chunks" class="text-2xl font-bold text-blue-400"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-sm">Processing Time</p>
+                            <p id="file-processing-time" class="text-2xl font-bold text-green-400"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-sm">File Size</p>
+                            <p id="file-size" class="text-2xl font-bold text-yellow-400"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Chunk Detail Modal -->
+    <div id="chunk-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-gray-800 rounded-lg shadow-2xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="modal-title" class="text-xl font-bold text-white">Chunk Details</h3>
+                <button id="modal-close" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div id="modal-content" class="space-y-3">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const STATUSES = {
+                QUEUED: 'Queued',
+                PROCESSING: 'Processing',
+                COMPLETED: 'Completed',
+                ERROR: 'Error'
+            };
+
+            const STATUS_COLORS = {
+                [STATUSES.QUEUED]: 'rgba(59, 130, 246, 0.7)',
+                [STATUSES.PROCESSING]: 'rgba(245, 158, 11, 0.7)',
+                [STATUSES.COMPLETED]: 'rgba(16, 185, 129, 0.7)',
+                [STATUSES.ERROR]: 'rgba(239, 68, 68, 0.7)'
+            };
+
+            const STATUS_BG_CLASSES = {
+                [STATUSES.QUEUED]: 'bg-blue-500',
+                [STATUSES.PROCESSING]: 'bg-yellow-500',
+                [STATUSES.COMPLETED]: 'bg-green-500',
+                [STATUSES.ERROR]: 'bg-red-500'
+            };
+            
+            let mockFiles = [];
+            let treemapChart = null;
+            let simulationInterval = null;
+
+            const appState = {
+                currentView: 'dashboard',
+                selectedFileId: null,
+            };
+
+            function generateMockData() {
+                mockFiles = [];
+                const fileTypes = ['document_analysis', 'research_paper', 'technical_spec', 'user_manual', 'report'];
+                
+                for (let i = 0; i < 12; i++) {
+                    const totalChunks = Math.floor(Math.random() * 200) + 30;
+                    const chunks = [];
+                    let totalSize = 0;
+                    
+                    for (let j = 0; j < totalChunks; j++) {
+                        const size = Math.floor(Math.random() * 150) + 20;
+                        totalSize += size;
+                        const statusRand = Math.random();
+                        let status;
+                        if (statusRand < 0.6) status = STATUSES.COMPLETED;
+                        else if (statusRand < 0.8) status = STATUSES.PROCESSING;
+                        else if (statusRand < 0.95) status = STATUSES.QUEUED;
+                        else status = STATUSES.ERROR;
+                        
+                        chunks.push({
+                            id: `chunk-${i}-${j}`,
+                            size: size,
+                            status: status,
+                            log: `Processing log for chunk ${j}:\n${status === STATUSES.ERROR ? 'ERROR: Failed to process content' : 'Successfully processed content block'}\nTimestamp: ${new Date().toISOString()}`
+                        });
+                    }
+                    
+                    const fileType = fileTypes[Math.floor(Math.random() * fileTypes.length)];
+                    const file = {
+                        id: `file-${i}`,
+                        name: `${fileType}_${String(i+1).padStart(3, '0')}.pdf`,
+                        chunks: chunks,
+                        totalSize: totalSize,
+                        submittedAt: new Date(Date.now() - Math.random() * 1000 * 60 * 60 * 24),
+                        processingTime: 0,
+                        startTime: null,
+                        endTime: null
+                    };
+                    updateFileStatus(file);
+                    mockFiles.push(file);
+                }
+            }
+
+            function updateFileStatus(file) {
+                const chunkStatuses = file.chunks.map(c => c.status);
+                const completedCount = chunkStatuses.filter(s => s === STATUSES.COMPLETED).length;
+                const errorCount = chunkStatuses.filter(s => s === STATUSES.ERROR).length;
+                const processingCount = chunkStatuses.filter(s => s === STATUSES.PROCESSING).length;
+                
+                if (errorCount > 0) {
+                    file.status = STATUSES.ERROR;
+                } else if (completedCount === file.chunks.length) {
+                    file.status = STATUSES.COMPLETED;
+                } else if (processingCount > 0) {
+                    file.status = STATUSES.PROCESSING;
+                } else {
+                    file.status = STATUSES.QUEUED;
+                }
+
+                if (file.status === STATUSES.PROCESSING && !file.startTime) {
+                    file.startTime = Date.now();
+                }
+
+                if (file.status === STATUSES.COMPLETED && file.startTime && !file.endTime) {
+                    file.endTime = Date.now();
+                    file.processingTime = ((file.endTime - file.startTime) / 1000).toFixed(2);
+                } else if (file.status === STATUSES.PROCESSING && file.startTime) {
+                    file.processingTime = ((Date.now() - file.startTime) / 1000).toFixed(2);
+                }
+            }
+
+            const dashboardView = document.getElementById('dashboard-view');
+            const fileView = document.getElementById('file-view');
+            const fileCardGrid = document.getElementById('file-card-grid');
+            const backToDashboardBtn = document.getElementById('back-to-dashboard');
+
+            function switchView(viewName, fileId = null) {
+                appState.currentView = viewName;
+                appState.selectedFileId = fileId;
+
+                if (viewName === 'dashboard') {
+                    dashboardView.classList.remove('hidden');
+                    fileView.classList.add('hidden');
+                    if (treemapChart) {
+                        treemapChart.destroy();
+                        treemapChart = null;
+                    }
+                } else if (viewName === 'file') {
+                    dashboardView.classList.add('hidden');
+                    fileView.classList.remove('hidden');
+                    renderFileView(fileId);
+                }
+            }
+
+            function formatTimeAgo(date) {
+                const seconds = Math.floor((new Date() - date) / 1000);
+                let interval = seconds / 31536000;
+                if (interval > 1) return Math.floor(interval) + " years ago";
+                interval = seconds / 2592000;
+                if (interval > 1) return Math.floor(interval) + " months ago";
+                interval = seconds / 86400;
+                if (interval > 1) return Math.floor(interval) + " days ago";
+                interval = seconds / 3600;
+                if (interval > 1) return Math.floor(interval) + " hours ago";
+                interval = seconds / 60;
+                if (interval > 1) return Math.floor(interval) + " minutes ago";
+                return Math.floor(seconds) + " seconds ago";
+            }
+
+            function renderDashboard() {
+                fileCardGrid.innerHTML = '';
+                let totalChunksProcessed = 0;
+                let totalProcessingTime = 0;
+                let completedFilesCount = 0;
+
+                mockFiles.forEach(file => {
+                    updateFileStatus(file);
+                    const card = document.createElement('div');
+                    card.className = 'file-card flex-shrink-0 w-64 bg-gray-800 p-4 rounded-lg shadow-md cursor-pointer hover:bg-gray-700 transition-colors duration-200 border border-gray-700';
+                    card.dataset.fileId = file.id;
+
+                    const completedChunks = file.chunks.filter(c => c.status === STATUSES.COMPLETED).length;
+                    totalChunksProcessed += completedChunks;
+                    const progress = (completedChunks / file.chunks.length) * 100;
+                    
+                    if(file.status === STATUSES.COMPLETED) {
+                        totalProcessingTime += parseFloat(file.processingTime);
+                        completedFilesCount++;
+                    }
+
+                    const statusColor = file.status === STATUSES.COMPLETED ? 'text-green-400' : 
+                                       file.status === STATUSES.ERROR ? 'text-red-400' : 
+                                       file.status === STATUSES.PROCESSING ? 'text-yellow-400' : 'text-blue-400';
+
+                    card.innerHTML = `
+                        <h3 class="font-bold text-md truncate text-white mb-2">${file.name}</h3>
+                        <p class="text-sm text-gray-400 mb-2">Status: <span class="font-semibold ${statusColor}">${file.status}</span></p>
+                        <p class="text-sm text-gray-400">Chunks: ${file.chunks.length}</p>
+                        <p class="text-sm text-gray-400">Size: ${(file.totalSize / 1024).toFixed(1)} KB</p>
+                        <p class="text-sm text-gray-400 mb-3">Submitted: ${formatTimeAgo(file.submittedAt)}</p>
+                        <div class="w-full bg-gray-600 rounded-full h-2.5">
+                            <div class="${STATUS_BG_CLASSES[file.status]} h-2.5 rounded-full transition-all duration-300" style="width: ${progress}%"></div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">${progress.toFixed(1)}% complete</p>
+                    `;
+                    fileCardGrid.appendChild(card);
+                });
+                
+                document.getElementById('queue-depth').textContent = mockFiles.filter(f => f.status !== STATUSES.COMPLETED).length;
+                document.getElementById('total-chunks').textContent = totalChunksProcessed.toLocaleString();
+                document.getElementById('avg-time').textContent = completedFilesCount > 0 ? `${(totalProcessingTime / completedFilesCount).toFixed(2)}s` : 'N/A';
+            }
+            
+            function renderFileView(fileId) {
+                const file = mockFiles.find(f => f.id === fileId);
+                if (!file) return;
+
+                document.getElementById('file-view-title').textContent = file.name;
+                document.getElementById('file-view-status').textContent = `Status: ${file.status} | ${file.chunks.filter(c => c.status === STATUSES.COMPLETED).length}/${file.chunks.length} chunks completed`;
+                document.getElementById('file-total-chunks').textContent = file.chunks.length.toLocaleString();
+                document.getElementById('file-processing-time').textContent = `${file.processingTime}s`;
+                document.getElementById('file-size').textContent = `${(file.totalSize / 1024).toFixed(2)} KB`;
+
+                const ctx = document.getElementById('treemap-canvas').getContext('2d');
+                const treemapData = {
+                    datasets: [{
+                        label: 'File Chunks',
+                        tree: file.chunks,
+                        key: 'size',
+                        groups: ['status'],
+                        backgroundColor: (c) => {
+                            if (c.raw && c.raw._data) {
+                                return STATUS_COLORS[c.raw._data.status] || 'rgba(107, 114, 128, 0.7)';
+                            }
+                            return 'rgba(107, 114, 128, 0.7)';
+                        },
+                        borderColor: 'rgba(13, 17, 23, 1)',
+                        borderWidth: 1.5,
+                        spacing: 1,
+                        labels: {
+                            display: false
+                        },
+                    }]
+                };
+
+                if (treemapChart) {
+                    treemapChart.data = treemapData;
+                    treemapChart.update();
+                } else {
+                    treemapChart = new Chart(ctx, {
+                        type: 'treemap',
+                        data: treemapData,
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    backgroundColor: 'rgba(31, 41, 55, 0.95)',
+                                    titleColor: 'white',
+                                    bodyColor: 'white',
+                                    borderColor: 'rgba(75, 85, 99, 0.8)',
+                                    borderWidth: 1,
+                                    callbacks: {
+                                        title: (items) => {
+                                            if (items && items[0] && items[0].raw && items[0].raw._data) {
+                                                return `${items[0].raw._data.id}`;
+                                            }
+                                            return '';
+                                        },
+                                        label: (item) => {
+                                            if (item && item.raw && item.raw._data) {
+                                                return [
+                                                    `Status: ${item.raw._data.status}`,
+                                                    `Size: ${item.raw.v} bytes`,
+                                                    'Click for details'
+                                                ];
+                                            }
+                                            return '';
+                                        },
+                                    }
+                                }
+                            },
+                            onClick: (e, elements) => {
+                                if (elements && elements.length > 0) {
+                                    const context = elements[0].element.$context;
+                                    if (context && context.raw && context.raw._data) {
+                                        const clickedChunk = context.raw._data;
+                                        showChunkModal(clickedChunk);
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            const modal = document.getElementById('chunk-modal');
+            const modalContent = document.getElementById('modal-content');
+            const modalTitle = document.getElementById('modal-title');
+
+            function showChunkModal(chunk) {
+                modalTitle.textContent = `Chunk: ${chunk.id}`;
+                const statusColor = chunk.status === STATUSES.COMPLETED ? 'text-green-400' : 
+                                   chunk.status === STATUSES.ERROR ? 'text-red-400' : 
+                                   chunk.status === STATUSES.PROCESSING ? 'text-yellow-400' : 'text-blue-400';
+                
+                modalContent.innerHTML = `
+                    <p><span class="font-semibold text-gray-400">Status:</span> <span class="font-bold ${statusColor}">${chunk.status}</span></p>
+                    <p><span class="font-semibold text-gray-400">Size:</span> ${chunk.size} bytes</p>
+                    <div class="pt-2">
+                        <p class="font-semibold text-gray-400">Processing Log:</p>
+                        <pre class="bg-gray-900 p-3 rounded-md text-sm text-gray-300 whitespace-pre-wrap max-h-32 overflow-y-auto">${chunk.log}</pre>
+                    </div>
+                `;
+                modal.classList.remove('hidden');
+            }
+
+            function hideChunkModal() {
+                modal.classList.add('hidden');
+            }
+
+            function startSimulation() {
+                simulationInterval = setInterval(() => {
+                    mockFiles.forEach(file => {
+                        if (file.status !== STATUSES.COMPLETED && file.status !== STATUSES.ERROR) {
+                            // Randomly transition some chunks
+                            const queuedChunks = file.chunks.filter(c => c.status === STATUSES.QUEUED);
+                            const processingChunks = file.chunks.filter(c => c.status === STATUSES.PROCESSING);
+                            
+                            // Start processing some queued chunks
+                            if (queuedChunks.length > 0 && Math.random() < 0.3) {
+                                const chunkToProcess = queuedChunks[Math.floor(Math.random() * Math.min(3, queuedChunks.length))];
+                                chunkToProcess.status = STATUSES.PROCESSING;
+                                chunkToProcess.log = `Processing started at ${new Date().toISOString()}\nAnalyzing content...`;
+                            }
+                            
+                            // Complete some processing chunks
+                            if (processingChunks.length > 0 && Math.random() < 0.4) {
+                                const chunkToComplete = processingChunks[Math.floor(Math.random() * processingChunks.length)];
+                                chunkToComplete.status = Math.random() < 0.95 ? STATUSES.COMPLETED : STATUSES.ERROR;
+                                chunkToComplete.log = chunkToComplete.status === STATUSES.ERROR ? 
+                                    `ERROR: Processing failed at ${new Date().toISOString()}\nTimeout or content parsing error` :
+                                    `Successfully processed at ${new Date().toISOString()}\nContent analysis complete`;
+                            }
+                        }
+                    });
+
+                    if (appState.currentView === 'dashboard') {
+                        renderDashboard();
+                    } else if (appState.currentView === 'file') {
+                        renderFileView(appState.selectedFileId);
+                    }
+
+                }, 1500);
+            }
+
+            // Event listeners
+            fileCardGrid.addEventListener('click', (e) => {
+                const card = e.target.closest('.file-card');
+                if (card) {
+                    switchView('file', card.dataset.fileId);
+                }
+            });
+
+            backToDashboardBtn.addEventListener('click', () => switchView('dashboard'));
+            document.getElementById('modal-close').addEventListener('click', hideChunkModal);
+            modal.addEventListener('click', (e) => {
+                if(e.target.id === 'chunk-modal') {
+                    hideChunkModal();
+                }
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    if (!modal.classList.contains('hidden')) {
+                        hideChunkModal();
+                    } else if (appState.currentView === 'file') {
+                        switchView('dashboard');
+                    }
+                }
+            });
+
+            // Initialize
+            generateMockData();
+            renderDashboard();
+            startSimulation();
+        });
+    </script>
+</body>
+</html>

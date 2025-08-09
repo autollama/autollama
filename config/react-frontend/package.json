@@ -1,0 +1,67 @@
+{
+  "name": "autollama-frontend", 
+  "private": true,
+  "version": "2.3.0",
+  "description": "AutoLlama React Frontend - Modern web interface for intelligent document processing and RAG interactions",
+  "type": "module",
+  "keywords": [
+    "react",
+    "frontend",
+    "rag",
+    "document-processing",
+    "tailwind",
+    "vite",
+    "semantic-search",
+    "ui"
+  ],
+  "homepage": "https://github.com/your-username/autollama#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/autollama.git",
+    "directory": "config/react-frontend"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/autollama/issues"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "AutoLlama Team",
+    "url": "https://github.com/your-username/autollama"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0"
+  },
+  "dependencies": {
+    "@uppy/core": "^4.5.2",
+    "@uppy/dashboard": "^4.4.2",
+    "@uppy/drag-drop": "^4.2.2",
+    "@uppy/file-input": "^4.2.2",
+    "@uppy/progress-bar": "^4.3.2",
+    "@uppy/react": "^4.5.2",
+    "@uppy/tus": "^4.3.2",
+    "@uppy/xhr-upload": "^4.4.2",
+    "axios": "^1.3.4",
+    "clsx": "^1.2.1",
+    "lucide-react": "^0.263.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.8.1",
+    "tailwind-merge": "^1.10.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.28",
+    "@types/react-dom": "^18.0.11",
+    "@vitejs/plugin-react": "^4.0.0",
+    "autoprefixer": "^10.4.14",
+    "eslint": "^8.38.0",
+    "eslint-plugin-react": "^7.32.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.3.4",
+    "postcss": "^8.4.21",
+    "tailwindcss": "^3.2.7",
+    "vite": "^4.3.2"
+  }
+}
