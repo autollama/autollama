@@ -80,12 +80,20 @@ export const useSettings = () => {
     }
   }, [reloadSettings]);
 
-  // Auto-test connections when connection settings change
+  // Auto-test connections on app startup and when connection settings change
   useEffect(() => {
-    if (settings.connections.testConnections) {
+    // Always test connections on startup or when settings change
+    testConnections();
+  }, [testConnections]);
+
+  // Set up periodic validation every 30 seconds for real-time status
+  useEffect(() => {
+    const interval = setInterval(() => {
       testConnections();
-    }
-  }, [settings.connections, testConnections]);
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [testConnections]);
 
   return {
     settings,

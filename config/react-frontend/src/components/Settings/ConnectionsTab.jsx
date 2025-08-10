@@ -68,20 +68,26 @@ const ConnectionsTab = ({ onSettingsChange }) => {
   const testConnections = async () => {
     setTesting(true);
     try {
-      // This would call the actual connection test API
-      // const results = await api.testConnections(formData);
-      
-      // Mock test results for now
-      const mockResults = {
-        openai: formData.openaiApiKey ? Math.random() > 0.2 : false,
-        qdrant: formData.qdrantUrl && formData.qdrantApiKey ? Math.random() > 0.2 : false,
-        database: formData.databaseUrl ? Math.random() > 0.2 : false,
-        bm25: Math.random() > 0.1, // BM25 service is usually available
+      // Use the real validation function from settingsManager
+      // Create the settings structure expected by validateConnections
+      const settingsForValidation = {
+        connections: formData
       };
+      const results = await settingsManager.validateConnections(settingsForValidation);
+      setTestResults(results);
       
-      setTestResults(mockResults);
+      // Log results for debugging
+      console.log('✅ Connection test results:', results);
     } catch (error) {
-      console.error('Connection test failed:', error);
+      console.error('❌ Connection test failed:', error);
+      // Set all as failed on error
+      setTestResults({
+        openai: false,
+        claude: false,
+        qdrant: false,
+        database: false,
+        bm25: false,
+      });
     } finally {
       setTesting(false);
     }
