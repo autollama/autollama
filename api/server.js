@@ -1480,6 +1480,84 @@ app.post('/api/settings', async (req, res) => {
     }
 });
 
+// Test Claude API connection endpoint
+app.post('/api/test-claude', async (req, res) => {
+    try {
+        const { apiKey } = req.body;
+        
+        if (!apiKey) {
+            return res.status(400).json({
+                success: false,
+                error: 'API key is required'
+            });
+        }
+
+        console.log('🧪 Testing Claude API connection...');
+
+        // Test the Claude API with a simple request
+        const response = await axios.post('https://api.anthropic.com/v1/messages', {
+            model: 'claude-3-5-haiku-20241022',
+            max_tokens: 10,
+            messages: [
+                {
+                    role: 'user',
+                    content: 'Hello'
+                }
+            ]
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01'
+            },
+            timeout: 10000 // 10 second timeout
+        });
+
+        if (response.status === 200 && response.data) {
+            console.log('✅ Claude API test successful');
+            res.json({
+                success: true,
+                message: 'Claude API connection successful',
+                model: 'claude-3-5-haiku-20241022',
+                response_id: response.data.id
+            });
+        } else {
+            throw new Error('Unexpected response from Claude API');
+        }
+
+    } catch (error) {
+        console.error('❌ Claude API test failed:', error.message);
+        
+        let errorMessage = 'Unknown error';
+        let statusCode = 500;
+        
+        if (error.response) {
+            statusCode = error.response.status;
+            if (error.response.status === 401) {
+                errorMessage = 'Invalid API key - please check your Anthropic API key';
+            } else if (error.response.status === 403) {
+                errorMessage = 'API key does not have permission to access Claude models';
+            } else if (error.response.status === 429) {
+                errorMessage = 'Rate limit exceeded - please try again later';
+            } else {
+                errorMessage = error.response.data?.error?.message || `HTTP ${error.response.status} error`;
+            }
+        } else if (error.code === 'ECONNABORTED') {
+            errorMessage = 'Connection timeout - please check your internet connection';
+        } else if (error.code === 'ENOTFOUND') {
+            errorMessage = 'Unable to reach Anthropic API - please check your internet connection';
+        } else {
+            errorMessage = error.message;
+        }
+
+        res.status(statusCode).json({
+            success: false,
+            error: errorMessage,
+            details: error.response?.data || null
+        });
+    }
+});
+
 app.get('/api/settings/:key', async (req, res) => {
     try {
         const { key } = req.params;
@@ -1728,11 +1806,11 @@ class FileProcessor {
 
     async parseEPUB(buffer) {
         return new Promise((resolve, reject) => {
-            // Add overall timeout for EPUB parsing
+            // Add overall timeout for EPUB parsing - increased for large files
             const parseTimeout = setTimeout(() => {
-                console.error('❌ EPUB parsing timeout after 60 seconds');
+                console.error('❌ EPUB parsing timeout after 300 seconds');
                 reject(new Error('EPUB parsing timeout - file may be corrupted or too large'));
-            }, 60000); // 60 second timeout
+            }, 300000); // 300 second (5 minute) timeout for large files
             
             // Write buffer to temporary file since epub library requires file path
             tmp.file({ postfix: '.epub' }, (err, path, fd, cleanupCallback) => {
@@ -1759,11 +1837,22 @@ class FileProcessor {
                         console.error('❌ EPUB parsing error:', error.message);
                         clearTimeout(parseTimeout);
                         cleanupCallback();
-                        reject(error);
+                        
+                        // Enhanced error handling for different EPUB issues
+                        let errorMessage = `EPUB parsing failed: ${error.message}`;
+                        if (error.message.includes('ENOENT')) {
+                            errorMessage = 'EPUB file appears to be corrupted or missing';
+                        } else if (error.message.includes('Invalid')) {
+                            errorMessage = 'Invalid EPUB format - file may be corrupted';
+                        } else if (error.message.includes('timeout')) {
+                            errorMessage = 'EPUB processing timed out - file may be too large or complex';
+                        }
+                        
+                        reject(new Error(errorMessage));
                     });
                     
                     epubParser.on('end', () => {
-                        console.log('📖 EPUB: Parser finished, processing chapters');
+                        console.log(`📖 EPUB: Parser finished, processing ${epubParser.flow.length} chapters (${Math.round(buffer.length / 1024 / 1024)}MB file)`);
                         let content = '';
                         const chapters = epubParser.flow;
                         

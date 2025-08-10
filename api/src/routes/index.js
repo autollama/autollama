@@ -16,6 +16,7 @@ const pipelineRoutes = require('./pipeline.routes');
 const docsRoutes = require('./docs.routes');
 const openwebuiRoutes = require('./openwebui.routes');
 const { router: chatRoutes, initializeChatRoutes } = require('./chat.routes');
+const uploadRoutes = require('./upload.routes');
 
 /**
  * Setup all API routes with proper prefixes
@@ -186,6 +187,9 @@ function setupRoutes(app, services) {
     // All other routes under /api prefix
     // OpenWebUI pipeline routes (mount early to avoid conflicts)
     apiRouter.use('/openwebui', openwebuiRoutes);
+    
+    // Upload routes for chunked uploads
+    apiRouter.use('/upload', uploadRoutes);
     
     // Session routes first to ensure /in-progress is handled correctly
     apiRouter.use('/', sessionRoutes);

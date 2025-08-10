@@ -68,6 +68,51 @@ function createRoutes(services = {}) {
     }
   } = services;
 
+  // Tag-based search endpoint - returns only documents with specific tags
+  router.get('/search/tags', async (req, res) => {
+    try {
+      const { 
+        tag,
+        field = 'tags', // tags, main_topics, sentiment, content_type, technical_level
+        limit = 20
+      } = req.query;
+      
+      if (!tag) {
+        return res.status(400).json({
+          success: false,
+          error: 'Tag parameter is required'
+        });
+      }
+      
+      const validFields = ['tags', 'main_topics', 'sentiment', 'content_type', 'technical_level'];
+      if (!validFields.includes(field)) {
+        return res.status(400).json({
+          success: false,
+          error: `Field must be one of: ${validFields.join(', ')}`
+        });
+      }
+      
+      // Use direct database access for tag search
+      const results = await db.searchContentByTag(tag, field, parseInt(limit));
+      
+      res.json({
+        success: true,
+        results: results,
+        total: results.length,
+        tag: tag,
+        field: field,
+        query_type: 'tag_search'
+      });
+    } catch (error) {
+      console.error('❌ Tag search error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error during tag search',
+        details: error.message
+      });
+    }
+  });
+
   // Main search endpoint
   router.get('/search', async (req, res) => {
     try {

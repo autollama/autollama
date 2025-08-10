@@ -730,28 +730,116 @@ async function getRecordById(recordId) {
  */
 async function searchContent(searchQuery, limit = 50) {
     try {
-        console.log(`🔍 Searching for: "${searchQuery}"`);
+        console.log(`🔍 OPTIMIZED search for: "${searchQuery}"`);
         
-        // OPTIMIZED: Use full-text search indexes and window functions
+        // ULTRA-OPTIMIZED: Use indexes, minimal data, fast queries
         const query = `
-            WITH search_results AS (
+            WITH ranked_results AS (
+                SELECT DISTINCT ON (url)
+                    -- Only essential fields for search results (reduce I/O)
+                    url, title, summary, chunk_text, chunk_id, chunk_index,
+                    sentiment, category, content_type, technical_level, main_topics,
+                    tags, key_entities, processing_status, created_time, source, contextual_summary,
+                    -- Use indexed full-text search with ranking
+                    ts_rank_cd(to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(summary, '') || ' ' || COALESCE(tags, '')), plainto_tsquery('english', $1)) as rank
+                FROM processed_content
+                WHERE 
+                    -- Primary: Use GIN full-text search index (fastest)
+                    to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(summary, '') || ' ' || COALESCE(tags, '')) @@ plainto_tsquery('english', $1)
+                    -- Secondary: Use trigram indexes for fuzzy matching
+                    OR title % $1
+                    OR tags % $1
+                ORDER BY url, created_time DESC
+            )
+            SELECT 
+                url, title, summary, chunk_text, chunk_id, chunk_index,
+                sentiment, category, content_type, technical_level, main_topics,
+                tags, key_entities, processing_status, created_time, source, contextual_summary,
+                -- Add score for frontend sorting
+                rank as score
+            FROM ranked_results
+            WHERE rank > 0.01  -- Filter very low relevance results
+            ORDER BY rank DESC, created_time DESC
+            LIMIT $2
+        `;
+        
+        const result = await cachedQuery(query, [searchQuery, limit], false); // No cache for search results
+        
+        console.log(`✅ OPTIMIZED search found ${result.rows.length} results`);
+        
+        return result.rows.map(row => ({
+            // Essential fields with optimized naming for frontend
+            url: row.url,
+            title: row.title,
+            summary: row.summary,
+            chunk_text: row.chunk_text,
+            chunk_id: row.chunk_id,
+            chunk_index: row.chunk_index,
+            sentiment: row.sentiment,
+            category: row.category,
+            content_type: row.content_type,
+            technical_level: row.technical_level,
+            main_topics: row.main_topics,
+            tags: row.tags,
+            key_entities: row.key_entities || {},
+            processing_status: row.processing_status,
+            created_time: row.created_time,
+            source: row.source,
+            contextual_summary: row.contextual_summary,
+            score: row.score || 0 // Relevance score for sorting
+        }));
+    } catch (error) {
+        console.error('❌ Error searching content:', error.message);
+        return [];
+    }
+}
+
+/**
+ * Search content by tag match - returns only documents that have the exact tag
+ * @param {string} tag - Tag to search for
+ * @param {string} tagField - Which field to search in (tags, main_topics, sentiment, content_type, technical_level)
+ * @param {number} limit - Maximum number of results to return
+ */
+async function searchContentByTag(tag, tagField = 'tags', limit = 50) {
+    try {
+        console.log(`🏷️ Searching for tag: "${tag}" in field: "${tagField}"`);
+        
+        let whereClause;
+        let queryParams = [tag, limit];
+        
+        switch (tagField) {
+            case 'tags':
+                // Tags is stored as JSON string like '{"wisdom","spirituality"}'
+                whereClause = `tags LIKE $1`;
+                queryParams[0] = `%"${tag}"%`;
+                break;
+            case 'main_topics':
+                // main_topics is stored as PostgreSQL text array
+                whereClause = `$1 = ANY(main_topics)`;
+                break;
+            case 'sentiment':
+                whereClause = `sentiment = $1`;
+                break;
+            case 'content_type':
+                whereClause = `content_type = $1`;
+                break;
+            case 'technical_level':
+                whereClause = `technical_level = $1`;
+                break;
+            default:
+                throw new Error(`Unsupported tag field: ${tagField}`);
+        }
+        
+        const query = `
+            WITH tag_results AS (
                 SELECT 
                     id, airtable_id, url, title, summary, chunk_text, chunk_id, chunk_index,
                     sentiment, emotions, category, content_type, technical_level, main_topics,
                     key_concepts, tags, key_entities, embedding_status, processing_status,
                     created_time, processed_date, sent_to_li, source, contextual_summary, uses_contextual_embedding,
-                    -- Use full-text search for better performance
-                    ts_rank(to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(summary, '') || ' ' || COALESCE(tags, '')), plainto_tsquery('english', $1)) as rank,
                     ROW_NUMBER() OVER (PARTITION BY url ORDER BY created_time DESC) as rn
                 FROM processed_content
-                WHERE 
-                    -- Use the GIN indexes for full-text search
-                    to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(summary, '') || ' ' || COALESCE(tags, '')) @@ plainto_tsquery('english', $1)
-                    OR title ILIKE $2 
-                    OR summary ILIKE $2
-                    OR chunk_text ILIKE $2
-                    OR tags ILIKE $2
-                    OR category ILIKE $2
+                WHERE ${whereClause}
             )
             SELECT 
                 id, airtable_id, url, title, summary, chunk_text, chunk_id, chunk_index,
@@ -759,26 +847,15 @@ async function searchContent(searchQuery, limit = 50) {
                 key_concepts, tags, key_entities, 
                 embedding_status as "embeddingStatus",
                 processing_status, created_time, processed_date, sent_to_li, source, contextual_summary, uses_contextual_embedding
-            FROM search_results
+            FROM tag_results
             WHERE rn = 1
-            ORDER BY rank DESC, 
-                CASE 
-                    WHEN title ILIKE $2 THEN 1
-                    WHEN summary ILIKE $2 THEN 2
-                    WHEN tags ILIKE $1 THEN 3
-                    WHEN category ILIKE $1 THEN 4
-                    WHEN key_entities::text ILIKE $1 THEN 5
-                    WHEN chunk_text ILIKE $1 THEN 6
-                    ELSE 7
-                END,
-                created_time DESC
-            LIMIT $3
+            ORDER BY created_time DESC
+            LIMIT $2
         `;
         
-        const searchPattern = `%${searchQuery}%`;
-        const result = await cachedQuery(query, [searchQuery, searchPattern, limit], true);
+        const result = await cachedQuery(query, queryParams, true);
         
-        console.log(`✅ Found ${result.rows.length} search results`);
+        console.log(`✅ Found ${result.rows.length} results for tag "${tag}" in field "${tagField}"`);
         
         return result.rows.map(row => ({
             ...row,
@@ -799,7 +876,7 @@ async function searchContent(searchQuery, limit = 50) {
             usesContextualEmbedding: row.uses_contextual_embedding
         }));
     } catch (error) {
-        console.error('❌ Error searching content:', error.message);
+        console.error('❌ Error searching content by tag:', error.message);
         return [];
     }
 }
@@ -1540,6 +1617,7 @@ module.exports = {
     updateUploadSession,
     getRecordById,
     searchContent,
+    searchContentByTag,
     getDatabaseStats,
     // New chunk explorer functions
     getAllDocuments,

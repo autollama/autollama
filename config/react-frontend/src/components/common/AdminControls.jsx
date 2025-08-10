@@ -135,7 +135,21 @@ export const SessionStatusBadge = ({ status, count }) => {
 export const MemoryUsageDisplay = ({ memoryData, onClick }) => {
   if (!memoryData) return null;
 
-  const heapUtilization = parseFloat(memoryData.heapUtilization) || 0;
+  // Handle both old and new data format
+  const current = memoryData.current || memoryData;
+  
+  // Parse memory values - handle both "88MB" strings and numeric bytes
+  const parseMemoryValue = (value) => {
+    if (typeof value === 'string' && value.includes('MB')) {
+      return parseFloat(value.replace('MB', ''));
+    }
+    return Math.round(value / 1024 / 1024); // Convert bytes to MB
+  };
+  
+  const heapUsedMB = parseMemoryValue(current.heapUsed || 0);
+  const heapTotalMB = parseMemoryValue(current.heapTotal || 0);
+  const heapUtilization = heapTotalMB > 0 ? Math.round((heapUsedMB / heapTotalMB) * 100) : 0;
+  
   const getMemoryStatus = () => {
     if (heapUtilization > 90) return 'error';
     if (heapUtilization > 75) return 'warning';
@@ -145,9 +159,9 @@ export const MemoryUsageDisplay = ({ memoryData, onClick }) => {
   return (
     <AdminCard
       title="Memory Usage"
-      value={memoryData.heapUtilization}
+      value={`${heapUtilization}%`}
       icon={MemoryStick}
-      description={`${Math.round(memoryData.heapUsed / 1024 / 1024)}MB used`}
+      description={`${heapUsedMB}MB used`}
       status={getMemoryStatus()}
       onClick={onClick}
     />
@@ -186,9 +200,13 @@ export const CleanupStatusDisplay = ({ lastCleanup, recommendationsCount, onClea
 export const SystemHealthSummary = ({ healthData, onDetails }) => {
   if (!healthData) return null;
 
+  // Handle both old and new data structure
+  const healthScore = healthData.healthScore || healthData.health?.percentage || 0;
+  const statusText = healthData.status || healthData.health?.overall || 'unknown';
+  
   const getHealthStatus = () => {
-    if (healthData.healthScore >= 90) return 'success';
-    if (healthData.healthScore >= 70) return 'warning';
+    if (healthScore >= 90) return 'success';
+    if (healthScore >= 70) return 'warning';
     return 'error';
   };
 
@@ -218,9 +236,9 @@ export const SystemHealthSummary = ({ healthData, onDetails }) => {
   return (
     <AdminCard
       title="System Health"
-      value={`${healthData.healthScore}/100`}
+      value={`${healthScore}/100`}
       icon={Activity}
-      description={healthData.status}
+      description={statusText.toUpperCase()}
       status={getHealthStatus()}
       badge={actualIssuesCount > 0 ? actualIssuesCount : null}
       onClick={onDetails}

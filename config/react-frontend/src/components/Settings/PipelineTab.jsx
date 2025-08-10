@@ -19,6 +19,9 @@ const PipelineTab = ({ onSettingsChange }) => {
     loadRagSettings();
   }, [settings.pipeline]);
 
+  // Check if Anthropic API key is configured
+  const hasAnthropicKey = settings.connections?.claudeApiKey && settings.connections.claudeApiKey.trim().length > 0;
+
   // Load pipeline statistics
   const loadPipelineStats = async () => {
     try {
@@ -353,13 +356,22 @@ const PipelineTab = ({ onSettingsChange }) => {
               className="input-primary"
               disabled={ragSaving}
             >
-              <option value="gpt-4o-mini">GPT-4o Mini (Fast & Cost-Effective)</option>
-              <option value="gpt-4o">GPT-4o (Most Capable)</option>
-              <option value="gpt-4">GPT-4 (Flagship Model)</option>
-              <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Budget)</option>
+              <optgroup label="OpenAI Models">
+                <option value="gpt-4o-mini">GPT-4o Mini (Fast & Cost-Effective)</option>
+                <option value="gpt-4o">GPT-4o (Most Capable)</option>
+                <option value="gpt-4">GPT-4 (Flagship Model)</option>
+                <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Budget)</option>
+              </optgroup>
+              {hasAnthropicKey && (
+                <optgroup label="Anthropic Models">
+                  <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Most Capable)</option>
+                  <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (Fast & Efficient)</option>
+                  <option value="claude-3-opus-20240229">Claude 3 Opus (Creative & Complex)</option>
+                </optgroup>
+              )}
             </select>
             <p className="text-xs text-gray-500">
-              OpenAI model used to interpret and synthesize RAG search results
+              Language model used to interpret and synthesize RAG search results
             </p>
           </div>
 
@@ -409,7 +421,8 @@ const PipelineTab = ({ onSettingsChange }) => {
         {/* Model Information Card */}
         <div className="mt-6 p-4 bg-gray-800 bg-opacity-50 rounded-lg border border-gray-700">
           <h5 className="font-medium text-gray-300 mb-3">Model Comparison</h5>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+          <div className={`grid grid-cols-1 md:grid-cols-2 ${hasAnthropicKey ? 'lg:grid-cols-4 xl:grid-cols-7' : 'lg:grid-cols-4'} gap-4 text-xs`}>
+            {/* OpenAI Models */}
             <div className="space-y-1">
               <div className="font-medium text-blue-400">GPT-4o Mini</div>
               <div className="text-gray-500">Fast, cost-effective</div>
@@ -430,6 +443,27 @@ const PipelineTab = ({ onSettingsChange }) => {
               <div className="text-gray-500">Budget option</div>
               <div className="text-gray-500">Faster responses</div>
             </div>
+            
+            {/* Anthropic Models - only show if API key is configured */}
+            {hasAnthropicKey && (
+              <>
+                <div className="space-y-1">
+                  <div className="font-medium text-orange-400">Claude 3.5 Sonnet</div>
+                  <div className="text-gray-500">Superior reasoning</div>
+                  <div className="text-gray-500">Excellent for analysis</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="font-medium text-cyan-400">Claude 3.5 Haiku</div>
+                  <div className="text-gray-500">Fast, efficient</div>
+                  <div className="text-gray-500">Cost-effective choice</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="font-medium text-indigo-400">Claude 3 Opus</div>
+                  <div className="text-gray-500">Most creative</div>
+                  <div className="text-gray-500">Complex tasks</div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

@@ -103,10 +103,22 @@ const FileUploader = ({ onSuccess, onError }) => {
     return allowedTypes.includes(file.type) && file.size <= maxSize;
   };
 
-  // Upload individual file with SSE streaming
+  // Upload individual file with chunked upload for large files
   const uploadFile = async (fileData) => {
     updateUploadStatus(fileData.id, { status: 'uploading', progress: 0 });
 
+    const LARGE_FILE_THRESHOLD = 10 * 1024 * 1024; // 10MB
+    const isLargeFile = fileData.file.size > LARGE_FILE_THRESHOLD;
+    
+    if (isLargeFile) {
+      return uploadFileChunked(fileData);
+    } else {
+      return uploadFileRegular(fileData);
+    }
+  };
+
+  // Regular upload for smaller files (< 10MB)
+  const uploadFileRegular = async (fileData) => {
     let timeoutId = null;
     
     try {
@@ -115,9 +127,9 @@ const FileUploader = ({ onSuccess, onError }) => {
       formData.append('enableContextual', settings.processing.enableContextualEmbeddings);
       formData.append('source', 'user');
 
-      // Make a fetch request to the streaming endpoint with extended timeout for large files
+      // Make a fetch request to the streaming endpoint with extended timeout
       const controller = new AbortController();
-      timeoutId = setTimeout(() => controller.abort(), 1800000); // 30 minutes timeout for large files
+      timeoutId = setTimeout(() => controller.abort(), 1800000); // 30 minutes timeout
       
       // Store the abort controller so we can cancel the upload
       updateUploadStatus(fileData.id, { abortController: controller });
@@ -132,75 +144,8 @@ const FileUploader = ({ onSuccess, onError }) => {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // Read the SSE stream with proper chunked data handling
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = ''; // Buffer for incomplete messages
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          // Decode the chunk and add to buffer
-          buffer += decoder.decode(value, { stream: true });
-          
-          // Process complete lines from buffer
-          const lines = buffer.split('\n');
-          
-          // Keep the last potentially incomplete line in buffer
-          buffer = lines.pop() || '';
-          
-          for (const line of lines) {
-            if (line.trim() === '') continue; // Skip empty lines
-            
-            if (line.startsWith('data: ')) {
-              try {
-                const jsonData = line.slice(6).trim(); // Remove 'data: ' prefix and trim
-                if (jsonData === '') continue; // Skip empty data lines
-                
-                const data = JSON.parse(jsonData);
-                // Ensure data has the expected structure
-                if (data && typeof data === 'object') {
-                  handleProgressUpdate({ event: data.event, data: data.data }, fileData);
-                }
-              } catch (parseError) {
-                console.error('Failed to parse SSE data:', parseError, 'Line:', line);
-                // Don't fail the entire upload for parse errors
-              }
-            }
-          }
-        }
-        
-        // Process any remaining data in buffer
-        if (buffer.trim() && buffer.startsWith('data: ')) {
-          try {
-            const jsonData = buffer.slice(6).trim();
-            if (jsonData) {
-              const data = JSON.parse(jsonData);
-              if (data && typeof data === 'object') {
-                handleProgressUpdate({ event: data.event, data: data.data }, fileData);
-              }
-            }
-          } catch (parseError) {
-            console.error('Failed to parse final SSE data:', parseError, 'Buffer:', buffer);
-          }
-        }
-      } finally {
-        reader.releaseLock();
-        clearTimeout(timeoutId); // Clean up timeout
-      }
-
-      // SSE stream ended - if no completion event was received, 
-      // the upload may have completed but the event was missed
-      
-      // Set a reasonable timeout to check for completion if we haven't received a complete event
-      setTimeout(() => {
-        updateUploadStatus(fileData.id, {
-          status: 'processing',
-          progress: Math.max(fileData.progress || 0, 95) // Show near completion
-        });
-      }, 1000);
+      // Use shared processing stream handler
+      await handleProcessingStream(response, fileData);
 
     } catch (error) {
       console.error('Upload failed:', error);
@@ -239,6 +184,235 @@ const FileUploader = ({ onSuccess, onError }) => {
         onError(fileData, error);
       }
     }
+  };
+
+  // Chunked upload for large files (> 10MB) with progress tracking
+  const uploadFileChunked = async (fileData) => {
+    const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB chunks
+    const file = fileData.file;
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    
+    let uploadedChunks = 0;
+    let uploadStartTime = Date.now();
+    let controller = new AbortController();
+    
+    updateUploadStatus(fileData.id, { 
+      abortController: controller,
+      totalChunks,
+      uploadedChunks: 0,
+      uploadSpeed: 0,
+      estimatedTimeRemaining: 0
+    });
+
+    try {
+      // Step 1: Initialize chunked upload session
+      const initResponse = await fetch('/api/upload/initialize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          totalChunks,
+          enableContextual: settings.processing.enableContextualEmbeddings,
+          source: 'user'
+        }),
+        signal: controller.signal
+      });
+
+      if (!initResponse.ok) {
+        throw new Error(`Failed to initialize upload: ${initResponse.status}`);
+      }
+
+      const { uploadId, sessionId } = await initResponse.json();
+      
+      updateUploadStatus(fileData.id, { 
+        uploadId, 
+        sessionId,
+        status: 'uploading',
+        progress: 5 // 5% for initialization
+      });
+
+      // Step 2: Upload chunks sequentially with progress tracking
+      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+        if (controller.signal.aborted) {
+          throw new Error('Upload cancelled by user');
+        }
+
+        const start = chunkIndex * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, file.size);
+        const chunkBlob = file.slice(start, end);
+        
+        const chunkFormData = new FormData();
+        chunkFormData.append('chunk', chunkBlob);
+        chunkFormData.append('uploadId', uploadId);
+        chunkFormData.append('chunkIndex', chunkIndex.toString());
+        chunkFormData.append('totalChunks', totalChunks.toString());
+
+        const chunkStartTime = Date.now();
+        
+        const chunkResponse = await fetch('/api/upload/chunk', {
+          method: 'POST',
+          body: chunkFormData,
+          signal: controller.signal
+        });
+
+        if (!chunkResponse.ok) {
+          throw new Error(`Chunk upload failed: ${chunkResponse.status}`);
+        }
+
+        uploadedChunks++;
+        const chunkTime = Date.now() - chunkStartTime;
+        const totalTime = Date.now() - uploadStartTime;
+        
+        // Calculate upload statistics
+        const uploadedBytes = uploadedChunks * CHUNK_SIZE;
+        const uploadSpeed = uploadedBytes / (totalTime / 1000); // bytes per second
+        const remainingBytes = file.size - uploadedBytes;
+        const estimatedTimeRemaining = remainingBytes / uploadSpeed;
+        
+        // Upload progress: 5% init + 85% upload progress + 10% for processing
+        const uploadProgress = 5 + (uploadedChunks / totalChunks) * 85;
+        
+        updateUploadStatus(fileData.id, {
+          uploadedChunks,
+          progress: Math.min(uploadProgress, 90),
+          uploadSpeed: Math.round(uploadSpeed / 1024), // KB/s
+          estimatedTimeRemaining: Math.round(estimatedTimeRemaining),
+          lastChunkTime: chunkTime
+        });
+
+        // Brief pause to prevent overwhelming the server
+        if (chunkIndex < totalChunks - 1) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+      }
+
+      // Step 3: Finalize upload and start processing
+      const finalizeResponse = await fetch('/api/upload/finalize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uploadId, sessionId }),
+        signal: controller.signal
+      });
+
+      if (!finalizeResponse.ok) {
+        throw new Error(`Failed to finalize upload: ${finalizeResponse.status}`);
+      }
+
+      updateUploadStatus(fileData.id, {
+        status: 'processing',
+        progress: 95,
+        message: 'Upload complete, starting processing...'
+      });
+
+      // Step 4: Connect to processing stream
+      const streamResponse = await fetch(`/api/upload/stream/${sessionId}`, {
+        method: 'GET',
+        signal: controller.signal
+      });
+
+      if (!streamResponse.ok) {
+        throw new Error(`Failed to connect to processing stream: ${streamResponse.status}`);
+      }
+
+      // Handle processing stream similar to regular upload
+      await handleProcessingStream(streamResponse, fileData);
+
+    } catch (error) {
+      console.error('Chunked upload failed:', error);
+      
+      let errorMessage = 'Upload failed';
+      if (error.name === 'AbortError') {
+        const currentStatus = uploadQueue.find(f => f.id === fileData.id)?.status;
+        if (currentStatus === 'cancelled') {
+          return;
+        }
+        errorMessage = 'Upload cancelled';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      updateUploadStatus(fileData.id, { 
+        status: 'error', 
+        error: errorMessage
+      });
+
+      if (onError) {
+        onError(fileData, error);
+      }
+    }
+  };
+
+  // Handle processing stream for both regular and chunked uploads
+  const handleProcessingStream = async (response, fileData) => {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = ''; // Buffer for incomplete messages
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        // Decode the chunk and add to buffer
+        buffer += decoder.decode(value, { stream: true });
+        
+        // Process complete lines from buffer
+        const lines = buffer.split('\n');
+        
+        // Keep the last potentially incomplete line in buffer
+        buffer = lines.pop() || '';
+        
+        for (const line of lines) {
+          if (line.trim() === '') continue; // Skip empty lines
+          
+          if (line.startsWith('data: ')) {
+            try {
+              const jsonData = line.slice(6).trim(); // Remove 'data: ' prefix and trim
+              if (jsonData === '') continue; // Skip empty data lines
+              
+              const data = JSON.parse(jsonData);
+              // Ensure data has the expected structure
+              if (data && typeof data === 'object') {
+                handleProgressUpdate({ event: data.event, data: data.data }, fileData);
+              }
+            } catch (parseError) {
+              console.error('Failed to parse SSE data:', parseError, 'Line:', line);
+              // Don't fail the entire upload for parse errors
+            }
+          }
+        }
+      }
+      
+      // Process any remaining data in buffer
+      if (buffer.trim() && buffer.startsWith('data: ')) {
+        try {
+          const jsonData = buffer.slice(6).trim();
+          if (jsonData) {
+            const data = JSON.parse(jsonData);
+            if (data && typeof data === 'object') {
+              handleProgressUpdate({ event: data.event, data: data.data }, fileData);
+            }
+          }
+        } catch (parseError) {
+          console.error('Failed to parse final SSE data:', parseError, 'Buffer:', buffer);
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    // SSE stream ended - set completion if not already received
+    setTimeout(() => {
+      const currentFile = uploadQueue.find(f => f.id === fileData.id);
+      if (currentFile && currentFile.status === 'processing') {
+        updateUploadStatus(fileData.id, {
+          status: 'processing',
+          progress: Math.max(currentFile.progress || 0, 95)
+        });
+      }
+    }, 1000);
   };
 
   // Handle progress updates from SSE stream
@@ -428,6 +602,7 @@ const FileUploader = ({ onSuccess, onError }) => {
             <div className="text-sm text-gray-500">
               <p>Supported: PDF, TXT, MD, DOC, DOCX, EPUB, CSV, JSON</p>
               <p>Maximum size: 100MB per file</p>
+              <p className="text-xs mt-1">Large files (>10MB) use chunked upload with progress tracking</p>
             </div>
           </div>
           
@@ -597,6 +772,25 @@ const FileUploadItem = ({ fileData, onRemove, onRetry, onUpload, onStop }) => {
             <span className="text-gray-400">({Math.round(fileData.progress)}%)</span>
           )}
         </div>
+        
+        {/* Enhanced upload statistics for chunked uploads */}
+        {fileData.status === 'uploading' && fileData.totalChunks && (
+          <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
+            <span>
+              {fileData.uploadedChunks || 0}/{fileData.totalChunks} chunks
+            </span>
+            {fileData.uploadSpeed > 0 && (
+              <span>
+                {fileData.uploadSpeed} KB/s
+              </span>
+            )}
+            {fileData.estimatedTimeRemaining > 0 && (
+              <span>
+                ~{Math.ceil(fileData.estimatedTimeRemaining / 1000)}s remaining
+              </span>
+            )}
+          </div>
+        )}
         
         {fileData.error && (
           <div className="text-sm text-red-400 mt-1">

@@ -179,10 +179,14 @@ const StatsPanel = () => {
 
   // Calculate overall system health using real service status including session health
   const getSystemHealth = () => {
+    // Check if we have system health data from /api/system/status
+    const systemHealth = adminData.systemHealth;
+    
     const checks = {
-      database: systemStats.database?.status === 'connected',
-      qdrant: systemStats.knowledgeBase?.qdrant_status === 'active', 
-      bm25: detailedStats.bm25?.health?.status === 'healthy',
+      // Use system status API data if available, fall back to legacy checks
+      database: systemHealth?.services?.postgresql?.status === 'healthy' || systemStats.database?.status === 'connected',
+      qdrant: systemHealth?.services?.qdrant?.status === 'healthy' || systemStats.knowledgeBase?.qdrant_status === 'active',
+      bm25: systemHealth?.services?.bm25?.status === 'healthy' || detailedStats.bm25?.health?.status === 'healthy',
       api: systemStats.health?.status === 'connected' || true, // API is working if we can call it
       sessions: (adminData.stuckSessions?.stuck_count || 0) === 0, // No stuck sessions = healthy
     };

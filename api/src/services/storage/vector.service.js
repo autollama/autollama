@@ -548,6 +548,50 @@ class VectorService {
   }
 
   /**
+   * Get Qdrant activity information
+   * @returns {Object} Activity data with search statistics
+   */
+  async getActivity() {
+    try {
+      // Get collection info which includes search statistics
+      const response = await this.httpClient.get(`/collections/${this.config.collection}`);
+      
+      if (response.data.status === 'ok' && response.data.result) {
+        const collectionInfo = response.data.result;
+        
+        return {
+          activity: [{
+            collection: this.config.collection,
+            vectors_count: collectionInfo.vectors_count || 0,
+            indexed_vectors_count: collectionInfo.indexed_vectors_count || 0,
+            points_count: collectionInfo.points_count || 0,
+            segments_count: collectionInfo.segments_count || 1,
+            status: collectionInfo.status || 'active'
+          }],
+          totalSearches: collectionInfo.vectors_count || 0, // Use vector count as proxy for activity
+          timestamp: new Date().toISOString()
+        };
+      }
+      
+      return {
+        activity: [],
+        totalSearches: 0,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      this.logger.warn('Failed to get Qdrant activity', { error: error.message });
+      
+      // Return empty activity instead of throwing
+      return {
+        activity: [],
+        totalSearches: 0,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  /**
    * Update service configuration
    * @param {Object} newConfig - New configuration options
    */

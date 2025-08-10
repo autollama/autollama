@@ -7,7 +7,7 @@ const ConnectionsTab = ({ onSettingsChange }) => {
   const { settings, connectionStatus, updateCategory } = useAppContext();
   const [formData, setFormData] = useState(settings.connections);
   const [showKeys, setShowKeys] = useState({});
-  const [testing, setTesting] = useState(false);
+  const [testing, setTesting] = useState({ all: false, claude: false });
   const [testResults, setTestResults] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -66,7 +66,7 @@ const ConnectionsTab = ({ onSettingsChange }) => {
 
   // Test connections
   const testConnections = async () => {
-    setTesting(true);
+    setTesting(prev => ({ ...prev, all: true }));
     try {
       // Use the real validation function from settingsManager
       // Create the settings structure expected by validateConnections
@@ -89,7 +89,55 @@ const ConnectionsTab = ({ onSettingsChange }) => {
         bm25: false,
       });
     } finally {
-      setTesting(false);
+      setTesting(prev => ({ ...prev, all: false }));
+    }
+  };
+
+  // Test individual connection
+  const testIndividualConnection = async (connectionId) => {
+    setTesting({ ...testing, [connectionId]: true });
+    try {
+      console.log(`🧪 Testing ${connectionId} connection...`);
+      
+      if (connectionId === 'claude') {
+        // Test Anthropic Claude API directly
+        const testResult = await testClaudeConnection(formData.claudeApiKey);
+        setTestResults(prev => ({ ...prev, claude: testResult.success }));
+        
+        if (testResult.success) {
+          console.log('✅ Claude connection successful:', testResult.model);
+        } else {
+          console.error('❌ Claude connection failed:', testResult.error);
+        }
+      }
+      
+    } catch (error) {
+      console.error(`❌ ${connectionId} test failed:`, error);
+      setTestResults(prev => ({ ...prev, [connectionId]: false }));
+    } finally {
+      setTesting(prev => ({ ...prev, [connectionId]: false }));
+    }
+  };
+
+  // Test Claude API connection
+  const testClaudeConnection = async (apiKey) => {
+    if (!apiKey || !apiKey.trim()) {
+      return { success: false, error: 'API key is required' };
+    }
+
+    try {
+      const response = await fetch('/api/test-claude', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ apiKey: apiKey.trim() }),
+      });
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      return { success: false, error: error.message };
     }
   };
 
@@ -211,11 +259,11 @@ const ConnectionsTab = ({ onSettingsChange }) => {
         
         <button
           onClick={testConnections}
-          disabled={testing}
+          disabled={testing.all}
           className="btn-primary"
         >
-          <RefreshCw className={`w-4 h-4 ${testing ? 'animate-spin' : ''}`} />
-          {testing ? 'Testing...' : 'Test All'}
+          <RefreshCw className={`w-4 h-4 ${testing.all ? 'animate-spin' : ''}`} />
+          {testing.all ? 'Testing...' : 'Test All'}
         </button>
       </div>
 
@@ -292,23 +340,41 @@ const ConnectionsTab = ({ onSettingsChange }) => {
                       {field.required && <span className="text-red-400 ml-1">*</span>}
                     </label>
                     
-                    <div className="relative">
-                      <input
-                        type={field.type === 'password' && !showKeys[field.key] ? 'password' : 'text'}
-                        value={formData[field.key] || ''}
-                        onChange={(e) => handleInputChange(field.key, e.target.value)}
-                        placeholder={field.placeholder}
-                        className="input-primary pr-12"
-                        required={field.required}
-                      />
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type={field.type === 'password' && !showKeys[field.key] ? 'password' : 'text'}
+                          value={formData[field.key] || ''}
+                          onChange={(e) => handleInputChange(field.key, e.target.value)}
+                          placeholder={field.placeholder}
+                          className="input-primary pr-12"
+                          required={field.required}
+                        />
+                        
+                        {field.type === 'password' && (
+                          <button
+                            type="button"
+                            onClick={() => toggleKeyVisibility(field.key)}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                          >
+                            {showKeys[field.key] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        )}
+                      </div>
                       
-                      {field.type === 'password' && (
+                      {/* Individual test button for API keys */}
+                      {field.key === 'claudeApiKey' && formData[field.key] && (
                         <button
-                          type="button"
-                          onClick={() => toggleKeyVisibility(field.key)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                          onClick={() => testIndividualConnection('claude')}
+                          disabled={testing.claude}
+                          className="btn-secondary px-3 py-2 text-sm"
+                          title="Test Claude API connection"
                         >
-                          {showKeys[field.key] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          {testing.claude ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : (
+                            'Test'
+                          )}
                         </button>
                       )}
                     </div>

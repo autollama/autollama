@@ -23,38 +23,68 @@ const UnifiedSearch = () => {
   
   const hybridSearch = useHybridSearch();
   const searchTimeoutRef = useRef(null);
+  const searchAbortControllerRef = useRef(null);
 
-  // Perform the actual search (moved before useEffect to fix dependency order)
+  // Perform the actual search with request cancellation
   const performSearch = useCallback(async (searchQuery, searchFilters, mode) => {
     try {
-      setIsSearching(true);
+      // Cancel previous request if still pending
+      if (searchAbortControllerRef.current) {
+        searchAbortControllerRef.current.abort();
+      }
       
-      // Use the working /api/search endpoint directly
-      const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}&limit=${settings.search.maxSearchResults || 50}`);
-      const results = await response.json();
+      // Create new AbortController for this request
+      searchAbortControllerRef.current = new AbortController();
+      
+      setIsSearching(true);
+      setSearchError(null);
+      
+      const startTime = performance.now();
+      
+      // OPTIMIZED: Direct API call with request cancellation
+      const response = await fetch(
+        `/api/search?q=${encodeURIComponent(searchQuery)}&limit=${settings.search.maxSearchResults || 50}`, 
+        { 
+          signal: searchAbortControllerRef.current.signal,
+          headers: {
+            'Cache-Control': 'no-cache' // Ensure fresh results
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Search failed: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const results = data.results || data || [];
+      
+      const searchTime = performance.now() - startTime;
+      console.log(`🚀 FAST search completed in ${searchTime.toFixed(2)}ms - ${results.length} results`);
       
       // Transform results to match expected format
       const transformedResults = {
-        combined: results || [],
-        bm25: mode === 'bm25' ? results || [] : [],
-        semantic: mode === 'semantic' ? results || [] : [],
+        combined: results,
+        bm25: mode === 'bm25' ? results : [],
+        semantic: mode === 'semantic' ? results : [],
       };
       
       // Update local search results state
       setSearchResults(transformedResults);
-      setSearchError(null);
-      
-      // Note: Don't call handleSearchQueryChange here to avoid circular calls
-      // The query is already set by the calling function
       
     } catch (error) {
-      console.error('Search failed:', error);
+      if (error.name === 'AbortError') {
+        console.log('🚫 Search request cancelled');
+        return; // Don't update state for cancelled requests
+      }
+      console.error('❌ Search failed:', error);
       setSearchError(error.message);
       setSearchResults({ combined: [], bm25: [], semantic: [] });
     } finally {
       setIsSearching(false);
+      searchAbortControllerRef.current = null;
     }
-  }, [settings.search.maxSearchResults]); // Dependencies for useCallback
+  }, [settings.search.maxSearchResults]);
 
   // Synchronize local query with global searchQuery from context
   useEffect(() => {
@@ -78,21 +108,31 @@ const UnifiedSearch = () => {
     }
   }, [settings.search.enableSearchHistory]);
 
-  // Debounced search function
+  // Optimized debounced search function with better performance
   const debouncedSearch = useCallback(
     (searchQuery, searchFilters, mode) => {
+      // Clear previous timeout
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
       }
 
-      searchTimeoutRef.current = setTimeout(async () => {
-        if (searchQuery.trim().length < 2) return;
+      // Cancel any pending search request
+      if (searchAbortControllerRef.current) {
+        searchAbortControllerRef.current.abort();
+      }
 
-        setIsSearching(true);
+      searchTimeoutRef.current = setTimeout(async () => {
+        // Minimum query length check
+        if (searchQuery.trim().length < 2) {
+          setSearchResults({ combined: [], bm25: [], semantic: [] });
+          return;
+        }
+
         try {
+          console.log(`⏱️ DEBOUNCED search triggered (300ms delay): "${searchQuery}"`);
           await performSearch(searchQuery, searchFilters, mode);
           
-          // Add to search history
+          // Add to search history (optimized)
           if (settings.search.enableSearchHistory) {
             setSearchHistory(prevHistory => {
               const newHistory = [
@@ -100,19 +140,58 @@ const UnifiedSearch = () => {
                 ...prevHistory.filter(h => h.query !== searchQuery)
               ].slice(0, 10);
               
-              localStorage.setItem('autollama-search-history', JSON.stringify(newHistory));
+              // Async localStorage to avoid blocking UI
+              setTimeout(() => {
+                localStorage.setItem('autollama-search-history', JSON.stringify(newHistory));
+              }, 0);
+              
               return newHistory;
             });
           }
         } catch (error) {
-          console.error('Search failed:', error);
-        } finally {
-          setIsSearching(false);
+          console.error('❌ Debounced search failed:', error);
         }
-      }, 150); // Reduced debounce time for faster response
+      }, 300); // Increased to 300ms for better performance (fewer queries)
     },
-    [performSearch, settings.search.enableSearchHistory] // Added performSearch dependency
+    [performSearch, settings.search.enableSearchHistory]
   );
+
+  // Tag-based search function for specific tag filtering
+  const handleTagSearch = useCallback(async (tag, tagField = 'tags') => {
+    try {
+      console.log('🏷️ Performing tag search for:', tag, 'in field:', tagField);
+      setIsSearching(true);
+      
+      // Use the new tag search API endpoint
+      const response = await fetch(`/api/search/tags?tag=${encodeURIComponent(tag)}&field=${tagField}&limit=${settings.search.maxSearchResults || 50}`);
+      const results = await response.json();
+      
+      if (results.success) {
+        console.log('🏷️ Tag search results:', results.results.length, 'documents');
+        
+        // Transform results to match expected format
+        const transformedResults = {
+          combined: results.results || [],
+          bm25: [],
+          semantic: [],
+        };
+        
+        // Update search results and query to show what we searched for
+        setSearchResults(transformedResults);
+        setQuery(`tag:${tag}`);
+        handleSearchQueryChange(`tag:${tag}`);
+        setSearchError(null);
+      } else {
+        throw new Error(results.error || 'Tag search failed');
+      }
+    } catch (error) {
+      console.error('❌ Tag search failed:', error);
+      setSearchError(`Tag search failed: ${error.message}`);
+      setSearchResults({ combined: [], bm25: [], semantic: [] });
+    } finally {
+      setIsSearching(false);
+    }
+  }, [settings.search.maxSearchResults, handleSearchQueryChange]);
 
   // Handle search input change
   const handleQueryChange = (newQuery) => {
@@ -144,15 +223,35 @@ const UnifiedSearch = () => {
     }
   };
 
-  // Clear search
+  // Clear search and cancel pending requests
   const clearSearch = () => {
     setQuery('');
+    setSearchResults({ combined: [], bm25: [], semantic: [] });
+    setSearchError(null);
+    
     // Clear global search query to keep header search in sync
     handleSearchQueryChange('');
+    
+    // Cancel pending requests and timeouts
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
+    if (searchAbortControllerRef.current) {
+      searchAbortControllerRef.current.abort();
+    }
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      if (searchAbortControllerRef.current) {
+        searchAbortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   // Search mode configurations (memoized to prevent recreation)
   const searchModes = useMemo(() => [
@@ -305,6 +404,7 @@ const UnifiedSearch = () => {
           error={searchError}
           mode={searchMode}
           onSearchQueryChange={handleSearchQueryChange}
+          onTagSearch={handleTagSearch}
         />
       )}
     </div>

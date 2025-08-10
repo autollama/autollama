@@ -8,9 +8,9 @@ const capitalizeWords = (str) => {
   return str.replace(/\b\w/g, char => char.toUpperCase());
 };
 
-// Utility function to handle tag clicks and launch searches
-const handleTagClick = (tag, handleSearchQueryChange) => {
-  console.log('🏷️ Tag clicked:', tag);
+// Utility function to handle tag clicks and launch tag-based searches
+const handleTagClick = (tag, tagField, onTagSearch, onSearchQueryChange) => {
+  console.log('🏷️ Tag clicked:', tag, 'field:', tagField);
   
   // Safety checks
   if (!tag) {
@@ -18,28 +18,43 @@ const handleTagClick = (tag, handleSearchQueryChange) => {
     return;
   }
   
-  if (!handleSearchQueryChange) {
-    console.error('❌ Tag click failed - handleSearchQueryChange function not available');
+  if (!onTagSearch) {
+    console.error('❌ Tag click failed - onTagSearch function not available, trying fallback');
+    // Try fallback to onSearchQueryChange if available
+    if (onSearchQueryChange) {
+      console.log('🔄 Using fallback onSearchQueryChange');
+      onSearchQueryChange(tag);
+      return;
+    }
+    console.error('❌ No fallback available');
     return;
   }
   
-  if (typeof handleSearchQueryChange !== 'function') {
-    console.error('❌ Tag click failed - handleSearchQueryChange is not a function:', typeof handleSearchQueryChange);
+  if (typeof onTagSearch !== 'function') {
+    console.error('❌ Tag click failed - onTagSearch is not a function:', typeof onTagSearch);
     return;
   }
   
   try {
-    console.log('🔄 Calling handleSearchQueryChange with:', tag);
-    handleSearchQueryChange(tag);
+    console.log('🔄 Calling onTagSearch with tag:', tag, 'field:', tagField);
+    onTagSearch(tag, tagField);
   } catch (error) {
-    console.error('❌ Error calling handleSearchQueryChange:', error);
+    console.error('❌ Error calling onTagSearch:', error);
   }
 };
 
-const SearchResults = ({ query, results, loading, error, mode, onSearchQueryChange }) => {
+const SearchResults = ({ query, results, loading, error, mode, onSearchQueryChange, onTagSearch }) => {
   const [viewMode, setViewMode] = useState('combined'); // 'combined', 'bm25', 'semantic'
   const [sortBy, setSortBy] = useState('relevance'); // 'relevance', 'date', 'title'
   const { handleDocumentSelect, handleChunkSelect } = useAppContext();
+
+  // Create fallback tag search function if not provided
+  const handleTagSearch = onTagSearch || ((tag, field) => {
+    console.log('🏷️ Fallback: Using text search for tag:', tag);
+    if (onSearchQueryChange) {
+      onSearchQueryChange(tag);
+    }
+  });
 
   // Safety check to ensure function is available
   if (!onSearchQueryChange) {
@@ -182,6 +197,7 @@ const SearchResults = ({ query, results, loading, error, mode, onSearchQueryChan
             onDocumentSelect={handleDocumentSelect}
             onChunkSelect={handleChunkSelect}
             onSearchQueryChange={onSearchQueryChange}
+            onTagSearch={handleTagSearch}
           />
         ))}
       </div>
@@ -221,7 +237,7 @@ const ViewModeTab = ({ id, label, icon: Icon, count, active, onClick, color }) =
 );
 
 // Individual Search Result Item
-const SearchResultItem = ({ result, query, rank, viewMode, onDocumentSelect, onChunkSelect, onSearchQueryChange }) => {
+const SearchResultItem = ({ result, query, rank, viewMode, onDocumentSelect, onChunkSelect, onSearchQueryChange, onTagSearch }) => {
   const [expanded, setExpanded] = useState(false);
 
   // Get relevance score display
@@ -290,7 +306,7 @@ const SearchResultItem = ({ result, query, rank, viewMode, onDocumentSelect, onC
               <p className="text-sm text-gray-400 mb-2">
                 Chunk {result.chunk_index || 'N/A'} • 
                 <button
-                  onClick={() => handleTagClick(result.content_type, onSearchQueryChange)}
+                  onClick={() => handleTagClick(result.content_type, 'content_type', onTagSearch, onSearchQueryChange)}
                   className="text-gray-400 hover:text-gray-200 underline cursor-pointer transition-colors mx-1"
                   title={`Search for "${capitalizeWords(result.content_type)}" content type`}
                 >
@@ -300,7 +316,7 @@ const SearchResultItem = ({ result, query, rank, viewMode, onDocumentSelect, onC
                   <>
                     • 
                     <button
-                      onClick={() => handleTagClick(result.technical_level, onSearchQueryChange)}
+                      onClick={() => handleTagClick(result.technical_level, 'technical_level', onTagSearch, onSearchQueryChange)}
                       className="text-gray-400 hover:text-gray-200 underline cursor-pointer transition-colors mx-1"
                       title={`Search for "${capitalizeWords(result.technical_level)}" technical level`}
                     >
@@ -376,7 +392,7 @@ const SearchResultItem = ({ result, query, rank, viewMode, onDocumentSelect, onC
             {result.main_topics?.slice(0, 3).map((topic, i) => (
               <button
                 key={i}
-                onClick={() => handleTagClick(topic, onSearchQueryChange)}
+                onClick={() => handleTagClick(topic, 'main_topics', onTagSearch, onSearchQueryChange)}
                 className="px-2 py-1 bg-primary-600 bg-opacity-20 text-primary-300 text-xs rounded-full hover:bg-primary-600 hover:bg-opacity-40 hover:text-primary-200 transition-colors cursor-pointer"
                 title={`Search for "${capitalizeWords(topic)}"`}
               >
@@ -385,7 +401,7 @@ const SearchResultItem = ({ result, query, rank, viewMode, onDocumentSelect, onC
             ))}
             {result.sentiment && (
               <button
-                onClick={() => handleTagClick(result.sentiment, onSearchQueryChange)}
+                onClick={() => handleTagClick(result.sentiment, 'sentiment', onTagSearch, onSearchQueryChange)}
                 className={`px-2 py-1 text-xs rounded-full transition-colors cursor-pointer ${
                   result.sentiment === 'positive' ? 'bg-green-600 bg-opacity-20 text-green-300 hover:bg-green-600 hover:bg-opacity-40 hover:text-green-200' :
                   result.sentiment === 'negative' ? 'bg-red-600 bg-opacity-20 text-red-300 hover:bg-red-600 hover:bg-opacity-40 hover:text-red-200' :
