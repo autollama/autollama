@@ -1,6 +1,6 @@
 # AutoLlama - Intelligent RAG Platform
 
-[![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)](https://github.com/your-username/autollama)
+[![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)](https://github.com/snedea/autollama)
 [![Docker](https://img.shields.io/badge/docker-supported-blue.svg)](https://docker.com)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -17,20 +17,126 @@
 - **⚙️ Comprehensive Settings**: Web-based configuration for AI providers, processing parameters, and system settings
 - **🗄️ Dual Storage**: PostgreSQL for structured data, Qdrant for vector embeddings
 
+## Prerequisites
+
+Before installing AutoLlama, ensure you have the following:
+
+### System Requirements
+
+- **Operating System**: Linux (Ubuntu/Debian/CentOS/RHEL), macOS, or Windows with WSL
+- **Memory**: Minimum 4GB RAM (8GB+ recommended)
+- **Storage**: At least 10GB free space
+- **Network**: Internet connection for downloading dependencies and AI API access
+
+### Required Software
+
+#### 1. Docker & Docker Compose Installation
+
+**For Ubuntu/Debian:**
+```bash
+# Update package index
+sudo apt update
+
+# Install basic dependencies
+sudo apt install curl gnupg apt-transport-https ca-certificates lsb-release
+
+# Add Docker's official GPG key
+curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+# Add Docker repository
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Update package index
+sudo apt update
+
+# Install Docker
+sudo apt install docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+# Add your user to docker group
+sudo usermod -aG docker $USER
+
+# Start and enable Docker
+sudo systemctl start docker
+sudo systemctl enable docker
+```
+
+**For CentOS/RHEL/Fedora:**
+```bash
+# Install Docker
+sudo dnf install docker docker-compose
+
+# Start and enable Docker
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# Add user to docker group
+sudo usermod -aG docker $USER
+```
+
+**For macOS:**
+Download Docker Desktop from https://www.docker.com/products/docker-desktop/
+
+**After installation:**
+```bash
+# Log out and back in, then verify installation
+docker --version
+docker compose version
+
+# Test Docker permissions
+docker ps
+```
+
+**Troubleshooting Docker Permissions:**
+If you encounter "permission denied" errors:
+```bash
+# Refresh group membership without logging out
+newgrp docker
+
+# Or use sudo temporarily
+sudo docker compose up -d
+```
+
+#### 2. Tailscale Installation (Optional but Recommended)
+
+AutoLlama includes Tailscale integration for secure networking. Install Tailscale before running the containers:
+
+**Get your install script:**
+1. Visit https://login.tailscale.com/admin/machines/new-linux
+2. Copy your personalized install command
+3. Run it (example format):
+
+```bash
+curl -fsSL https://tailscale.com/install.sh | sh && sudo tailscale up --auth-key=tskey-auth-YOUR-KEY-HERE
+```
+
+**After Tailscale installation:**
+```bash
+# Create required config directory
+mkdir -p ~/.config
+
+# Create tsauthkey file (required for Docker mount)
+touch ~/.config/tsauthkey
+chmod 600 ~/.config/tsauthkey
+
+# Verify Tailscale is running
+sudo tailscale status
+```
+
+### Required Accounts & API Keys
+
+Before starting, obtain the following:
+
+- **OpenAI API key** from https://platform.openai.com/api-keys
+- **Qdrant Cloud account** from https://cloud.qdrant.io (or set up local Qdrant)
+- **PostgreSQL database** (can use cloud providers or local setup)
+
 ## Quick Start
-
-### Prerequisites
-
-- Docker and Docker Compose
-- OpenAI API key
-- Qdrant Cloud account (or local Qdrant instance)
-- PostgreSQL database
 
 ### Installation
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/your-username/autollama.git
+git clone https://github.com/snedea/autollama.git
 cd autollama
 ```
 
@@ -256,7 +362,48 @@ curl http://your-domain/api/health/comprehensive
 
 ## Troubleshooting
 
-### Common Issues
+### Installation Issues
+
+**Docker not found:**
+```bash
+# Verify Docker installation
+which docker
+docker --version
+
+# If not installed, follow installation steps above
+```
+
+**Docker permission denied:**
+```bash
+# Refresh group membership
+newgrp docker
+
+# Or add user to docker group and re-login
+sudo usermod -aG docker $USER
+# Log out and back in
+```
+
+**Missing tsauthkey file:**
+```bash
+# Create required file
+mkdir -p ~/.config
+touch ~/.config/tsauthkey
+chmod 600 ~/.config/tsauthkey
+
+# Restart containers
+docker compose down && docker compose up -d
+```
+
+**Package installation errors (Debian/Ubuntu):**
+```bash
+# Install missing dependencies
+sudo apt install curl gnupg apt-transport-https ca-certificates
+
+# Update package lists
+sudo apt update
+```
+
+### Runtime Issues
 
 **Services not starting:**
 ```bash
@@ -292,6 +439,12 @@ pool.query('SELECT NOW()').then(r => console.log('✓ Database connected:', r.ro
 - **Slow processing**: Adjust `CONTEXT_GENERATION_BATCH_SIZE` in settings
 - **High memory usage**: Monitor chunk size and concurrent processing limits
 - **API timeouts**: Increase timeout values in nginx configuration
+
+### Common Error Messages
+
+**"bind source path does not exist"**: Missing tsauthkey file - create it as shown above
+**"unable to get image"**: Docker permission issue - run `newgrp docker` or use sudo
+**"Package not found"**: Update package lists with `sudo apt update`
 
 ## Contributing
 
