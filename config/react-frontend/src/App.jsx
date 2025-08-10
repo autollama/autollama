@@ -720,15 +720,18 @@ function App() {
   };
 
   const handleSearchQueryChange = (query) => {
+    console.log('🔄 handleSearchQueryChange called:', { query, currentView });
     setSearchQuery(query);
     
     // Switch to search view if we have a query and we're not already there
     if (query.trim() && currentView !== 'search') {
+      console.log('🔄 Switching to search view');
       setCurrentView('search');
     }
     
     // If query is empty and we're in search view, go back to dashboard
     if (!query.trim() && currentView === 'search') {
+      console.log('🔄 Switching to dashboard view');
       setCurrentView('dashboard');
     }
   };
@@ -860,6 +863,11 @@ const Header = () => {
     sse 
   } = useAppContext();
 
+  // Safety check for context initialization
+  if (!handleSearchQueryChange) {
+    console.warn('⚠️ Header: handleSearchQueryChange not available from context, using no-op');
+  }
+
   return (
     <header className="text-center mb-8">
       {/* Logo and Title */}
@@ -872,10 +880,6 @@ const Header = () => {
             <span className="text-gradient">AutoLlama.io</span>
           </button>
         </h1>
-        <p className="text-xl text-gray-400">The Digital Pasture</p>
-        <div className="flex items-center justify-center gap-4 mt-2 text-sm text-gray-500">
-          <span>AutoLlama Version 2.3</span>
-        </div>
       </div>
 
       {/* Action Bar */}
@@ -887,7 +891,13 @@ const Header = () => {
             type="text"
             placeholder="Search documents, chunks, topics..."
             value={searchQuery}
-            onChange={(e) => handleSearchQueryChange(e.target.value)}
+            onChange={(e) => {
+              if (handleSearchQueryChange) {
+                handleSearchQueryChange(e.target.value);
+              } else {
+                console.warn('⚠️ Header: handleSearchQueryChange not available, ignoring search input');
+              }
+            }}
             className="input-primary pl-10"
           />
         </div>
@@ -935,7 +945,9 @@ const Footer = () => {
   return (
     <footer className="text-center p-4 text-xs text-gray-500 relative z-10 border-t border-gray-800 mt-16">
       <div className="flex flex-wrap justify-center items-center gap-4">
-        <span>AutoLlama Version 2.3</span>
+        <span>The Digital Pasture</span>
+        <span>•</span>
+        <span>Version 2.3</span>
       </div>
     </footer>
   );

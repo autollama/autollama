@@ -320,12 +320,29 @@ class SettingsManager {
     // Test database connection
     if (config.connections.databaseUrl && config.connections.databaseUrl.trim()) {
       try {
-        // Test through the API health endpoint which checks database connectivity
-        const response = await fetch('/health');
-        const healthData = await response.text();
-        results.database = healthData === 'healthy';
+        // Test through the comprehensive API health endpoint
+        const response = await fetch('/api/health');
+        if (response.ok) {
+          const healthData = await response.json();
+          // Check if PostgreSQL is connected
+          results.database = healthData.database?.postgresql === 'connected';
+        } else {
+          // Fallback to simple health endpoint
+          const fallbackResponse = await fetch('/health');
+          const fallbackData = await fallbackResponse.text();
+          results.database = fallbackData === 'healthy';
+        }
       } catch (error) {
         console.error('Database connection test failed:', error);
+        // Try fallback endpoint
+        try {
+          const fallbackResponse = await fetch('/health');
+          const fallbackData = await fallbackResponse.text();
+          results.database = fallbackData === 'healthy';
+        } catch (fallbackError) {
+          console.error('Fallback database test failed:', fallbackError);
+          results.database = false;
+        }
       }
     }
 

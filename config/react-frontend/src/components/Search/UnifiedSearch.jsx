@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Search, Filter, Sliders, Zap, Brain, X, Clock, TrendingUp } from 'lucide-react';
 import { useAppContext } from '../../App';
 import { useHybridSearch } from '../../hooks/useAPI';
@@ -24,9 +24,43 @@ const UnifiedSearch = () => {
   const hybridSearch = useHybridSearch();
   const searchTimeoutRef = useRef(null);
 
+  // Perform the actual search (moved before useEffect to fix dependency order)
+  const performSearch = useCallback(async (searchQuery, searchFilters, mode) => {
+    try {
+      setIsSearching(true);
+      
+      // Use the working /api/search endpoint directly
+      const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}&limit=${settings.search.maxSearchResults || 50}`);
+      const results = await response.json();
+      
+      // Transform results to match expected format
+      const transformedResults = {
+        combined: results || [],
+        bm25: mode === 'bm25' ? results || [] : [],
+        semantic: mode === 'semantic' ? results || [] : [],
+      };
+      
+      // Update local search results state
+      setSearchResults(transformedResults);
+      setSearchError(null);
+      
+      // Note: Don't call handleSearchQueryChange here to avoid circular calls
+      // The query is already set by the calling function
+      
+    } catch (error) {
+      console.error('Search failed:', error);
+      setSearchError(error.message);
+      setSearchResults({ combined: [], bm25: [], semantic: [] });
+    } finally {
+      setIsSearching(false);
+    }
+  }, [settings.search.maxSearchResults]); // Dependencies for useCallback
+
   // Synchronize local query with global searchQuery from context
   useEffect(() => {
+    console.log('🔍 Search useEffect triggered:', { searchQuery, currentQuery: query });
     if (searchQuery && searchQuery !== query) {
+      console.log('🔄 Updating search query and triggering search:', searchQuery);
       setQuery(searchQuery);
       // Trigger search if we have a query from context
       if (searchQuery.trim()) {
@@ -34,7 +68,7 @@ const UnifiedSearch = () => {
         performSearch(searchQuery, filters, searchMode);
       }
     }
-  }, [searchQuery]);
+  }, [searchQuery, query, performSearch, filters, searchMode]); // Added missing dependencies
 
   // Load search history from localStorage
   useEffect(() => {
@@ -60,63 +94,36 @@ const UnifiedSearch = () => {
           
           // Add to search history
           if (settings.search.enableSearchHistory) {
-            const newHistory = [
-              { query: searchQuery, timestamp: new Date().toISOString(), mode },
-              ...searchHistory.filter(h => h.query !== searchQuery)
-            ].slice(0, 10);
-            
-            setSearchHistory(newHistory);
-            localStorage.setItem('autollama-search-history', JSON.stringify(newHistory));
+            setSearchHistory(prevHistory => {
+              const newHistory = [
+                { query: searchQuery, timestamp: new Date().toISOString(), mode },
+                ...prevHistory.filter(h => h.query !== searchQuery)
+              ].slice(0, 10);
+              
+              localStorage.setItem('autollama-search-history', JSON.stringify(newHistory));
+              return newHistory;
+            });
           }
         } catch (error) {
           console.error('Search failed:', error);
         } finally {
           setIsSearching(false);
         }
-      }, 300);
+      }, 150); // Reduced debounce time for faster response
     },
-    [searchHistory, settings.search.enableSearchHistory]
+    [performSearch, settings.search.enableSearchHistory] // Added performSearch dependency
   );
-
-  // Perform the actual search
-  const performSearch = async (searchQuery, searchFilters, mode) => {
-    try {
-      setIsSearching(true);
-      
-      // Use the working /api/search endpoint directly
-      const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}&limit=${settings.search.maxSearchResults || 50}`);
-      const results = await response.json();
-      
-      // Transform results to match expected format
-      const transformedResults = {
-        combined: results || [],
-        bm25: mode === 'bm25' ? results || [] : [],
-        semantic: mode === 'semantic' ? results || [] : [],
-      };
-      
-      // Update local search results state
-      setSearchResults(transformedResults);
-      setSearchError(null);
-      
-      // Update parent component with search query
-      handleSearchQueryChange(searchQuery);
-      
-    } catch (error) {
-      console.error('Search failed:', error);
-      setSearchError(error.message);
-      setSearchResults({ combined: [], bm25: [], semantic: [] });
-    } finally {
-      setIsSearching(false);
-    }
-  };
 
   // Handle search input change
   const handleQueryChange = (newQuery) => {
     setQuery(newQuery);
-    // Update global search query to keep header search in sync
-    handleSearchQueryChange(newQuery);
+    // Only trigger debounced search, don't update global context on every keystroke
     if (newQuery.trim()) {
       debouncedSearch(newQuery, filters, searchMode);
+    } else {
+      // Clear search if empty
+      setSearchResults({ combined: [], bm25: [], semantic: [] });
+      handleSearchQueryChange(''); // Only update context when clearing
     }
   };
 
@@ -147,8 +154,8 @@ const UnifiedSearch = () => {
     }
   };
 
-  // Search mode configurations
-  const searchModes = [
+  // Search mode configurations (memoized to prevent recreation)
+  const searchModes = useMemo(() => [
     {
       id: 'hybrid',
       label: 'Hybrid',
@@ -173,7 +180,7 @@ const UnifiedSearch = () => {
       color: 'text-blue-400',
       bgColor: 'bg-blue-600',
     },
-  ];
+  ], []);
 
   const currentMode = searchModes.find(mode => mode.id === searchMode);
 
@@ -183,13 +190,11 @@ const UnifiedSearch = () => {
       <div className="relative">
         <div className="relative flex items-center">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
+          <SearchInput
             placeholder="Search across all your documents..."
             value={query}
-            onChange={(e) => handleQueryChange(e.target.value)}
+            onChange={handleQueryChange}
             className="input-primary pl-12 pr-20 text-lg h-14"
-            autoComplete="off"
           />
           
           {/* Clear Button */}
@@ -299,6 +304,7 @@ const UnifiedSearch = () => {
           loading={isSearching}
           error={searchError}
           mode={searchMode}
+          onSearchQueryChange={handleSearchQueryChange}
         />
       )}
     </div>
@@ -413,5 +419,24 @@ const SearchHistory = ({ history, onSelectQuery, onClearHistory }) => (
   </div>
 );
 
+// Optimized Search Input Component to prevent unnecessary re-renders
+const SearchInput = React.memo(({ placeholder, value, onChange, className }) => {
+  const handleChange = useCallback((e) => {
+    onChange(e.target.value);
+  }, [onChange]);
+
+  return (
+    <input
+      type="text"
+      placeholder={placeholder}
+      value={value}
+      onChange={handleChange}
+      className={className}
+      autoComplete="off"
+    />
+  );
+});
+
+SearchInput.displayName = 'SearchInput';
 
 export default UnifiedSearch;

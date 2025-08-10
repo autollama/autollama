@@ -48,6 +48,27 @@ curl -X POST http://localhost:8080/api/process-file-stream -F "file=@test.pdf" -
 - **Performance Optimized**: Reduced CPU usage and memory leaks
 - **Visual Improvements**: Enhanced spacing, collision prevention, and smooth transitions
 
+## v2.3 Search Functionality Overhaul ✨
+
+### Tag Click Search Implementation (2025-08-10)
+- **Clickable Tags**: All tags in search results (topics, sentiment, content type, technical level) are now fully clickable
+- **Instant Search**: Tag clicks immediately trigger searches and switch to search view with relevant results
+- **Proper Capitalization**: Fixed tag display to show proper capitalization using `capitalizeWords()` utility
+- **Comprehensive Error Handling**: Added safety checks and graceful fallbacks for missing functions
+
+### Technical Fixes Applied
+- **Fixed ReferenceError**: Resolved `Can't find variable: handleSearchQueryChange` and `onSearchQueryChange` errors
+- **Prop Drilling Issue**: Fixed missing prop passing from `SearchResults` → `SearchResultItem` component
+- **JavaScript Scoping**: Eliminated closure/scoping issues by using direct prop references instead of intermediate variables
+- **Context Initialization**: Added safety checks in Header component for context timing issues
+- **Search Performance**: Optimized search initialization order and useEffect dependencies
+
+### Search Architecture Enhancement
+- **Component Chain**: `UnifiedSearch` → `SearchResults` → `SearchResultItem` with proper prop flow
+- **Function Passing**: `handleSearchQueryChange` passed via props instead of unreliable context access
+- **Error Recovery**: Multiple layers of validation prevent crashes from missing functions
+- **User Experience**: Smooth search transitions with visual feedback and hover effects on clickable tags
+
 ## v2.2 Enhanced Features ✨
 
 ### Intelligent Contextual Retrieval
