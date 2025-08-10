@@ -1,8 +1,11 @@
-# AutoLlama - Intelligent RAG Platform
-
-[![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)](https://github.com/snedea/autollama)
-[![Docker](https://img.shields.io/badge/docker-supported-blue.svg)](https://docker.com)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+<div align="center">
+  <img src="assets/images/autollama-logo.png" alt="AutoLlama Logo" width="200"/>
+  <h1>AutoLlama - Intelligent RAG Platform</h1>
+  
+  [![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)](https://github.com/snedea/autollama)
+  [![Docker](https://img.shields.io/badge/docker-supported-blue.svg)](https://docker.com)
+  [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+</div>
 
 **AutoLlama** is an advanced Retrieval-Augmented Generation (RAG) platform that enables intelligent document processing and contextual search. Process URLs, PDFs, and various document formats with state-of-the-art AI analysis, semantic search, and real-time processing capabilities.
 
