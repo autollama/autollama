@@ -222,7 +222,7 @@ export const apiEndpoints = {
   advancedCleanup: (data = {}) => api.post('/cleanup-sessions/advanced', data),
   cleanupStuckSessions: (data = {}) => api.post('/upload-sessions/cleanup-stuck', data),
   getAdminSessionStats: () => api.get('/admin/session-stats'),
-  getSystemHealth: () => api.get('/admin/system-health'),
+  getSystemHealth: () => api.get('/system/status'),
 };
 
 // Chat/RAG endpoints

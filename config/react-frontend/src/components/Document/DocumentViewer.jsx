@@ -1,8 +1,65 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, FileText, Brain, Search, BarChart3, Download, ExternalLink, Clock, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { ArrowLeft, FileText, Brain, Search, BarChart3, Download, ExternalLink, Clock, CheckCircle, AlertCircle, Loader, File } from 'lucide-react';
 import { useAppContext } from '../../App';
 import ChunkInspector from './ChunkInspector';
 import ErrorBoundary from '../common/ErrorBoundary';
+
+// Utility function to extract filename from URL
+const extractFilename = (url) => {
+  if (!url) return null;
+  
+  try {
+    // Handle file:// URLs
+    if (url.startsWith('file://')) {
+      const filename = url.replace('file://', '');
+      return filename;
+    }
+    
+    // Handle regular URLs - extract filename from path
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname;
+    const filename = pathname.split('/').pop();
+    
+    // Return filename if it exists and has an extension
+    if (filename && filename.includes('.')) {
+      return decodeURIComponent(filename);
+    }
+    
+    // Fallback: return the URL without protocol
+    return url.replace(/^https?:\/\//, '');
+  } catch (error) {
+    // If URL parsing fails, try simple extraction
+    const parts = url.split('/');
+    const lastPart = parts[parts.length - 1];
+    
+    if (lastPart && lastPart.includes('.')) {
+      return decodeURIComponent(lastPart);
+    }
+    
+    // Final fallback: return cleaned URL
+    return url.replace(/^(https?:\/\/|file:\/\/)/, '');
+  }
+};
+
+// Utility function to truncate filename for display
+const truncateFilename = (filename, maxLength = 50) => {
+  if (!filename || filename.length <= maxLength) return filename;
+  
+  // Try to keep the file extension visible
+  const lastDot = filename.lastIndexOf('.');
+  if (lastDot > 0 && filename.length - lastDot < 8) {
+    const name = filename.substring(0, lastDot);
+    const ext = filename.substring(lastDot);
+    const availableLength = maxLength - ext.length - 3; // -3 for "..."
+    
+    if (availableLength > 10) {
+      return `${name.substring(0, availableLength)}...${ext}`;
+    }
+  }
+  
+  // Simple truncation
+  return `${filename.substring(0, maxLength - 3)}...`;
+};
 
 // Document Analysis Component - MOVED TO TOP TO PREVENT HOISTING ISSUES
 const DocumentAnalysis = ({ document, chunks }) => {
@@ -490,6 +547,12 @@ const DocumentViewer = () => {
               </span>
               <span>{selectedDocument.contentType || 'Document'}</span>
               <span>{chunks.length} chunks</span>
+              {selectedDocument.url && (
+                <span className="flex items-center gap-1 text-gray-400" title={selectedDocument.url}>
+                  <File className="w-4 h-4" />
+                  {truncateFilename(extractFilename(selectedDocument.url), 50)}
+                </span>
+              )}
               {selectedDocument.usesContextualEmbedding && (
                 <span className="flex items-center gap-1 text-blue-400">
                   <Brain className="w-4 h-4" />
@@ -857,6 +920,12 @@ const StatusCard = ({ title, value, icon: Icon, color, animated = false }) => (
 
 // Topics and Entities Card Component
 const TopicsAndEntitiesCard = ({ chunks }) => {
+  // State for managing expanded sections
+  const [expandedTopics, setExpandedTopics] = useState(false);
+  const [expandedPeople, setExpandedPeople] = useState(false);
+  const [expandedOrganizations, setExpandedOrganizations] = useState(false);
+  const [expandedLocations, setExpandedLocations] = useState(false);
+
   // Aggregate topics and entities from all completed chunks
   const completedChunks = chunks.filter(chunk => 
     (chunk.status === 'completed' || 
@@ -917,15 +986,19 @@ const TopicsAndEntitiesCard = ({ chunks }) => {
           <h4 className="font-medium mb-2 text-gray-300">Main Topics</h4>
           {hasTopics ? (
             <div className="flex flex-wrap gap-2">
-              {uniqueTopics.slice(0, 12).map((topic, i) => (
+              {(expandedTopics ? uniqueTopics : uniqueTopics.slice(0, 12)).map((topic, i) => (
                 <span key={i} className="px-3 py-1 bg-blue-600 bg-opacity-20 text-blue-300 text-sm rounded-full">
                   {topic}
                 </span>
               ))}
               {uniqueTopics.length > 12 && (
-                <span className="px-3 py-1 bg-gray-600 bg-opacity-20 text-gray-400 text-sm rounded-full">
-                  +{uniqueTopics.length - 12} more
-                </span>
+                <button
+                  onClick={() => setExpandedTopics(!expandedTopics)}
+                  className="px-3 py-1 bg-gray-600 bg-opacity-20 text-gray-400 text-sm rounded-full hover:bg-gray-600 hover:bg-opacity-40 hover:text-gray-300 transition-colors cursor-pointer"
+                  title={expandedTopics ? 'Show less' : `Show all ${uniqueTopics.length} topics`}
+                >
+                  {expandedTopics ? 'Show less' : `+${uniqueTopics.length - 12} more`}
+                </button>
               )}
             </div>
           ) : (
@@ -943,22 +1016,46 @@ const TopicsAndEntitiesCard = ({ chunks }) => {
               {uniquePeople.length > 0 && (
                 <div>
                   <span className="text-gray-400">People:</span>
-                  <span className="ml-2">{uniquePeople.slice(0, 8).join(', ')}</span>
-                  {uniquePeople.length > 8 && <span className="text-gray-400"> +{uniquePeople.length - 8} more</span>}
+                  <span className="ml-2">{(expandedPeople ? uniquePeople : uniquePeople.slice(0, 8)).join(', ')}</span>
+                  {uniquePeople.length > 8 && (
+                    <button
+                      onClick={() => setExpandedPeople(!expandedPeople)}
+                      className="text-gray-400 hover:text-gray-300 transition-colors cursor-pointer underline ml-1"
+                      title={expandedPeople ? 'Show less' : `Show all ${uniquePeople.length} people`}
+                    >
+                      {expandedPeople ? ' Show less' : ` +${uniquePeople.length - 8} more`}
+                    </button>
+                  )}
                 </div>
               )}
               {uniqueOrganizations.length > 0 && (
                 <div>
                   <span className="text-gray-400">Organizations:</span>
-                  <span className="ml-2">{uniqueOrganizations.slice(0, 8).join(', ')}</span>
-                  {uniqueOrganizations.length > 8 && <span className="text-gray-400"> +{uniqueOrganizations.length - 8} more</span>}
+                  <span className="ml-2">{(expandedOrganizations ? uniqueOrganizations : uniqueOrganizations.slice(0, 8)).join(', ')}</span>
+                  {uniqueOrganizations.length > 8 && (
+                    <button
+                      onClick={() => setExpandedOrganizations(!expandedOrganizations)}
+                      className="text-gray-400 hover:text-gray-300 transition-colors cursor-pointer underline ml-1"
+                      title={expandedOrganizations ? 'Show less' : `Show all ${uniqueOrganizations.length} organizations`}
+                    >
+                      {expandedOrganizations ? ' Show less' : ` +${uniqueOrganizations.length - 8} more`}
+                    </button>
+                  )}
                 </div>
               )}
               {uniqueLocations.length > 0 && (
                 <div>
                   <span className="text-gray-400">Locations:</span>
-                  <span className="ml-2">{uniqueLocations.slice(0, 8).join(', ')}</span>
-                  {uniqueLocations.length > 8 && <span className="text-gray-400"> +{uniqueLocations.length - 8} more</span>}
+                  <span className="ml-2">{(expandedLocations ? uniqueLocations : uniqueLocations.slice(0, 8)).join(', ')}</span>
+                  {uniqueLocations.length > 8 && (
+                    <button
+                      onClick={() => setExpandedLocations(!expandedLocations)}
+                      className="text-gray-400 hover:text-gray-300 transition-colors cursor-pointer underline ml-1"
+                      title={expandedLocations ? 'Show less' : `Show all ${uniqueLocations.length} locations`}
+                    >
+                      {expandedLocations ? ' Show less' : ` +${uniqueLocations.length - 8} more`}
+                    </button>
+                  )}
                 </div>
               )}
             </div>

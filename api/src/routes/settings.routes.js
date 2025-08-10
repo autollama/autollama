@@ -232,6 +232,87 @@ router.post('/settings/test-connections', async (req, res) => {
   });
 });
 
+// Test Claude API connection endpoint
+router.post('/test-claude', async (req, res) => {
+  try {
+    const { apiKey } = req.body;
+    
+    if (!apiKey) {
+      return res.status(400).json({
+        success: false,
+        error: 'API key is required'
+      });
+    }
+
+    console.log('🧪 Testing Claude API connection...');
+
+    // Import axios for HTTP requests
+    const axios = require('axios');
+
+    // Test the Claude API with a simple request
+    const response = await axios.post('https://api.anthropic.com/v1/messages', {
+      model: 'claude-3-5-haiku-20241022',
+      max_tokens: 10,
+      messages: [
+        {
+          role: 'user',
+          content: 'Hello'
+        }
+      ]
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      timeout: 10000 // 10 second timeout
+    });
+
+    if (response.status === 200 && response.data) {
+      console.log('✅ Claude API test successful');
+      res.json({
+        success: true,
+        message: 'Claude API connection successful',
+        model: 'claude-3-5-haiku-20241022',
+        response_id: response.data.id
+      });
+    } else {
+      throw new Error('Unexpected response from Claude API');
+    }
+
+  } catch (error) {
+    console.error('❌ Claude API test failed:', error.message);
+    
+    let errorMessage = 'Unknown error';
+    let statusCode = 500;
+    
+    if (error.response) {
+      statusCode = error.response.status;
+      if (error.response.status === 401) {
+        errorMessage = 'Invalid API key - please check your Anthropic API key';
+      } else if (error.response.status === 403) {
+        errorMessage = 'API key does not have permission to access Claude models';
+      } else if (error.response.status === 429) {
+        errorMessage = 'Rate limit exceeded - please try again later';
+      } else {
+        errorMessage = error.response.data?.error?.message || `HTTP ${error.response.status} error`;
+      }
+    } else if (error.code === 'ECONNABORTED') {
+      errorMessage = 'Connection timeout - please check your internet connection';
+    } else if (error.code === 'ENOTFOUND') {
+      errorMessage = 'Unable to reach Anthropic API - please check your internet connection';
+    } else {
+      errorMessage = error.message;
+    }
+
+    res.status(statusCode).json({
+      success: false,
+      error: errorMessage,
+      details: error.response?.data || null
+    });
+  }
+});
+
 // Favicon upload endpoint with error handling
 router.post('/settings/favicon', (req, res) => {
   // Handle multer upload with custom error handling

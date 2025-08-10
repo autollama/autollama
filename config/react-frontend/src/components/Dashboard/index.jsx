@@ -1,9 +1,8 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { LayoutGrid, Activity, BarChart3, Upload, Waves } from 'lucide-react';
+import { LayoutGrid, Activity, BarChart3, Upload } from 'lucide-react';
 import DocumentGrid from './DocumentGrid';
 import { useAppContext } from '../../App';
 
-import FlowingDashboard from './FlowingDashboard';
 
 // Lazy load heavy components
 const ProcessingQueue = lazy(() => import('./ProcessingQueue'));
@@ -123,13 +122,6 @@ const Dashboard = () => {
       component: ProcessingQueue,
     },
     {
-      id: 'flowing',
-      label: 'Flow View',
-      icon: Waves,
-      badge: null,
-      component: FlowingDashboard,
-    },
-    {
       id: 'analytics',
       label: 'Analytics',
       icon: BarChart3,
@@ -240,7 +232,7 @@ const Dashboard = () => {
       </div>
 
       {/* Quick Actions Float */}
-      <QuickActionButton />
+      <QuickActionButton setActiveTab={setActiveTab} />
     </div>
   );
 };
@@ -262,23 +254,49 @@ const QuickStat = ({ label, value, icon, trend, pulsing }) => (
 );
 
 // Quick Action Button Component
-const QuickActionButton = () => {
+const QuickActionButton = ({ setActiveTab }) => {
   const [showActions, setShowActions] = useState(false);
+  const { setCurrentView } = useAppContext();
+
+  const handleUploadFiles = () => {
+    setCurrentView('processing');
+    setShowActions(false);
+  };
+
+  const handleProcessUrl = () => {
+    setCurrentView('processing'); 
+    setShowActions(false);
+  };
+
+  const handleViewAnalytics = () => {
+    // Stay on dashboard but switch to analytics tab
+    setActiveTab('analytics');
+    setShowActions(false);
+  };
 
   return (
     <div className="fixed bottom-6 right-6 z-40">
       {/* Action Menu */}
       {showActions && (
         <div className="absolute bottom-16 right-0 bg-gray-800 rounded-lg shadow-2xl border border-gray-700 p-2 space-y-2 min-w-[200px]">
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-700 rounded-lg transition-colors">
+          <button 
+            onClick={handleUploadFiles}
+            className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-700 rounded-lg transition-colors"
+          >
             <Upload className="w-4 h-4 text-primary-400" />
             <span>Upload Files</span>
           </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-700 rounded-lg transition-colors">
+          <button 
+            onClick={handleProcessUrl}
+            className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-700 rounded-lg transition-colors"
+          >
             <LayoutGrid className="w-4 h-4 text-primary-400" />
             <span>Process URL</span>
           </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-700 rounded-lg transition-colors">
+          <button 
+            onClick={handleViewAnalytics}
+            className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-700 rounded-lg transition-colors"
+          >
             <BarChart3 className="w-4 h-4 text-primary-400" />
             <span>View Analytics</span>
           </button>

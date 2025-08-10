@@ -99,6 +99,9 @@ class SettingsManager {
           if (dbSettings.openai_api_key) {
             mappedSettings.connections.openaiApiKey = dbSettings.openai_api_key;
           }
+          if (dbSettings.claude_api_key) {
+            mappedSettings.connections.claudeApiKey = dbSettings.claude_api_key;
+          }
           if (dbSettings.qdrant_url) {
             mappedSettings.connections.qdrantUrl = dbSettings.qdrant_url;
           }
@@ -141,6 +144,9 @@ class SettingsManager {
       
       if (connections.openaiApiKey && connections.openaiApiKey.trim()) {
         dbSettings.openai_api_key = connections.openaiApiKey;
+      }
+      if (connections.claudeApiKey && connections.claudeApiKey.trim()) {
+        dbSettings.claude_api_key = connections.claudeApiKey;
       }
       if (connections.qdrantUrl && connections.qdrantUrl.trim()) {
         dbSettings.qdrant_url = connections.qdrantUrl;
