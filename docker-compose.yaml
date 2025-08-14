@@ -1,36 +1,28 @@
-services:
-  # Legacy static frontend (keeping for compatibility)
-  autollama-legacy:
-    image: nginx:alpine
-    network_mode: service:autollama-on-hstgr
-    volumes:
-      - ./config:/usr/share/nginx/html:ro
-      - ./config/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./logs:/var/log/autollama:rw
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "3"
+# AutoLlama v2.3.1 - Production Deployment
+# For production environments with external database and advanced configuration
 
-  # New React frontend
+services:
+  # React Frontend
   autollama:
     build: 
       context: ./config/react-frontend
       dockerfile: Dockerfile
     ports:
-      - "8080:80"    # New React interface (primary - production port)
+      - "8080:80"
     environment:
       - NODE_ENV=production
     depends_on:
-      - autollama-api
-      - autollama-bm25
-    extra_hosts:
-      # Update this IP when Tailscale container restarts with new IP
-      # Get current IP: docker exec autollama-autollama-on-hstgr-1 tailscale status | head -1
-      - "autollama-api:100.64.199.110"
+      autollama-api:
+        condition: service_healthy
+      autollama-bm25:
+        condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     deploy:
       resources:
         limits:
@@ -39,36 +31,31 @@ services:
         reservations:
           memory: 256M
           cpus: '0.25'
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
     logging:
       driver: "json-file"
       options:
         max-size: "5m"
         max-file: "3"
+    networks:
+      - autollama-network
 
+  # API Server
   autollama-api:
     build: ./api
-    network_mode: service:autollama-on-hstgr
     environment:
       - NODE_ENV=production
       - PORT=3001
       - WS_PORT=3003
       - NODE_TLS_REJECT_UNAUTHORIZED=0
-      - DATABASE_URL=postgresql://autollama_user:autollama_secure_password_2024@100.92.210.53:5432/autollama
+      - DATABASE_URL=${DATABASE_URL}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - QDRANT_URL=https://c4c8ee46-d9dd-4c0f-a00e-9215675351da.us-west-1-0.aws.cloud.qdrant.io:6333
+      - QDRANT_URL=${QDRANT_URL}
       - QDRANT_API_KEY=${QDRANT_API_KEY}
-      - ENABLE_CONTEXTUAL_EMBEDDINGS=true
-      - CONTEXTUAL_EMBEDDING_MODEL=gpt-4o-mini
-      # CORS Configuration for Production
-      - FRONTEND_URL=https://autollama.io
-      - LEGACY_FRONTEND_URL=http://localhost:8082
-      - ALLOWED_ORIGINS=https://autollama.io,http://autollama.io,http://localhost:8080,http://localhost:8082,https://api.autollama.io,http://api.autollama.io
+      - ENABLE_CONTEXTUAL_EMBEDDINGS=${ENABLE_CONTEXTUAL_EMBEDDINGS:-true}
+      - CONTEXTUAL_EMBEDDING_MODEL=${CONTEXTUAL_EMBEDDING_MODEL:-gpt-4o-mini}
+      # CORS Configuration
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:8080}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
     restart: unless-stopped
     deploy:
       resources:
@@ -89,10 +76,12 @@ services:
       options:
         max-size: "5m"
         max-file: "3"
+    networks:
+      - autollama-network
 
+  # BM25 Search Service
   autollama-bm25:
     build: ./bm25-service
-    network_mode: service:autollama-on-hstgr
     environment:
       - PORT=3002
       - PYTHONPATH=/app
@@ -118,70 +107,16 @@ services:
       options:
         max-size: "5m"
         max-file: "3"
-
-
-  autollama-on-hstgr:
-    image: tailscale/tailscale:latest
-    hostname: autollama-on-hstgr
-    environment:
-      - TS_EXTRA_ARGS=--auth-key file:/run/secrets/tsauthkey
-      - TS_STATE_DIR=/var/lib/tailscale
-      - TS_USERSPACE=false
-    volumes:
-      - ${PWD}/tailscale-state:/var/lib/tailscale
-    devices:
-      - /dev/net/tun:/dev/net/tun
-    cap_add:
-      - net_admin
-    restart: unless-stopped
-    secrets:
-      - tsauthkey
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "3"
-
-  # Local proxy to access the Tailscale-networked services
-  autollama-proxy:
-    image: nginx:alpine
-    ports:
-      - "8081:80"    # Main web interface (avoiding conflict)
-      - "3004:3003"  # WebSocket for real-time updates  
-      - "3005:3002"  # BM25 service API
-      - "9099:9099"  # OpenWebUI Pipeline API
-    extra_hosts:
-      # Update this IP when Tailscale container restarts with new IP
-      # Get current IP: docker exec autollama-autollama-on-hstgr-1 tailscale status | head -1
-      - "autollama-on-hstgr:100.64.199.110"
-    volumes:
-      - ./proxy-nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    restart: unless-stopped
-    depends_on:
-      - autollama-on-hstgr
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-          cpus: '0.25'
-        reservations:
-          memory: 128M
-          cpus: '0.1'
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "3"
+    networks:
+      - autollama-network
 
 volumes:
   autollama-bm25-data:
+    driver: local
 
-secrets:
-  tsauthkey:
-    file: ~/.config/tsauthkey
+networks:
+  autollama-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
