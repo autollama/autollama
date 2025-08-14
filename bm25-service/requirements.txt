@@ -1,3 +1,6 @@
+# AutoLlama BM25 Search Service Dependencies
+# Production-ready lexical search for hybrid retrieval
+
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 bm25s==0.2.6
