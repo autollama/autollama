@@ -1,78 +1,93 @@
 #!/bin/bash
 
-# AutoLlama Pipeline UI Build Script
-echo "🦙 Building AutoLlama Pipeline UI..."
+# AutoLlama v2.3.1 - Build Script
+# Builds all AutoLlama components for production deployment
 
-# Check if Node.js is available
-if ! command -v node &> /dev/null; then
-    echo "❌ Node.js is not installed. Please install Node.js 18+ to build the pipeline UI."
-    exit 1
-fi
+set -e  # Exit on any error
 
-# Check Node.js version
-NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-if [ "$NODE_VERSION" -lt 18 ]; then
-    echo "❌ Node.js version 18 or higher is required. Current version: $(node -v)"
-    exit 1
-fi
+echo "🦙 AutoLlama v2.3.1 Build System"
+echo "================================="
 
-# Navigate to pipeline directory
-cd config/pipeline
-
-# Install dependencies if node_modules doesn't exist
-if [ ! -d "node_modules" ]; then
-    echo "📦 Installing dependencies..."
-    npm install
-    if [ $? -ne 0 ]; then
-        echo "❌ Failed to install dependencies"
+# Function to check prerequisites
+check_prerequisites() {
+    echo "🔍 Checking prerequisites..."
+    
+    # Check Docker
+    if ! command -v docker &> /dev/null; then
+        echo "❌ Docker is required but not installed"
+        echo "   Install from: https://docs.docker.com/get-docker/"
         exit 1
     fi
-fi
+    
+    # Check Docker Compose
+    if ! docker compose version &> /dev/null; then
+        echo "❌ Docker Compose is required but not available"
+        exit 1
+    fi
+    
+    echo "✅ Prerequisites satisfied"
+}
 
-# Type check
-echo "🔍 Running type check..."
-npm run type-check
-if [ $? -ne 0 ]; then
-    echo "❌ Type check failed"
-    exit 1
-fi
+# Function to build Docker images
+build_images() {
+    echo ""
+    echo "🏗️ Building Docker images..."
+    
+    # Build API service
+    echo "📦 Building API service..."
+    docker compose -f docker-compose.public.yaml build autollama-api --no-cache
+    
+    # Build frontend
+    echo "📦 Building React frontend..."
+    docker compose -f docker-compose.public.yaml build autollama --no-cache
+    
+    # Build BM25 service
+    echo "📦 Building BM25 search service..."
+    docker compose -f docker-compose.public.yaml build autollama-bm25 --no-cache
+    
+    echo "✅ All images built successfully"
+}
 
-# Build the React app
-echo "🏗️ Building React app..."
-npm run build
-if [ $? -ne 0 ]; then
-    echo "❌ Build failed"
-    exit 1
-fi
+# Function to validate build
+validate_build() {
+    echo ""
+    echo "🧪 Validating build..."
+    
+    # Check if .env exists
+    if [ ! -f ".env" ]; then
+        echo "⚠️  No .env file found. Copy .env.public.example to .env and configure it."
+        echo "   cp .env.public.example .env"
+        return 1
+    fi
+    
+    # Test configuration
+    if docker compose -f docker-compose.public.yaml config > /dev/null 2>&1; then
+        echo "✅ Docker Compose configuration is valid"
+    else
+        echo "❌ Docker Compose configuration has errors"
+        return 1
+    fi
+}
 
-# Create backup of original index.html
-if [ -f "../index.html" ] && [ ! -f "../index.html.backup" ]; then
-    echo "💾 Backing up original index.html..."
-    cp ../index.html ../index.html.backup
-fi
+# Main execution
+main() {
+    check_prerequisites
+    build_images
+    validate_build
+    
+    echo ""
+    echo "🎉 Build completed successfully!"
+    echo ""
+    echo "🚀 Quick start commands:"
+    echo "   ./quick-start.sh              # Interactive setup (recommended)"
+    echo "   npm run start                 # Start services"
+    echo "   npm run logs                  # View logs"
+    echo "   npm run health                # Check health"
+    echo ""
+    echo "🌐 Access points after starting:"
+    echo "   http://localhost:7734         # Main interface"
+    echo "   http://localhost:7734/health  # Health check"
+}
 
-# Copy built files to nginx directory
-echo "📋 Copying built files..."
-cp -r dist/* ../
-if [ $? -ne 0 ]; then
-    echo "❌ Failed to copy built files"
-    exit 1
-fi
-
-# Copy icons if they exist
-if [ -f "../icons.svg" ]; then
-    cp ../icons.svg dist/
-fi
-
-echo "✅ Pipeline UI built successfully!"
-echo "🌐 The new pipeline UI will be served by nginx at http://localhost:8080"
-echo ""
-echo "Development commands:"
-echo "  npm run dev     - Start development server"
-echo "  npm run build   - Build for production"
-echo "  npm run preview - Preview production build"
-echo ""
-echo "To restore the original UI:"
-echo "  cp config/index.html.backup config/index.html"
-
-cd ../..
+# Run main function
+main
