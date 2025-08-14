@@ -1,8 +1,7 @@
-version: '3.8'
+# AutoLlama v2.3.1 - Production Docker Compose Configuration
+# High-availability deployment with load balancing and security optimizations
 
-# Production Docker Compose Configuration for AutoLlama v2.1
-# This configuration provides high availability, security, and performance
-# optimizations for production deployments.
+version: '3.8'
 
 services:
   # Nginx Load Balancer
