@@ -1,0 +1,33 @@
+# Commit Message Template for AutoLlama
+# 
+# Format: <type>: <description>
+#
+# Types:
+#   feat:     New feature
+#   fix:      Bug fix
+#   docs:     Documentation changes
+#   style:    Code style changes (formatting, etc.)
+#   refactor: Code refactoring
+#   test:     Adding tests
+#   chore:    Maintenance tasks
+#
+# Examples:
+#   feat: add document batch processing
+#   fix: resolve search timeout in large documents
+#   docs: update installation instructions
+#   refactor: optimize vector search performance
+#
+# Guidelines:
+# - Use imperative mood ("add" not "added")
+# - Keep first line under 50 characters
+# - Reference issues with "Fixes #123" or "Closes #456"
+# - Be specific and descriptive
+#
+# Body (optional):
+# - Explain WHAT and WHY, not HOW
+# - Separate from subject with blank line
+# - Wrap at 72 characters
+#
+# Footer (optional):
+# - Reference issues: "Fixes #123"
+# - Breaking changes: "BREAKING CHANGE: ..."
