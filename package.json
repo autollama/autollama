@@ -1,7 +1,7 @@
 {
   "name": "autollama",
-  "version": "2.3.0",
-  "description": "Intelligent RAG platform for document processing and contextual search with advanced AI analysis",
+  "version": "2.3.1",
+  "description": "Production-ready RAG platform with embedded databases, contextual embeddings, and one-command deployment",
   "keywords": [
     "rag",
     "llm",
@@ -12,23 +12,33 @@
     "semantic-search",
     "ai",
     "contextual-embeddings",
-    "qdrant"
+    "qdrant",
+    "postgresql",
+    "docker",
+    "production-ready"
   ],
-  "homepage": "https://github.com/your-username/autollama#readme",
+  "homepage": "https://github.com/snedea/autollama#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/autollama.git"
+    "url": "https://github.com/snedea/autollama.git"
   },
   "bugs": {
-    "url": "https://github.com/your-username/autollama/issues"
+    "url": "https://github.com/snedea/autollama/issues"
   },
   "license": "MIT",
   "author": {
-    "name": "AutoLlama Team",
-    "url": "https://github.com/your-username/autollama"
+    "name": "AutoLlama Contributors",
+    "url": "https://github.com/snedea/autollama/contributors"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=16.0.0",
+    "docker": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "docker compose -f docker-compose.public.yaml up -d",
+    "stop": "docker compose -f docker-compose.public.yaml down",
+    "logs": "docker compose -f docker-compose.public.yaml logs -f",
+    "health": "curl -f http://localhost:7734/health"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.57.0",
