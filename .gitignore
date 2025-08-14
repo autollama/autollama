@@ -29,3 +29,37 @@ uploads/
 # Development files
 debug.log
 test-output/
+
+# Development and internal documentation files (prevent future commits)
+*_SUMMARY*.md
+*_PLAN*.md
+*_NOTES*.md
+SESSION_SUMMARY*.md
+PHASE_*.md
+OPTIMIZATION_*.md
+TECHNICAL_IMPLEMENTATION*.md
+SECURITY_WARNING*.md
+*Refactoring_Plan*.md
+*Release_Summary*.md
+RELEASE_NOTES_v2.[0-2]*.md
+Modern_file_upload_solutions.md
+
+# Test and debug files
+test_*.txt
+debug_*.txt
+fix_*.sql
+temp_*.sql
+*_test.sql
+
+# Backup directories and migration files
+backup/
+backups/
+*.backup
+migration-backup/
+
+# Downloaded binaries and archives
+gh_*/
+*.tar.gz
+*.zip
+*.deb
+*.rpm
