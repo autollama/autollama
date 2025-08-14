@@ -1,1 +1,0 @@
-This is a test document to verify that the dashboard refreshes correctly when new content is processed. The document count should increment from 198 to 199 when this is processed successfully.
