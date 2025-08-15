@@ -7,9 +7,9 @@ class SettingsManager {
       connections: {
         openaiApiKey: '',
         claudeApiKey: '',
-        qdrantUrl: 'https://c4c8ee46-d9dd-4c0f-a00e-9215675351da.us-west-1-0.aws.cloud.qdrant.io',
+        qdrantUrl: '',
         qdrantApiKey: '',
-        databaseUrl: 'postgresql://autollama_user:autollama_secure_password_2024@100.92.210.53:5432/autollama',
+        databaseUrl: '',
         testConnections: false,
       },
       

@@ -301,9 +301,9 @@ async function storeBM25Index(chunks, filename) {
 
 // Initialize services
 const turndownService = new TurndownService();
-// Initialize OpenAI client with hardcoded API key
+// Initialize OpenAI client - API key must be provided via environment variable
 const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY || 'your-openai-api-key-here'
+    apiKey: process.env.OPENAI_API_KEY
 });
 
 // This will be reassigned when configuration is loaded from database
@@ -311,8 +311,8 @@ let openaiClient = openai;
 
 // Configuration
 // Airtable configuration removed - system now uses PostgreSQL database exclusively
-const QDRANT_URL = process.env.QDRANT_URL || 'https://c4c8ee46-d9dd-4c0f-a00e-9215675351da.us-west-1-0.aws.cloud.qdrant.io';
-const QDRANT_API_KEY = process.env.QDRANT_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.ghMgF9xxBObWVQnMQab9wCk7JP4jkHI7k4Z1TYo8zqg';
+const QDRANT_URL = process.env.QDRANT_URL;
+const QDRANT_API_KEY = process.env.QDRANT_API_KEY;
 
 // Contextual Embeddings Configuration
 const ENABLE_CONTEXTUAL_EMBEDDINGS = process.env.ENABLE_CONTEXTUAL_EMBEDDINGS === 'true';
@@ -330,10 +330,10 @@ async function initializeApiConfiguration() {
         if (dbOpenAIKey && dbOpenAIKey.trim() !== '' && dbOpenAIKey !== 'your_openai_api_key_here') {
             console.log('✅ Found OpenAI API key in database, reinitializing client...');
             
-            // Reinitialize OpenAI client with hardcoded key (override database)
+            // Reinitialize OpenAI client with environment key
             const { OpenAI } = require('openai');
             openaiClient = new OpenAI({
-                apiKey: process.env.OPENAI_API_KEY || 'your-openai-api-key-here'
+                apiKey: process.env.OPENAI_API_KEY
             });
             
             console.log('✅ OpenAI client successfully initialized with database settings');
@@ -3565,6 +3565,26 @@ async function startServer() {
         
         req.pipe(busboy);
     });
+    
+    // Validate required environment variables before starting server
+    function validateEnvironment() {
+        const required = ['OPENAI_API_KEY', 'QDRANT_URL', 'QDRANT_API_KEY', 'DATABASE_URL'];
+        const missing = required.filter(key => !process.env[key] || process.env[key].trim() === '');
+        
+        if (missing.length > 0) {
+            console.error('❌ SECURITY ERROR: Missing required environment variables:');
+            missing.forEach(key => console.error(`   - ${key}`));
+            console.error('');
+            console.error('Please set these environment variables before starting the server.');
+            console.error('See .env.example for configuration guidance.');
+            process.exit(1);
+        }
+        
+        console.log('✅ Environment validation passed - all required credentials configured');
+    }
+    
+    // Validate environment before starting
+    validateEnvironment();
     
     // Start the Express server
     app.listen(PORT, () => {
