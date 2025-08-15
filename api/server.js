@@ -1102,12 +1102,12 @@ app.get('/api/pipeline/download', async (req, res) => {
         
         // Replace placeholders with actual configuration
         pipelineContent = pipelineContent.replace(
-            'QDRANT_URL: str = "https://c4c8ee46-d9dd-4c0f-a00e-9215675351da.us-west-1-0.aws.cloud.qdrant.io"',
+            'QDRANT_URL: str = "your_qdrant_url_here"',
             `QDRANT_URL: str = "${QDRANT_URL}"`
         );
         
         pipelineContent = pipelineContent.replace(
-            'QDRANT_API_KEY: str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiO2JtIn0.ghMgF9xxBObWVQnMQab9wCk7JP4jkHI7k4Z1TYo8zqg"',
+            'QDRANT_API_KEY: str = "your_qdrant_api_key_here"',
             `QDRANT_API_KEY: str = "${QDRANT_API_KEY}"`
         );
         

@@ -79,8 +79,8 @@ const config = {
   // Vector database configuration
   vector: {
     qdrant: {
-      url: process.env.QDRANT_URL || 'https://c4c8ee46-d9dd-4c0f-a00e-9215675351da.us-west-1-0.aws.cloud.qdrant.io',
-      apiKey: process.env.QDRANT_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.ghMgF9xxBObWVQnMQab9wCk7JP4jkHI7k4Z1TYo8zqg',
+      url: process.env.QDRANT_URL,
+      apiKey: process.env.QDRANT_API_KEY,
       collection: process.env.QDRANT_COLLECTION || 'autollama-content',
       timeoutMs: parseInt(process.env.QDRANT_TIMEOUT || '30000'),
       retries: parseInt(process.env.QDRANT_RETRIES || '3'),
