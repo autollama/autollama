@@ -142,8 +142,8 @@ const PipelineTab = ({ onSettingsChange }) => {
 
   // Detect current environment and preferred URLs
   const getPreferredUrl = () => {
-    // Use the CORRECT working configuration - direct API access via Tailscale IP
-    return 'http://100.64.199.110:3001/api/openwebui';
+    // Use dynamic hostname instead of hardcoded IP
+    return 'http://autollama-on-hstgr:3001/api/openwebui';
   };
 
   const getAlternativeUrls = () => {
@@ -217,7 +217,7 @@ const PipelineTab = ({ onSettingsChange }) => {
               type="url"
               value={formData.pipelineUrl}
               onChange={(e) => handleInputChange('pipelineUrl', e.target.value)}
-              placeholder="http://100.64.199.110:3001/api/openwebui"
+              placeholder="http://autollama-on-hstgr:3001/api/openwebui"
               className="input-primary"
               required
             />
