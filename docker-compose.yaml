@@ -38,6 +38,7 @@ services:
         max-file: "3"
     networks:
       - autollama-network
+      - caddy_default
 
   # API Server
   autollama-api:
@@ -116,7 +117,7 @@ volumes:
 
 networks:
   autollama-network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
+    external: true
+    name: autollama_default
+  caddy_default:
+    external: true
