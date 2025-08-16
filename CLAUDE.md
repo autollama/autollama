@@ -13,7 +13,10 @@ cd autollama && cp example.env .env && docker compose up -d
 - **Enhanced Processing Pipeline**: Fetch→IntelligentChunk→AdvancedAnalyze→ContextualGenerate→Embed→Store
 - **New Features**: Document type detection, semantic boundary detection, hierarchical chunking
 - **Enhanced Metadata**: 11 new contextual fields for performance analysis
-- **Native OpenWebUI Integration**: Built-in RAG pipeline at `https://autollama.io:9099`
+- **Domain Architecture** ✨:
+  - `https://autollama.io` → Dark mode marketing homepage with feature showcase
+  - `https://app.autollama.io` → AutoLlama RAG application (production interface)
+- **Native OpenWebUI Integration**: Built-in RAG pipeline accessible via app subdomain
 
 ## Critical Commands
 ```bash
@@ -400,6 +403,29 @@ const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=5
 - `config/react-frontend/` - Primary UI
 - `config/react-frontend/src/components/Dashboard/FlowingDashboard.jsx` - **v2.3 Optimized Flow View**
 - `config/react-frontend/nginx.conf` - Proxy config
+- `marketing-homepage/` - **Dark mode marketing site** ✨
+
+## Marketing Homepage v2.3 ✨
+
+### Features
+- **Dark Mode Design**: Beautiful gradient background (slate to steel blue)
+- **Feature Showcase**: Interactive cards highlighting AutoLlama capabilities
+- **Hero Section**: Compelling value proposition with call-to-action buttons
+- **Responsive Design**: Mobile-optimized with smooth animations
+- **Cache-Optimized**: No-cache headers for instant updates
+
+### Technical Stack
+- **Static HTML/CSS**: Ultra-fast loading, no JavaScript dependencies
+- **Docker Deployment**: Nginx-alpine container on port 3004
+- **Caddy Integration**: Reverse proxy with SSL termination
+- **DNS Configuration**: DNS-only mode for direct server access
+
+### Deployment
+```bash
+cd marketing-homepage
+docker compose up -d
+# Accessible at https://autollama.io
+```
 
 ## Environment
 ```bash
