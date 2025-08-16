@@ -338,7 +338,7 @@ const DocumentGrid = () => {
                 {/* Metadata */}
                 <div className="space-y-1 flex-1">
                   {doc.summary && (
-                    <p className="text-xs text-gray-400 line-clamp-2">
+                    <p className="text-xs text-gray-400 line-clamp-4">
                       {doc.summary}
                     </p>
                   )}

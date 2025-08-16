@@ -7,8 +7,7 @@ services:
     build: 
       context: ./config/react-frontend
       dockerfile: Dockerfile
-    ports:
-      - "8080:80"
+    network_mode: service:autollama-on-hstgr
     environment:
       - NODE_ENV=production
     depends_on:
@@ -16,6 +15,8 @@ services:
         condition: service_healthy
       autollama-bm25:
         condition: service_healthy
+      autollama-on-hstgr:
+        condition: service_started
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
@@ -36,19 +37,17 @@ services:
       options:
         max-size: "5m"
         max-file: "3"
-    networks:
-      - autollama-network
-      - caddy_default
 
   # API Server
   autollama-api:
     build: ./api
+    network_mode: service:autollama-on-hstgr
     environment:
       - NODE_ENV=production
       - PORT=3001
       - WS_PORT=3003
       - NODE_TLS_REJECT_UNAUTHORIZED=0
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=postgresql://autollama:password@172.23.0.3:5432/autollama
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - QDRANT_URL=${QDRANT_URL}
       - QDRANT_API_KEY=${QDRANT_API_KEY}
@@ -58,6 +57,9 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:8080}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
     restart: unless-stopped
+    depends_on:
+      autollama-on-hstgr:
+        condition: service_started
     deploy:
       resources:
         limits:
@@ -77,18 +79,20 @@ services:
       options:
         max-size: "5m"
         max-file: "3"
-    networks:
-      - autollama-network
 
   # BM25 Search Service
   autollama-bm25:
     build: ./bm25-service
+    network_mode: service:autollama-on-hstgr
     environment:
       - PORT=3002
       - PYTHONPATH=/app
     volumes:
       - autollama-bm25-data:/app/data/bm25_indices
     restart: unless-stopped
+    depends_on:
+      autollama-on-hstgr:
+        condition: service_started
     deploy:
       resources:
         limits:
@@ -108,6 +112,28 @@ services:
       options:
         max-size: "5m"
         max-file: "3"
+
+  # Tailscale VPN Sidecar
+  autollama-on-hstgr:
+    image: tailscale/tailscale:latest
+    hostname: autollama-on-hstgr-4
+    environment:
+      - TS_EXTRA_ARGS=--auth-key file:/home/chuck/.config/tsauthkey --hostname autollama-on-hstgr-4 --accept-routes
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+      - TS_ACCEPT_DNS=true
+    volumes:
+      - ./tailscale-state:/var/lib/tailscale
+      - /home/chuck/.config/tsauthkey:/home/chuck/.config/tsauthkey:ro
+    ports:
+      - "8080:80"
+      - "3001:3001"
+      - "3003:3003"
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - net_admin
+    restart: unless-stopped
     networks:
       - autollama-network
 
