@@ -1,0 +1,181 @@
+name: ⚡ Performance Issue
+description: Report slow processing, high resource usage, or performance problems
+title: "[Performance]: "
+labels: ["performance", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a performance issue! This helps us optimize AutoLlama for everyone.
+
+  - type: dropdown
+    id: performance_type
+    attributes:
+      label: Performance Issue Type
+      description: What type of performance problem are you experiencing?
+      options:
+        - Slow document processing
+        - High memory usage
+        - High CPU usage
+        - Slow search/retrieval
+        - Web interface sluggishness
+        - API response timeouts
+        - Database query performance
+        - Container startup time
+        - Large file handling
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Performance Issue Description
+      description: Describe the performance problem you're experiencing
+      placeholder: |
+        Provide specific details:
+        - What operation is slow?
+        - How long does it take vs. expected time?
+        - When did you first notice this issue?
+        - Is it consistently slow or intermittent?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this performance issue?
+      placeholder: |
+        Detailed steps:
+        1. Upload document of type X with size Y
+        2. Process with settings Z
+        3. Observe slow processing/high usage
+        4. Measure time: X minutes vs expected Y seconds
+    validations:
+      required: true
+
+  - type: textarea
+    id: metrics
+    attributes:
+      label: Performance Metrics
+      description: What specific metrics are you observing?
+      placeholder: |
+        Please provide measurements:
+        - Processing time: X minutes for Y MB document
+        - Memory usage: X GB (observed via docker stats)
+        - CPU usage: X% sustained
+        - Response times: API calls taking X seconds
+        - Search query time: X seconds for Y results
+      render: shell
+
+  - type: textarea
+    id: document_details
+    attributes:
+      label: Document/Data Details
+      description: What type of content are you processing?
+      placeholder: |
+        Content characteristics:
+        - Document type: PDF, EPUB, Web pages, etc.
+        - File size: X MB
+        - Document length: X pages/words
+        - Content complexity: Text-heavy, image-heavy, technical, etc.
+        - Number of documents being processed
+        - Batch size or concurrency level
+
+  - type: textarea
+    id: system_specs
+    attributes:
+      label: System Specifications
+      description: Details about your system resources
+      placeholder: |
+        Hardware/Environment:
+        - CPU: [e.g. Intel i7-10700K, Apple M1, etc.]
+        - RAM: [e.g. 16GB]
+        - Storage: [e.g. SSD, HDD, NVMe]
+        - OS: [e.g. Ubuntu 22.04, macOS 13.0]
+        - Docker resources: [CPU limit, memory limit]
+        - Network: [local, cloud, bandwidth limitations]
+    validations:
+      required: true
+
+  - type: textarea
+    id: configuration
+    attributes:
+      label: AutoLlama Configuration
+      description: Relevant settings that might affect performance
+      placeholder: |
+        Configuration details:
+        - Chunk size settings
+        - Batch processing settings
+        - AI model choices (GPT-4o-mini vs others)
+        - Concurrent processing limits
+        - Database configuration
+        - Any custom optimizations
+
+  - type: textarea
+    id: monitoring
+    attributes:
+      label: Resource Monitoring
+      description: Output from resource monitoring commands
+      placeholder: |
+        Please include output from:
+        - docker stats (show container resource usage)
+        - docker compose logs -f autollama-api | grep performance
+        - System monitoring tools (htop, Activity Monitor, Task Manager)
+        - Database performance metrics
+      render: shell
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact Level
+      description: How severely does this affect your use of AutoLlama?
+      options:
+        - Critical (Unusable for intended purpose)
+        - High (Significantly impacts productivity)
+        - Medium (Noticeable but manageable)
+        - Low (Minor inconvenience)
+    validations:
+      required: true
+
+  - type: textarea
+    id: comparison
+    attributes:
+      label: Performance Comparison
+      description: How does this compare to expected or previous performance?
+      placeholder: |
+        Comparison details:
+        - Previous AutoLlama versions that worked better
+        - Similar operations that perform well
+        - Expected performance based on system specs
+        - Comparison with other RAG systems (if applicable)
+
+  - type: textarea
+    id: attempts
+    attributes:
+      label: Optimization Attempts
+      description: What have you tried to improve performance?
+      placeholder: |
+        Optimization attempts:
+        - Adjusted chunk size or batch settings
+        - Increased Docker resource limits
+        - Changed AI models or providers
+        - Modified concurrent processing settings
+        - Database optimizations
+        - System-level optimizations
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm the following
+      options:
+        - label: I have provided specific performance measurements
+          required: true
+        - label: I have included system specifications
+          required: true
+        - label: I have attempted basic troubleshooting
+          required: true
+        - label: I have searched for similar performance issues
+          required: true

@@ -1,0 +1,134 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior in AutoLlama
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please provide as much detail as possible to help us reproduce and fix the issue.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: Describe what happened and what you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps to reproduce the behavior
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Process document '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen
+      placeholder: Describe the expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened
+      placeholder: Describe what actually happened
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of AutoLlama is affected?
+      options:
+        - Web Interface (React Frontend)
+        - API Server (Node.js)
+        - Document Processing Pipeline
+        - Search & Retrieval
+        - OpenWebUI Integration
+        - Database (PostgreSQL)
+        - Vector Database (Qdrant)
+        - Docker/Deployment
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severe is this bug?
+      options:
+        - Critical (System unusable)
+        - High (Major functionality broken)
+        - Medium (Minor functionality broken)
+        - Low (Cosmetic issue)
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Information about your environment
+      placeholder: |
+        - OS: [e.g. Ubuntu 22.04, macOS 13.0, Windows 11]
+        - Docker Version: [e.g. 24.0.7]
+        - AutoLlama Version: [e.g. v2.3.2]
+        - Browser: [e.g. Chrome 119, Firefox 120] (if web interface issue)
+        - Node.js Version: [if developing locally]
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and Error Messages
+      description: Relevant log output or error messages
+      placeholder: |
+        Paste any relevant logs here. You can get logs with:
+        - docker compose logs -f autollama-api
+        - docker compose logs -f autollama
+        - Browser console logs (F12 → Console)
+      render: shell
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other context about the problem
+      placeholder: |
+        - Screenshots
+        - Document types being processed
+        - Configuration details
+        - Workarounds attempted
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing issues to avoid duplicates
+          required: true
+        - label: I have provided detailed reproduction steps
+          required: true
+        - label: I have included relevant logs and error messages
+          required: true
+        - label: I am using a supported version of AutoLlama
+          required: true

@@ -1,0 +1,164 @@
+name: 🛠️ Installation & Setup Help
+description: Get help with installation, deployment, or configuration issues
+title: "[Setup]: "
+labels: ["question", "installation", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Need help getting AutoLlama up and running? We're here to help! Please provide details about your setup and what you've tried.
+
+  - type: dropdown
+    id: setup_stage
+    attributes:
+      label: Setup Stage
+      description: Where are you in the installation process?
+      options:
+        - Pre-installation (planning/requirements)
+        - Installing prerequisites (Docker, etc.)
+        - Cloning repository and initial setup
+        - Environment configuration (.env file)
+        - Docker container startup
+        - First-time access and testing
+        - OpenWebUI integration
+        - Production deployment
+        - Updating/upgrading
+    validations:
+      required: true
+
+  - type: textarea
+    id: issue_description
+    attributes:
+      label: Issue Description
+      description: What problem are you encountering?
+      placeholder: |
+        Describe what's not working:
+        - What step are you stuck on?
+        - What error messages are you seeing?
+        - What behavior are you experiencing?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps_taken
+    attributes:
+      label: Steps Already Taken
+      description: What have you already tried?
+      placeholder: |
+        Please list what you've tried:
+        1. Followed installation guide
+        2. Checked logs with: docker compose logs -f
+        3. Verified Docker installation
+        4. etc.
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Details
+      description: Tell us about your system
+      placeholder: |
+        - Operating System: [e.g. Ubuntu 22.04, macOS 13.0, Windows 11 + WSL]
+        - Docker Version: [e.g. 24.0.7] (run: docker --version)
+        - Docker Compose Version: [e.g. 2.21.0] (run: docker compose version)
+        - Available RAM: [e.g. 8GB]
+        - Available Storage: [e.g. 50GB free]
+        - Network Setup: [e.g. behind corporate firewall, home network]
+    validations:
+      required: true
+
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Configuration Details
+      description: Share relevant configuration (remove sensitive data!)
+      placeholder: |
+        Please share (remove any API keys or passwords):
+        - .env file contents (redacted)
+        - docker-compose.yaml modifications
+        - Any custom settings
+        - Network/port configurations
+      render: shell
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Logs
+      description: Paste relevant error messages or logs
+      placeholder: |
+        Please include logs from:
+        - docker compose logs -f autollama-api
+        - docker compose logs -f autollama
+        - System error messages
+        - Browser console errors (F12 → Console)
+      render: shell
+
+  - type: dropdown
+    id: deployment_type
+    attributes:
+      label: Deployment Type
+      description: How are you trying to deploy AutoLlama?
+      options:
+        - Local development (laptop/desktop)
+        - Home server/homelab
+        - Cloud VPS (DigitalOcean, Linode, etc.)
+        - AWS/Azure/GCP
+        - Corporate/enterprise environment
+        - Docker Desktop (Windows/Mac)
+        - Raspberry Pi or ARM device
+    validations:
+      required: true
+
+  - type: textarea
+    id: goals
+    attributes:
+      label: Setup Goals
+      description: What are you trying to accomplish?
+      placeholder: |
+        Help us understand your use case:
+        - Personal document management
+        - Team knowledge base
+        - Development/testing
+        - Production deployment
+        - Integration with existing systems
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites Check
+      description: Have you completed these prerequisites?
+      options:
+        - label: Docker is installed and running
+        - label: Docker Compose is available
+        - label: I have an OpenAI API key
+        - label: I have access to a PostgreSQL database
+        - label: I have access to Qdrant (cloud or local)
+        - label: I have read the installation documentation
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other information that might help
+      placeholder: |
+        - Screenshots of error messages
+        - Network/firewall restrictions
+        - Previous AutoLlama installations
+        - Similar tools you've successfully installed
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm the following
+      options:
+        - label: I have read the installation documentation
+          required: true
+        - label: I have searched existing issues for similar problems
+          required: true
+        - label: I have included relevant error logs
+          required: true
+        - label: I have provided detailed environment information
+          required: true
