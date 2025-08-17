@@ -1,7 +1,6 @@
 <div align="center">
   <img src="assets/images/autollama-logo.png" alt="AutoLlama Logo" width="200"/>
   
-  <h3><em>Finally.</em></h3>
   <h1>The Context-Aware RAG Framework</h1>
   <h2><em>Your Documents Have Context. Now Your RAG Does Too.</em></h2>
   
@@ -300,6 +299,64 @@ API Key: 0p3n-w3bu!
 ```
 
 **Try asking**: "How do the conclusions in Chapter 5 relate to the hypotheses presented in Chapter 1?"
+
+## Screenshots - See AutoLlama in Action
+
+Real screenshots from the AutoLlama platform—experience the interface that makes contextual RAG effortless.
+
+### 📊 Main Dashboard
+![Main Dashboard](https://autollama.io/assets/screenshots/dashboard-main.webp)
+
+Comprehensive document management with interactive processed documents, real-time processing queue, and intuitive search interface.
+
+### 🧠 Document Intelligence Dashboard  
+![Document Intelligence Dashboard](https://autollama.io/assets/screenshots/document-analysis.webp)
+
+Get comprehensive AI-powered insights into your documents with topic extraction, entity mapping, and RAG readiness scoring.
+
+### 🧩 Chunks Grid View
+![Chunks Grid View](https://autollama.io/assets/screenshots/chunks-grid.webp)
+
+Visual representation of processed chunks with completion status and easy navigation to individual chunk details.
+
+### ⚡ Real-Time Processing
+![Real-Time Processing](https://autollama.io/assets/screenshots/processing-queue.webp)
+
+Processing queue showing Llama actively processing items with real-time status updates.
+
+### 🔍 AI Analysis Panel
+![AI Analysis Panel](https://autollama.io/assets/screenshots/ai-analysis-panel.webp)
+
+Deep AI insights with topic extraction, entity recognition, sentiment analysis, and processing quality metrics.
+
+### 🚀 Ultra-Fast Contextual Search
+![Ultra-Fast Contextual Search](https://autollama.io/assets/screenshots/search-results-enhanced.webp)
+
+Lightning-fast BM25 search across contextually enhanced content, tags, entities, sentiment, and AI-generated metadata - find exactly what you need instantly.
+
+### 🔗 OpenWebUI Integration
+
+#### One-Click Setup
+![OpenWebUI Settings](https://autollama.io/assets/screenshots/openwebui/autollama-openwebui-settings.png)
+
+Configure your pipeline with just a URL and API key. AutoLlama handles the rest.
+
+#### Native Integration
+![OpenWebUI Model Selection](https://autollama.io/assets/screenshots/openwebui/autollama-openwebui-model-select.png)
+
+AutoLlama appears as 'autollama-rag' in your model dropdown. Switch seamlessly between AI models.
+
+#### Intelligent Responses
+![OpenWebUI Query Response](https://autollama.io/assets/screenshots/openwebui/autollama-openwebui-query-response.png)
+
+Get precise answers from your documents with contextual understanding and follow-up suggestions.
+
+### 🎯 What You're Seeing
+
+- **✓ Real-Time Processing**: Watch documents transform into intelligent chunks
+- **✓ Visual Analytics**: Comprehensive insights and quality metrics  
+- **✓ Contextual Intelligence**: Every chunk remembers its place in the story
+- **✓ Enterprise Ready**: Production interface built for scale
 
 ## API Documentation
 
