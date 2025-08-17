@@ -1,0 +1,140 @@
+name: 📚 Documentation Issue
+description: Report missing, incorrect, or unclear documentation
+title: "[Docs]: "
+labels: ["documentation", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve AutoLlama's documentation! Clear docs help everyone get the most out of contextual RAG.
+
+  - type: dropdown
+    id: doc_type
+    attributes:
+      label: Documentation Type
+      description: What type of documentation issue is this?
+      options:
+        - Missing documentation
+        - Incorrect/outdated information
+        - Unclear explanations
+        - Broken links or images
+        - Code examples don't work
+        - API documentation issues
+        - Installation/setup issues
+        - Configuration help needed
+        - Architecture explanation needed
+    validations:
+      required: true
+
+  - type: textarea
+    id: location
+    attributes:
+      label: Documentation Location
+      description: Where is the documentation issue located?
+      placeholder: |
+        Provide the specific location:
+        - URL: https://github.com/autollama/autollama/blob/main/README.md
+        - Section: "Quick Start"
+        - File: docs/api.md
+        - Page: http://localhost:8080/docs
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_content
+    attributes:
+      label: Current Content
+      description: What does the current documentation say? (copy/paste the relevant section)
+      placeholder: Paste the current documentation that needs improvement
+      render: markdown
+
+  - type: textarea
+    id: issue_description
+    attributes:
+      label: Issue Description
+      description: What specifically is wrong, missing, or unclear?
+      placeholder: |
+        Describe the problem:
+        - What information is missing?
+        - What is incorrect or outdated?
+        - What is confusing or unclear?
+        - What error did you encounter when following the docs?
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggested_improvement
+    attributes:
+      label: Suggested Improvement
+      description: How should this documentation be improved?
+      placeholder: |
+        Provide specific suggestions:
+        - What information should be added?
+        - How should it be rewritten for clarity?
+        - What examples would be helpful?
+        - What warnings or troubleshooting info is needed?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: audience
+    attributes:
+      label: Target Audience
+      description: Who would benefit most from this documentation improvement?
+      options:
+        - New users getting started
+        - Developers integrating AutoLlama
+        - System administrators deploying
+        - Contributors to the project
+        - All users
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: User Context
+      description: What were you trying to accomplish when you found this issue?
+      placeholder: |
+        Help us understand your use case:
+        - What task were you trying to complete?
+        - What was your experience level?
+        - Where did you get stuck?
+        - What would have helped you succeed faster?
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other information that would help improve the documentation
+      placeholder: |
+        - Screenshots showing the issue
+        - Related documentation that works well
+        - External resources that were helpful
+        - Error messages encountered
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Would you be interested in helping improve this documentation?
+      options:
+        - label: I would be willing to submit a pull request with improvements
+        - label: I can help review and test documentation changes
+        - label: I can provide feedback on drafts
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing issues to avoid duplicates
+          required: true
+        - label: I have provided specific location information
+          required: true
+        - label: I have clearly described what needs improvement
+          required: true
+        - label: I have provided constructive suggestions for improvement
+          required: true

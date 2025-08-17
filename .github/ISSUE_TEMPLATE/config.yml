@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 Documentation
+    url: https://github.com/autollama/autollama/blob/main/README.md
+    about: Read the comprehensive documentation and setup guides
+  - name: 🌐 Live Demo
+    url: https://autollama.io
+    about: Try AutoLlama live and see the interface in action
+  - name: 💬 Discussions
+    url: https://github.com/autollama/autollama/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 🚀 OpenWebUI Integration Guide
+    url: https://github.com/autollama/autollama/blob/main/README.md#chat-with-your-documents
+    about: Learn how to integrate AutoLlama with OpenWebUI for chat functionality

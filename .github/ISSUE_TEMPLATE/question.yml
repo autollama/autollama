@@ -1,0 +1,137 @@
+name: ❓ General Question
+description: Ask a question about AutoLlama functionality, usage, or concepts
+title: "[Question]: "
+labels: ["question", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question about AutoLlama? We're here to help! Please check our documentation first, then feel free to ask.
+
+  - type: dropdown
+    id: question_type
+    attributes:
+      label: Question Category
+      description: What type of question is this?
+      options:
+        - How to use a specific feature
+        - Understanding AutoLlama concepts
+        - Best practices and recommendations
+        - Configuration and customization
+        - Integration with other tools
+        - Comparison with other RAG systems
+        - Troubleshooting guidance
+        - Development and contribution
+        - Architecture and technical details
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+      placeholder: |
+        Please ask your question clearly and provide context:
+        - What are you trying to accomplish?
+        - What specific aspect are you confused about?
+        - What information are you looking for?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context and Background
+      description: Provide context to help us give you the best answer
+      placeholder: |
+        Help us understand your situation:
+        - What is your use case or project?
+        - What is your experience level with RAG systems?
+        - What have you already tried or researched?
+        - Are there specific constraints or requirements?
+
+  - type: textarea
+    id: current_understanding
+    attributes:
+      label: Current Understanding
+      description: What do you already know or think about this topic?
+      placeholder: |
+        Share your current knowledge:
+        - What do you think the answer might be?
+        - What documentation have you already read?
+        - What assumptions are you making?
+        - Where specifically are you getting confused?
+
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: Urgency
+      description: How urgently do you need an answer?
+      options:
+        - Blocking my work (urgent)
+        - Important for current project
+        - Planning for future implementation
+        - General curiosity/learning
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment (if relevant)
+      description: If this question relates to a specific setup, please provide details
+      placeholder: |
+        Environment details (if applicable):
+        - AutoLlama version
+        - Operating system
+        - Deployment type (local, cloud, etc.)
+        - Integration context (OpenWebUI, custom app, etc.)
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Information
+      description: Any other details that might help us answer your question
+      placeholder: |
+        Optional additional context:
+        - Screenshots or examples
+        - Related questions or topics
+        - Specific documentation that was unclear
+        - Examples of what you're trying to achieve
+
+  - type: checkboxes
+    id: research
+    attributes:
+      label: Research Checklist
+      description: Have you already checked these resources?
+      options:
+        - label: I have read the README and documentation
+        - label: I have searched existing GitHub issues
+        - label: I have checked the API documentation (/docs)
+        - label: I have looked for related questions online
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contributing Back
+      description: Would you be interested in helping improve our documentation based on the answer?
+      options:
+        - label: I would be willing to help improve documentation based on the answer
+        - label: I can share my experience to help other users
+        - label: I would like to contribute examples or tutorials
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing issues for similar questions
+          required: true
+        - label: I have provided sufficient context for my question
+          required: true
+        - label: I have checked the relevant documentation first
+          required: true
