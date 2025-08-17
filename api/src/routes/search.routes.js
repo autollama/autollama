@@ -57,7 +57,27 @@ function createRoutes(services = {}) {
     },
     storageService = {
       query: async () => ({ rows: [] }),
-      getDocuments: async () => ({ rows: [] }),
+      getDocuments: async (options = {}) => {
+        console.log('🟡 FALLBACK: Using fallback storageService.getDocuments');
+        console.log('🟡 FALLBACK: db type:', typeof db);
+        console.log('🟡 FALLBACK: db.getSmartContentMix type:', typeof db.getSmartContentMix);
+        // Use direct database access as fallback
+        try {
+          const result = await db.getSmartContentMix();
+          const documents = result.records || [];
+          const { limit = 20, offset = 0 } = options;
+          const startIndex = offset;
+          const endIndex = offset + limit;
+          const paginatedDocs = documents.slice(startIndex, endIndex);
+          return {
+            rows: paginatedDocs,
+            totalCount: documents.length
+          };
+        } catch (error) {
+          console.error('🟡 FALLBACK: Error in fallback getDocuments:', error.message);
+          return { rows: [], totalCount: 0 };
+        }
+      },
       getChunks: async () => ({ rows: [] }),
       getDocumentChunks: async () => ({ rows: [] }),
       getDatabaseStats: async () => ({ stats: {} })
@@ -351,37 +371,109 @@ function createRoutes(services = {}) {
     res.json({ message: "Router is working!" });
   });
 
-  // List all documents - RESTORED ORIGINAL VERSION (DON'T BREAK THE API!)
-  router.get('/documents', async (req, res) => {
+  // Working documents endpoint using raw SQL - FIXED
+  router.get('/documents-working', async (req, res) => {
     try {
-      const { limit = 20, offset = 0, sortBy = 'created_time' } = req.query;
+      const { limit = 20, offset = 0 } = req.query;
+      console.log('🟢 WORKING: Using corrected SQL for documents');
       
-      if (!storageService || !storageService.getDocuments) {
-        return res.json({
-          success: true,
-          documents: [{ error: "storageService not available" }],
-          pagination: { limit: parseInt(limit), offset: parseInt(offset), total: 0 }
-        });
-      }
+      // FIXED: Get latest document per URL, ordered by newest first
+      const query = `
+        WITH latest_per_url AS (
+          SELECT 
+            url, title, summary, created_time, updated_at,
+            embedding_status, content_type, sentiment,
+            ROW_NUMBER() OVER (PARTITION BY url ORDER BY created_time DESC) as rn
+          FROM processed_content 
+          WHERE url IS NOT NULL AND title IS NOT NULL
+        )
+        SELECT 
+          url, title, summary, created_time, updated_at,
+          embedding_status, content_type, sentiment
+        FROM latest_per_url 
+        WHERE rn = 1
+        ORDER BY created_time DESC 
+        LIMIT $1 OFFSET $2
+      `;
       
-      const results = await storageService.getDocuments({
-        limit: parseInt(limit),
-        offset: parseInt(offset),
-        sortBy
-      });
+      const result = await db.pool.query(query, [parseInt(limit), parseInt(offset)]);
+      const documents = result.rows || [];
+      
+      console.log(`🟢 WORKING: Returning ${documents.length} documents`);
       
       res.json({
         success: true,
-        documents: results.rows || results,
+        documents: documents,
         pagination: {
           limit: parseInt(limit),
           offset: parseInt(offset),
-          total: results.totalCount || results.length
+          total: documents.length
         }
       });
       
     } catch (error) {
-      console.error('Error fetching documents:', error);
+      console.error('Working documents error:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to fetch documents',
+        details: error.message 
+      });
+    }
+  });
+
+  // List all documents - FIXED VERSION
+  router.get('/documents', async (req, res) => {
+    try {
+      const { limit = 50, offset = 0 } = req.query;
+      console.log(`📋 Documents endpoint: limit=${limit}, offset=${offset}`);
+      
+      // FIXED: Get latest document per URL, ordered by newest first
+      const query = `
+        WITH latest_per_url AS (
+          SELECT 
+            url, title, summary, created_time, updated_at,
+            embedding_status, content_type, sentiment,
+            ROW_NUMBER() OVER (PARTITION BY url ORDER BY created_time DESC) as rn
+          FROM processed_content 
+          WHERE url IS NOT NULL AND title IS NOT NULL
+        )
+        SELECT 
+          url, title, summary, created_time, updated_at,
+          embedding_status, content_type, sentiment
+        FROM latest_per_url 
+        WHERE rn = 1
+        ORDER BY created_time DESC 
+        LIMIT $1 OFFSET $2
+      `;
+      
+      const countQuery = `
+        SELECT COUNT(DISTINCT url) as total 
+        FROM processed_content 
+        WHERE url IS NOT NULL AND title IS NOT NULL
+      `;
+      
+      const [documentsResult, countResult] = await Promise.all([
+        db.pool.query(query, [parseInt(limit), parseInt(offset)]),
+        db.pool.query(countQuery)
+      ]);
+      
+      const documents = documentsResult.rows || [];
+      const total = countResult.rows[0]?.total || 0;
+      
+      console.log(`📋 Documents: Returning ${documents.length} of ${total} total documents`);
+      
+      res.json({
+        success: true,
+        documents: documents,
+        pagination: {
+          limit: parseInt(limit),
+          offset: parseInt(offset),
+          total: parseInt(total)
+        }
+      });
+      
+    } catch (error) {
+      console.error('📋 Documents error:', error.message);
       res.status(500).json({ 
         success: false,
         error: 'Failed to fetch documents',

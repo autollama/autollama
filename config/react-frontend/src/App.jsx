@@ -7,15 +7,15 @@ import { useSettings } from './hooks/useSettings';
 import { useSSE } from './hooks/useSSE';
 import { useAPI } from './hooks/useAPI';
 
-// Import components
-import Dashboard from './components/Dashboard';
-import Search from './components/Search';
-import { SettingsModal } from './components/Settings';
-import { DocumentViewer } from './components/Document';
-import ProcessingManager from './components/Processing';
-import RAGChat from './components/Chat';
-import ChunkInspector from './components/Document/ChunkInspector';
-import ErrorBoundary from './components/common/ErrorBoundary';
+// Import components with lazy loading
+const Dashboard = React.lazy(() => import('./components/Dashboard'));
+const Search = React.lazy(() => import('./components/Search'));
+const SettingsModal = React.lazy(() => import('./components/Settings').then(module => ({ default: module.SettingsModal })));
+const DocumentViewer = React.lazy(() => import('./components/Document').then(module => ({ default: module.DocumentViewer })));
+const ProcessingManager = React.lazy(() => import('./components/Processing'));
+const RAGChat = React.lazy(() => import('./components/Chat'));
+const ChunkInspector = React.lazy(() => import('./components/Document/ChunkInspector'));
+const ErrorBoundary = React.lazy(() => import('./components/common/ErrorBoundary'));
 
 // Global App Context
 const AppContext = createContext();
@@ -57,6 +57,7 @@ function App() {
   const [chunkIndex, setChunkIndex] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [documents, setDocuments] = useState([]);
+  const [totalDocumentCount, setTotalDocumentCount] = useState(0);
   const [systemStats, setSystemStats] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -446,7 +447,7 @@ function App() {
       api.utils.invalidateCache.documents();
       
       // Limited document fetch to prevent memory issues that cause browser reloads
-      const fetchLimit = Math.min(20, settings.settings?.ui?.documentsPerPage || 20); // Max 20 documents
+      const fetchLimit = Math.min(30, settings.settings?.ui?.documentsPerPage || 30); // Max 30 documents to match grid display
       console.log(`🔄 Fetching ${fetchLimit} documents (memory-optimized limit)`);
       
       const docs = await api.documents.getAll({ 
@@ -456,16 +457,18 @@ function App() {
       
       // Documents are already sorted by database (ORDER BY created_time DESC)
       const documents = docs?.documents || [];
+      const totalCount = docs?.pagination?.total || 0;
       
       console.log('📅 LATEST DOCUMENTS from API (first 5):');
       documents.slice(0, 5).forEach((doc, i) => {
         console.log(`  ${i+1}. "${doc.title?.substring(0, 50)}" - ${doc.created_time}`);
       });
       
-      console.log('📋 Setting documents in state:', documents.length, 'total documents');
-      console.log('📋 Previous document count in state:', documents.length);
+      console.log('📋 Setting documents in state:', documents.length, 'visible,', totalCount, 'total documents');
+      console.log('🔍 DEBUG: Refresh limit vs display - fetched:', documents.length, 'will display up to 24 in grid');
       
       setDocuments(documents);
+      setTotalDocumentCount(totalCount);
     } catch (error) {
       console.error('❌ Failed to load documents:', error);
     }
@@ -746,6 +749,7 @@ function App() {
     chunkIndex,
     showSettings,
     documents,
+    totalDocumentCount,
     systemStats,
     searchQuery,
     searchResults,
@@ -796,31 +800,37 @@ function App() {
           </div>
           
           {/* Settings Modal */}
-          {showSettings && <SettingsModal />}
+          {showSettings && (
+            <React.Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div></div>}>
+              <SettingsModal />
+            </React.Suspense>
+          )}
           
           {/* Global Chunk Inspector Modal - For search results and other views */}
           {selectedChunk && currentView !== 'document' && (
-            <ErrorBoundary 
-              onClose={() => {
-                setSelectedChunk(null);
-                setSelectedChunks([]);
-                setChunkIndex(0);
-              }}
-              fallbackTitle="Chunk Inspector Error"
-            >
-              <ChunkInspector
-                chunk={selectedChunk}
-                document={{ url: selectedChunk.url || selectedChunk.source }} // Provide document context from chunk
-                chunkIndex={chunkIndex}
-                totalChunks={selectedChunks.length || 1}
+            <React.Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div></div>}>
+              <ErrorBoundary 
                 onClose={() => {
                   setSelectedChunk(null);
                   setSelectedChunks([]);
                   setChunkIndex(0);
                 }}
-                onNavigate={handleChunkNavigate}
-              />
-            </ErrorBoundary>
+                fallbackTitle="Chunk Inspector Error"
+              >
+                <ChunkInspector
+                  chunk={selectedChunk}
+                  document={{ url: selectedChunk.url || selectedChunk.source }} // Provide document context from chunk
+                  chunkIndex={chunkIndex}
+                  totalChunks={selectedChunks.length || 1}
+                  onClose={() => {
+                    setSelectedChunk(null);
+                    setSelectedChunks([]);
+                    setChunkIndex(0);
+                  }}
+                  onNavigate={handleChunkNavigate}
+                />
+              </ErrorBoundary>
+            </React.Suspense>
           )}
           
           {/* Footer */}
@@ -842,11 +852,13 @@ const MainLayout = () => {
       
       {/* Main Content */}
       <main className="mt-8">
-        {currentView === 'dashboard' && <Dashboard />}
-        {currentView === 'document' && <DocumentViewer />}
-        {currentView === 'search' && <Search />}
-        {currentView === 'processing' && <ProcessingManager />}
-        {currentView === 'chat' && <RAGChat />}
+        <React.Suspense fallback={<div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div></div>}>
+          {currentView === 'dashboard' && <Dashboard />}
+          {currentView === 'document' && <DocumentViewer />}
+          {currentView === 'search' && <Search />}
+          {currentView === 'processing' && <ProcessingManager />}
+          {currentView === 'chat' && <RAGChat />}
+        </React.Suspense>
       </main>
     </div>
   );
@@ -945,7 +957,7 @@ const Footer = () => {
   return (
     <footer className="text-center p-4 text-xs text-gray-500 relative z-10 border-t border-gray-800 mt-16">
       <div className="flex flex-wrap justify-center items-center gap-4">
-        <span>The Digital Pasture</span>
+        <span>Your Knowledge Deserves Better</span>
         <span>•</span>
         <span>Version 2.3</span>
       </div>
