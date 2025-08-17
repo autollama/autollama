@@ -5,7 +5,7 @@
   <h1>The Context-Aware RAG Framework</h1>
   <h2><em>Your Documents Have Context. Now Your RAG Does Too.</em></h2>
   
-  [![Version](https://img.shields.io/badge/version-2.3.2-blue.svg)](https://github.com/snedea/autollama/releases/latest)
+  [![Version](https://img.shields.io/badge/version-2.3.2-blue.svg)](https://github.com/autollama/autollama/releases/latest)
   [![Docker](https://img.shields.io/badge/docker-supported-blue.svg)](https://docker.com)
   [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 </div>
@@ -164,7 +164,7 @@ Before starting, obtain the following:
 
 1. **Clone and Enter**
 ```bash
-git clone https://github.com/snedea/autollama.git
+git clone https://github.com/autollama/autollama.git
 cd autollama
 ```
 
@@ -551,7 +551,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 *Your Documents Have Context. Now Your RAG Does Too.*
 
-**[Live Demo](https://autollama.io)** • **[Documentation](/docs)** • **[GitHub Issues](https://github.com/snedea/autollama/issues)** • **[Releases](https://github.com/snedea/autollama/releases)**
+**[Live Demo](https://autollama.io)** • **[Documentation](/docs)** • **[GitHub Issues](https://github.com/autollama/autollama/issues)** • **[Releases](https://github.com/snedea/autollama/releases)**
 
 *Built by developers, for developers who believe context changes everything.*
 
