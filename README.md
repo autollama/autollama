@@ -5,7 +5,7 @@
   <h1>The Context-Aware RAG Framework</h1>
   <h2><em>Your Documents Have Context. Now Your RAG Does Too.</em></h2>
   
-  [![Version](https://img.shields.io/badge/version-2.3.1-blue.svg)](https://github.com/snedea/autollama/releases/latest)
+  [![Version](https://img.shields.io/badge/version-2.3.2-blue.svg)](https://github.com/snedea/autollama/releases/latest)
   [![Docker](https://img.shields.io/badge/docker-supported-blue.svg)](https://docker.com)
   [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 </div>
@@ -547,7 +547,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**🦙 AutoLlama v2.3.1**
+**🦙 AutoLlama v2.3.2**
 
 *Your Documents Have Context. Now Your RAG Does Too.*
 
