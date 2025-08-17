@@ -1,9 +1,11 @@
 FROM nginx:alpine
 
-# Copy a simple HTML file
-COPY index.html /usr/share/nginx/html/index.html
+# Copy HTML files, assets, and favicon
+COPY *.html /usr/share/nginx/html/
+COPY assets/ /usr/share/nginx/html/assets/
+COPY favicon.ico /usr/share/nginx/html/favicon.ico
 
-# Simple nginx config
-RUN echo 'server { listen 80; server_name _; location / { root /usr/share/nginx/html; index index.html; add_header Cache-Control "no-cache, must-revalidate"; expires 0; } location /health { access_log off; return 200 "healthy\n"; add_header Content-Type text/plain; } }' > /etc/nginx/conf.d/default.conf
+# Simple nginx config with assets support
+RUN echo 'server { listen 80; server_name _; location / { root /usr/share/nginx/html; index index.html; add_header Cache-Control "no-cache, must-revalidate"; expires 0; } location /assets/ { root /usr/share/nginx/html; add_header Cache-Control "public, max-age=31536000"; } location /health { access_log off; return 200 "healthy\n"; add_header Content-Type text/plain; } }' > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80

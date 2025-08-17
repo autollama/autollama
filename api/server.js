@@ -561,7 +561,7 @@ function chunkText(content, url, chunkSize = 2000, overlap = 200) {
         chunks.push({
             chunk_text: chunk.trim(),
             chunk_id: chunkId,
-            chunk_index: Math.floor(i / (adaptiveChunkSize - adaptiveOverlap)),
+            chunk_index: chunks.length, // Fix: Use sequential chunk numbering
             original_url: url,
             total_chunks: totalChunks,
             chunk_size_used: adaptiveChunkSize,

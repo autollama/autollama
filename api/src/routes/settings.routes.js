@@ -353,6 +353,113 @@ router.delete('/settings/favicon', async (req, res) => {
   });
 });
 
+// Mode switching endpoints for v2.3.4 Pure Local Mode
+router.get('/config/mode', async (req, res) => {
+  try {
+    console.log('🔧 Get deployment mode info requested');
+    
+    const { getModeInfo } = require('../config/database.config');
+    const modeInfo = getModeInfo();
+    
+    res.json({
+      success: true,
+      mode: modeInfo,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Failed to get mode info:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve mode information',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+router.post('/config/mode', async (req, res) => {
+  try {
+    const { mode } = req.body;
+    console.log(`🔄 Mode switch requested: ${mode}`);
+    
+    if (!mode || !['local', 'cloud'].includes(mode)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid mode. Must be "local" or "cloud"',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    const { isModeChangeable, getModeInfo } = require('../config/database.config');
+    
+    if (!isModeChangeable()) {
+      return res.status(403).json({
+        success: false,
+        error: 'Mode switching is locked. Set VECTOR_DB_MODE_LOCKED=false to enable switching.',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // For now, mode switching requires restart - return guidance
+    res.json({
+      success: true,
+      message: 'Mode switch initiated. Restart required to apply changes.',
+      currentMode: getModeInfo(),
+      requestedMode: mode,
+      restartRequired: true,
+      instructions: [
+        `Set VECTOR_DB_MODE=${mode} in your environment`,
+        'Restart the application to apply the new mode',
+        'Verify the mode change in Settings → Connections'
+      ],
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Failed to switch mode:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to switch deployment mode',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+router.get('/config/mode/status', async (req, res) => {
+  try {
+    console.log('📊 Mode status check requested');
+    
+    const { getModeInfo, validateModeConfiguration } = require('../config/database.config');
+    
+    let modeInfo = getModeInfo();
+    let configValid = false;
+    let configError = null;
+    
+    try {
+      validateModeConfiguration();
+      configValid = true;
+    } catch (validationError) {
+      configError = validationError.message;
+    }
+    
+    res.json({
+      success: true,
+      mode: modeInfo,
+      configValid,
+      configError,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Failed to get mode status:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve mode status',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 /**
  * Initialize settings routes with services
  * @param {Object} services - Service container

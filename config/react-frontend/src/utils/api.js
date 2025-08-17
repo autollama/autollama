@@ -111,59 +111,64 @@ export const apiEndpoints = {
     const url = atob(encodedUrl);
     
     try {
-      // Try to load a reasonable number of chunks and find the right one
+      // Load all chunks to analyze the data structure
       const response = await api.get(`/document-chunks`, { 
         params: { 
           url: url, 
-          limit: Math.max(200, chunkIndex + 50) // Load enough chunks to include target
+          limit: 2000 // Load maximum chunks
         } 
       });
       
       if (response.data.chunks && response.data.chunks.length > 0) {
-        // First try to find exact chunk index match
-        let chunk = response.data.chunks.find(c => c.chunkIndex === chunkIndex);
+        const chunks = response.data.chunks;
+        
+        // Smart detection: Check for broken chunk indexing
+        const indices = chunks.map(c => c.chunkIndex !== undefined ? c.chunkIndex : -1);
+        const uniqueIndices = [...new Set(indices)];
+        const hasValidIndexes = uniqueIndices.length > 1 || (uniqueIndices.length === 1 && uniqueIndices[0] > 0);
+        
+        let chunk = null;
+        
+        if (hasValidIndexes) {
+          // Good data: Use index-based lookup
+          chunk = chunks.find(c => c.chunkIndex === chunkIndex);
+          console.log(`🔍 Index-based lookup for chunk ${chunkIndex}:`, chunk ? 'found' : 'not found');
+        } else {
+          // Broken data: Use array position fallback
+          console.log(`🔧 Detected broken chunk indexing (all chunks have index ${uniqueIndices[0]}), using array position`);
+          if (chunkIndex >= 0 && chunkIndex < chunks.length) {
+            chunk = chunks[chunkIndex];
+            console.log(`✅ Array position fallback: chunk[${chunkIndex}] found`);
+          } else {
+            console.warn(`❌ Array position ${chunkIndex} out of bounds (0-${chunks.length - 1})`);
+          }
+        }
         
         if (chunk) {
-          console.log(`✅ Found chunk by index ${chunkIndex}:`, {
+          console.log(`✅ Found chunk:`, {
             chunkId: chunk.chunkId || chunk.id,
+            chunkIndex: chunk.chunkIndex,
+            arrayPosition: chunks.indexOf(chunk),
             hasContent: !!(chunk.chunkText && chunk.chunkText.length > 0),
             contentLength: chunk.chunkText ? chunk.chunkText.length : 0
           });
           return { chunk };
         }
         
-        // If exact match not found, try loading all chunks
-        console.log(`⚠️ Chunk index ${chunkIndex} not found in ${response.data.chunks.length} chunks, loading all...`);
-        
-        const fullResponse = await api.get(`/document-chunks`, { 
-          params: { 
-            url: url, 
-            limit: 2000 // Load maximum chunks
-          } 
+        // Log debugging info
+        console.warn(`❌ Chunk ${chunkIndex} not found. Document info:`, {
+          totalChunks: chunks.length,
+          hasValidIndexes,
+          uniqueIndices: uniqueIndices.length,
+          indexRange: hasValidIndexes ? `${Math.min(...indices)} to ${Math.max(...indices)}` : 'broken',
+          requestedIndex: chunkIndex
         });
         
-        if (fullResponse.data.chunks) {
-          chunk = fullResponse.data.chunks.find(c => c.chunkIndex === chunkIndex);
-          if (chunk) {
-            console.log(`✅ Found chunk by index ${chunkIndex} in full load:`, {
-              chunkId: chunk.chunkId || chunk.id,
-              hasContent: !!(chunk.chunkText && chunk.chunkText.length > 0),
-              contentLength: chunk.chunkText ? chunk.chunkText.length : 0
-            });
-            return { chunk };
-          }
-        }
+        const errorMsg = hasValidIndexes 
+          ? `Chunk with index ${chunkIndex} not found. Available range: ${Math.min(...indices)} to ${Math.max(...indices)}`
+          : `Array position ${chunkIndex} out of bounds. Document has ${chunks.length} chunks (0-${chunks.length - 1})`;
         
-        // Log available chunk indices for debugging
-        const availableIndices = [...new Set(response.data.chunks.map(c => c.chunkIndex))].sort((a, b) => a - b);
-        console.warn(`❌ Chunk index ${chunkIndex} not found. Available indices:`, {
-          total: response.data.chunks.length,
-          uniqueIndices: availableIndices.length,
-          range: `${availableIndices[0]} to ${availableIndices[availableIndices.length - 1]}`,
-          sample: availableIndices.slice(0, 10)
-        });
-        
-        throw new Error(`Chunk with index ${chunkIndex} not found. Available range: ${availableIndices[0]} to ${availableIndices[availableIndices.length - 1]}`);
+        throw new Error(errorMsg);
       }
       
       throw new Error('No chunks returned from API');

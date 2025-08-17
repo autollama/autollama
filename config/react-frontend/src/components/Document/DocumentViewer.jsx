@@ -454,11 +454,28 @@ const DocumentViewer = () => {
   const handleChunkNavigate = async (newIndex) => {
     try {
       setChunkIndex(newIndex);
-      // Try to find the chunk in already loaded chunks first
-      const existingChunk = chunks.find(c => c.index === (newIndex - 1));
-      if (existingChunk) {
-        setSelectedChunk(existingChunk);
-        return;
+      
+      // Smart detection: Check if we have broken chunk indexing (all chunks same index)
+      const indices = chunks.map(c => c.index !== undefined ? c.index : -1);
+      const uniqueIndices = [...new Set(indices)];
+      const hasValidIndexes = uniqueIndices.length > 1 || (uniqueIndices.length === 1 && uniqueIndices[0] > 0);
+      
+      if (!hasValidIndexes) {
+        // Broken data: Use array position navigation
+        const arrayIndex = newIndex - 1; // Convert to 0-based
+        if (arrayIndex >= 0 && arrayIndex < chunks.length) {
+          console.log(`🔧 Using array position navigation: chunk ${newIndex} -> array[${arrayIndex}]`);
+          setSelectedChunk(chunks[arrayIndex]);
+          return;
+        }
+      } else {
+        // Good data: Use index-based navigation
+        const existingChunk = chunks.find(c => c.index === (newIndex - 1));
+        if (existingChunk) {
+          console.log(`✅ Found chunk by index: ${newIndex - 1}`);
+          setSelectedChunk(existingChunk);
+          return;
+        }
       }
       
       // If not found in loaded chunks, fetch it specifically by index
@@ -469,13 +486,11 @@ const DocumentViewer = () => {
       }
     } catch (error) {
       console.error('Failed to navigate to chunk:', error);
-      // Fallback: find any chunk that exists
-      const maxIndex = chunks.length > 0 ? Math.max(...chunks.map(c => c.index !== undefined ? c.index : -1)) : -1;
-      if (newIndex - 1 <= maxIndex) {
-        const fallbackChunk = chunks.find(c => c.index >= 0); // Get any valid chunk
-        if (fallbackChunk) {
-          setSelectedChunk(fallbackChunk);
-        }
+      // Enhanced fallback: try array position for broken data
+      const arrayIndex = newIndex - 1;
+      if (arrayIndex >= 0 && arrayIndex < chunks.length) {
+        console.log(`🔧 Fallback to array position: chunk ${newIndex} -> array[${arrayIndex}]`);
+        setSelectedChunk(chunks[arrayIndex]);
       }
     }
   };
@@ -621,7 +636,19 @@ const DocumentViewer = () => {
             chunk={selectedChunk}
             document={selectedDocument}
             chunkIndex={chunkIndex}
-            totalChunks={chunks.length > 0 ? Math.max(...chunks.map(c => c.index !== undefined ? c.index : -1)) + 1 : 0}
+            totalChunks={(() => {
+              if (chunks.length === 0) return 0;
+              
+              // Smart detection: Check if all chunks have the same index (broken data)
+              const indices = chunks.map(c => c.index !== undefined ? c.index : -1);
+              const uniqueIndices = [...new Set(indices)];
+              const hasValidIndexes = uniqueIndices.length > 1 || (uniqueIndices.length === 1 && uniqueIndices[0] > 0);
+              
+              // Use proper index calculation for good data, fallback to length for broken data
+              return hasValidIndexes 
+                ? Math.max(...indices) + 1 
+                : chunks.length;
+            })()}
             onClose={() => setSelectedChunk(null)}
             onNavigate={handleChunkNavigate}
           />

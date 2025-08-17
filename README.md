@@ -4,7 +4,7 @@
   <h1>The Context-Aware RAG Framework</h1>
   <h2><em>Your Documents Have Context. Now Your RAG Does Too.</em></h2>
   
-  [![Version](https://img.shields.io/badge/version-2.3.2-blue.svg)](https://github.com/autollama/autollama/releases/latest)
+  [![Version](https://img.shields.io/badge/version-2.3.4-blue.svg)](https://github.com/autollama/autollama/releases/latest)
   [![Docker](https://img.shields.io/badge/docker-supported-blue.svg)](https://docker.com)
   [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 </div>
@@ -21,6 +21,36 @@ For too long, RAG has been about finding chunks, not understanding documents. Au
 **AutoLlama**: "Here's how machine learning evolves through this research paper, building from foundational concepts in Chapter 2 to advanced applications in Chapter 7"
 
 See the difference? That's context at work.
+
+## 🏠 Pure Local Mode - NEW in v2.3.4
+
+**Complete Air-Gapped Deployment for Enterprise Environments**
+
+AutoLlama now offers **Pure Local Mode** - a completely isolated, air-gapped deployment perfect for:
+
+- 🏢 **Enterprise & Government**: Security-sensitive environments
+- 🔒 **Air-Gapped Networks**: Zero external dependencies (except optional OpenAI API)
+- 🛡️ **Compliance-Ready**: SOC 2, GDPR, HIPAA, ISO 27001 configurations
+- ⚡ **Enterprise Hardware**: Optimized for 2x Xeon, 64GB RAM, 2x RTX 3060
+
+### 5-Minute Local Setup
+
+```bash
+# Clone and deploy complete local stack
+git clone https://github.com/autollama/autollama.git
+cd autollama
+cp .env.local.example .env.local
+mkdir -p data/{postgres-local,qdrant-local,bm25-local,redis-local}
+docker-compose -f docker-compose.local.yml up -d
+
+# Access your air-gapped AutoLlama
+open http://localhost:8080
+```
+
+**That's it!** Your completely isolated, enterprise-grade RAG system is running.
+
+📚 **[Complete Local Deployment Guide →](docs/LOCAL_DEPLOYMENT.md)**
+🏢 **[Enterprise Configuration →](docs/ENTERPRISE.md)**
 
 ## What Makes AutoLlama Revolutionary
 
@@ -44,14 +74,34 @@ Chat with your documents instantly. Built-in RAG pipeline that OpenWebUI automat
 
 ## Prerequisites
 
-Before installing AutoLlama, ensure you have the following:
+AutoLlama v2.3.4 supports two deployment modes:
 
-### System Requirements
+### 🏠 Local Mode (Air-Gapped) - Recommended for Enterprise
 
-- **Operating System**: Linux (Ubuntu/Debian/CentOS/RHEL), macOS, or Windows with WSL
-- **Memory**: Minimum 4GB RAM (8GB+ recommended)
-- **Storage**: At least 10GB free space
-- **Network**: Internet connection for downloading dependencies and AI API access
+**System Requirements:**
+- **CPU**: 4+ cores (8+ recommended for enterprise)
+- **Memory**: 16GB RAM minimum (64GB recommended for enterprise)
+- **Storage**: 100GB+ SSD (500GB+ for enterprise)
+- **Network**: Isolated/air-gapped network (optional OpenAI API access)
+
+**Perfect for:**
+- Enterprise environments
+- Government/defense deployments  
+- Compliance-sensitive organizations
+- Privacy-focused installations
+
+### ☁️ Cloud Mode - For Development & Small Teams
+
+**System Requirements:**
+- **Memory**: 4GB RAM minimum (8GB+ recommended)
+- **Storage**: 10GB+ free space
+- **Network**: Internet connection for AI APIs and cloud services
+
+**Perfect for:**
+- Development environments
+- Small teams and startups
+- Quick prototyping
+- External service integrations
 
 ### Required Software
 
@@ -147,40 +197,72 @@ chmod 600 ~/.config/tsauthkey
 sudo tailscale status
 ```
 
-### Required Accounts & API Keys
-
-Before starting, obtain the following:
-
-- **OpenAI API key** from https://platform.openai.com/api-keys
-- **Qdrant Cloud account** from https://cloud.qdrant.io (or set up local Qdrant)
-- **PostgreSQL database** (can use cloud providers or local setup)
-
 ## Quick Start
 
-**Ready to experience contextual RAG? Here's your 60-second setup:**
+Choose your deployment mode:
 
-### Installation
+### 🏠 Pure Local Mode (Recommended for Enterprise)
 
-1. **Clone and Enter**
+**Complete air-gapped deployment - zero external dependencies:**
+
 ```bash
+# 1. Clone repository
 git clone https://github.com/autollama/autollama.git
 cd autollama
+
+# 2. Set up local environment  
+cp .env.local.example .env.local
+# Edit .env.local and add your OpenAI API key (optional)
+
+# 3. Create data directories
+mkdir -p data/{postgres-local,qdrant-local,bm25-local,redis-local}
+
+# 4. Deploy complete local stack
+docker-compose -f docker-compose.local.yml up -d
+
+# 5. Access your air-gapped AutoLlama
+open http://localhost:8080
 ```
 
-2. **Configure Your Keys**
+**Perfect for:** Enterprise, government, compliance-sensitive environments
+
+📚 **[Complete Local Deployment Guide →](docs/LOCAL_DEPLOYMENT.md)**
+
+### ☁️ Cloud Mode (Development & Small Teams)
+
+**Traditional cloud-first deployment:**
+
+**Required API Keys:**
+- **OpenAI API key** from https://platform.openai.com/api-keys  
+- **Qdrant Cloud account** from https://cloud.qdrant.io
+- **PostgreSQL database** (cloud providers or local setup)
+
 ```bash
+# 1. Clone repository
+git clone https://github.com/autollama/autollama.git
+cd autollama
+
+# 2. Configure environment
 cp example.env .env
-# Add your OpenAI API key and database credentials
-```
+# Edit .env with your API keys and service URLs
 
-3. **Launch AutoLlama**
-```bash
+# 3. Deploy cloud services
 docker compose up -d
+
+# 4. Access your cloud-connected AutoLlama
+open http://localhost:8080
 ```
 
-4. **Start Building**
+**Perfect for:** Development environments, small teams, and external service integrations
+
+🔗 **[API Keys Setup Guide →](/docs/cloud-setup.md)**
+
+### Verification & Testing
+
+Both deployment modes provide the same powerful interface:
+
 - **Web Interface**: http://localhost:8080
-- **API Documentation**: http://localhost:8080/docs
+- **API Documentation**: http://localhost:8080/docs  
 - **Health Check**: http://localhost:8080/health
 
 **That's it.** No virtual environments, no dependency hell, no hours of configuration. Just intelligent, context-aware RAG running in production-ready containers.
@@ -604,7 +686,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**🦙 AutoLlama v2.3.2**
+**🦙 AutoLlama v2.3.4**
 
 *Your Documents Have Context. Now Your RAG Does Too.*
 

@@ -1110,7 +1110,7 @@ const Footer = () => {
   return (
     <footer className="text-center p-4 text-xs text-gray-500 relative z-10 border-t border-gray-800 mt-16">
       <div className="flex flex-wrap justify-center items-center gap-4">
-        <span>Your Knowledge Deserves Better</span>
+        <span>Your Knowledge, Now Better</span>
         <span>•</span>
         <span>Version 2.3</span>
       </div>

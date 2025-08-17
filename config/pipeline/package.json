@@ -1,6 +1,6 @@
 {
   "name": "autollama-pipeline-ui",
-  "version": "1.0.0",
+  "version": "2.3.4",
   "private": true,
   "type": "module",
   "scripts": {

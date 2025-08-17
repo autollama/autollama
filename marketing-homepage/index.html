@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AutoLlama - The Context-Aware RAG Framework</title>
-    <!-- Dark Mode v2.0 - Cache Bust -->
-    <meta name="version" content="dark-v2.0-20250814024942">
+    <!-- Dark Mode v2.0 + Contact Links - Cache Bust -->
+    <meta name="version" content="dark-v2.2-20250817211500">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -152,6 +152,193 @@
             text-align: center;
             padding: 3rem 0;
         }
+        .footer-content {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            align-items: center;
+        }
+        .contact-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            justify-content: center;
+            align-items: center;
+        }
+        .contact-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #cbd5e1;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid transparent;
+        }
+        .contact-link:hover {
+            color: #60a5fa;
+            background: rgba(59,130,246,0.1);
+            border-color: rgba(59,130,246,0.3);
+            transform: translateY(-2px);
+        }
+        .contact-icon {
+            font-size: 1.2rem;
+        }
+        .footer-tagline {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        /* Screenshot Gallery Styles */
+        .screenshot-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+        .screenshot-container {
+            position: relative;
+            background: rgba(30,41,59,0.8);
+            border: 1px solid rgba(59,130,246,0.2);
+            border-radius: 1rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .screenshot-container.animate-in {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .screenshot-container:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 25px 50px rgba(59,130,246,0.4);
+            border-color: rgba(59,130,246,0.5);
+        }
+        .screenshot-img {
+            width: 100%;
+            height: auto;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+        .screenshot-container:hover .screenshot-img {
+            transform: scale(1.05);
+        }
+        .screenshot-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(15,23,42,0.95));
+            padding: 2rem 1.5rem 1.5rem;
+            color: white;
+        }
+        .screenshot-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #f1f5f9;
+        }
+        .screenshot-description {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            line-height: 1.4;
+        }
+        .screenshot-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(59,130,246,0.9);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .lazy-img {
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+        .lazy-img.loaded {
+            opacity: 1;
+        }
+
+        /* Lightbox Modal */
+        .lightbox-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .lightbox-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .lightbox-content {
+            max-width: 90vw;
+            max-height: 90vh;
+            position: relative;
+        }
+        .lightbox-img {
+            width: 100%;
+            height: auto;
+            border-radius: 0.5rem;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        }
+        .lightbox-close {
+            position: absolute;
+            top: -3rem;
+            right: 0;
+            background: rgba(239,68,68,0.9);
+            color: white;
+            border: none;
+            width: 3rem;
+            height: 3rem;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .lightbox-close:hover {
+            background: #ef4444;
+            transform: scale(1.1);
+        }
+        .lightbox-caption {
+            position: absolute;
+            bottom: -4rem;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: #f1f5f9;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        /* Animation keyframes */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         /* Modal Styles */
         .modal-overlay {
             position: fixed;
@@ -283,6 +470,7 @@
             transform: translateY(-5px) scale(1.02);
             box-shadow: 0 25px 50px rgba(59,130,246,0.4);
         }
+
         @media (max-width: 768px) {
             .hero h1 { font-size: 2.5rem; }
             .hero p { font-size: 1.2rem; }
@@ -303,6 +491,32 @@
             .features div[style*="grid-template-columns: 1fr auto 1fr auto 1fr"] div[style*="font-size: 2rem"] {
                 display: none;
             }
+            /* Mobile responsiveness for screenshots */
+            .screenshot-gallery {
+                grid-template-columns: 1fr !important;
+                gap: 1rem;
+            }
+            .screenshot-container {
+                margin-bottom: 1rem;
+            }
+            .lightbox-content {
+                max-width: 95vw;
+                max-height: 80vh;
+            }
+            .lightbox-close {
+                top: -2rem;
+                width: 2.5rem;
+                height: 2.5rem;
+                font-size: 1.2rem;
+            }
+            /* Contact links mobile responsiveness */
+            .contact-links {
+                gap: 1rem;
+            }
+            .contact-link {
+                padding: 0.75rem;
+                font-size: 0.9rem;
+            }
         }
     </style>
 </head>
@@ -315,7 +529,7 @@
                     <a href="#features">Features</a>
                     <a href="#docs">Docs</a>
                     <a href="https://github.com/snedea/autollama">GitHub</a>
-                    <a href="https://app.autollama.io" class="btn">Launch App</a>
+                    <a href="#screenshots" class="btn">See Screenshots</a>
                 </nav>
             </div>
         </div>
@@ -324,8 +538,6 @@
     <main>
         <section class="hero">
             <div class="container">
-                <div style="font-size: 1.1rem; color: #60a5fa; font-weight: 600; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.1em; text-align: center;">Finally.</div>
-                
                 <h1>The Context-Aware RAG Framework</h1>
                 
                 <div style="font-size: 1.8rem; color: #f1f5f9; font-weight: 500; margin-bottom: 2rem; font-style: italic; text-align: center;">
@@ -341,7 +553,7 @@
                 </div>
 
                 <div class="hero-buttons">
-                    <a href="#demo" class="btn btn-large">See the Difference</a>
+                    <a href="#screenshots" class="btn btn-large">See AutoLlama in Action</a>
                     <a href="https://www.anthropic.com/research/contextual-retrieval" class="btn btn-secondary btn-large">Read the Research</a>
                 </div>
                 
@@ -507,6 +719,185 @@
             </div>
         </section>
 
+        <!-- New Screenshot Showcase Section -->
+        <section id="screenshots" class="features" style="background: rgba(15,23,42,0.9);">
+            <div class="container">
+                <h2>See AutoLlama in Action</h2>
+                <p style="text-align: center; color: #cbd5e1; font-size: 1.1rem; margin-bottom: 3rem;">
+                    Real screenshots from the AutoLlama platform—<strong style="color: #60a5fa;">experience the interface that makes contextual RAG effortless</strong>
+                </p>
+                
+                <div class="screenshot-gallery">
+                    <div class="screenshot-container" data-screenshot="dashboard-main">
+                        <div class="screenshot-badge">Dashboard</div>
+                        <img 
+                            src="assets/screenshots/dashboard-main.webp" 
+                            alt="Comprehensive document management with interactiveprocessed documents, real-time processing queue, and intuitive search interface"
+                            class="screenshot-img lazy-img"
+                            loading="lazy"
+                        >
+                        <div class="screenshot-overlay">
+                            <div class="screenshot-title">Main Dashboard</div>
+                            <div class="screenshot-description">
+                                Comprehensive document management with interactiveprocessed documents, real-time processing queue, and intuitive search interface
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="screenshot-container" data-screenshot="document-analysis">
+                        <div class="screenshot-badge">Analysis</div>
+                        <img 
+                            src="assets/screenshots/document-analysis.webp" 
+                            alt="Get comprehensive AI-powered insights into your documents with topic extraction, entity mapping, and RAG readiness scoring."
+                            class="screenshot-img lazy-img"
+                            loading="lazy"
+                        >
+                        <div class="screenshot-overlay">
+                            <div class="screenshot-title">Document Intelligence Dashboard</div>
+                            <div class="screenshot-description">
+                                Get comprehensive AI-powered insights into your documents with topic extraction, entity mapping, and RAG readiness scoring.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="screenshot-container" data-screenshot="chunks-grid">
+                        <div class="screenshot-badge">Chunks</div>
+                        <img 
+                            src="assets/screenshots/chunks-grid.webp" 
+                            alt="Visual representation of processed chunks with completion status and easy navigation to individual chunk details"
+                            class="screenshot-img lazy-img"
+                            loading="lazy"
+                        >
+                        <div class="screenshot-overlay">
+                            <div class="screenshot-title">Chunks Grid View</div>
+                            <div class="screenshot-description">
+                                Visual representation of processed chunks with completion status and easy navigation to individual chunk details
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="screenshot-container" data-screenshot="processing-queue">
+                        <div class="screenshot-badge">Live Processing</div>
+                        <img 
+                            src="assets/screenshots/processing-queue.webp" 
+                            alt="Processing queue showing Llama actively processing items with real-time status updates"
+                            class="screenshot-img lazy-img"
+                            loading="lazy"
+                        >
+                        <div class="screenshot-overlay">
+                            <div class="screenshot-title">Real-Time Processing</div>
+                            <div class="screenshot-description">
+                                Processing queue showing Llama actively processing items with real-time status updates
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="screenshot-container" data-screenshot="ai-analysis-panel">
+                        <div class="screenshot-badge">AI Insights</div>
+                        <img 
+                            src="assets/screenshots/ai-analysis-panel.webp" 
+                            alt="AI analysis panel displaying extracted topics, entities, sentiment analysis, and contextual processing statistics"
+                            class="screenshot-img lazy-img"
+                            loading="lazy"
+                        >
+                        <div class="screenshot-overlay">
+                            <div class="screenshot-title">AI Analysis Panel</div>
+                            <div class="screenshot-description">
+                                Deep AI insights with topic extraction, entity recognition, sentiment analysis, and processing quality metrics
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="screenshot-container" data-screenshot="search-results-enhanced">
+                        <div class="screenshot-badge">Search</div>
+                        <img 
+                            src="assets/screenshots/search-results-enhanced.webp" 
+                            alt="Ultra-fast BM25 search interface showing contextually enhanced search results with tags, entities, sentiment analysis, and AI-generated metadata"
+                            class="screenshot-img lazy-img"
+                            loading="lazy"
+                        >
+                        <div class="screenshot-overlay">
+                            <div class="screenshot-title">Ultra-Fast Contextual Search</div>
+                            <div class="screenshot-description">
+                                Lightning-fast BM25 search across contextually enhanced content, tags, entities, sentiment, and AI-generated metadata - find exactly what you need instantly
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="screenshot-container" data-screenshot="openwebui-settings">
+                        <div class="screenshot-badge">OpenWebUI</div>
+                        <img 
+                            src="assets/screenshots/openwebui/autollama-openwebui-settings.png" 
+                            alt="OpenWebUI settings panel showing AutoLlama pipeline configuration with URL and API key setup"
+                            class="screenshot-img lazy-img"
+                            loading="lazy"
+                        >
+                        <div class="screenshot-overlay">
+                            <div class="screenshot-title">One-Click Setup</div>
+                            <div class="screenshot-description">
+                                Configure your pipeline with just a URL and API key. AutoLlama handles the rest.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="screenshot-container" data-screenshot="openwebui-model-select">
+                        <div class="screenshot-badge">Integration</div>
+                        <img 
+                            src="assets/screenshots/openwebui/autollama-openwebui-model-select.png" 
+                            alt="OpenWebUI interface showing autollama-rag model in dropdown selection menu"
+                            class="screenshot-img lazy-img"
+                            loading="lazy"
+                        >
+                        <div class="screenshot-overlay">
+                            <div class="screenshot-title">Native Integration</div>
+                            <div class="screenshot-description">
+                                AutoLlama appears as 'autollama-rag' in your model dropdown. Switch seamlessly between AI models.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="screenshot-container" data-screenshot="openwebui-query-response">
+                        <div class="screenshot-badge">Intelligence</div>
+                        <img 
+                            src="assets/screenshots/openwebui/autollama-openwebui-query-response.png" 
+                            alt="OpenWebUI chat interface showing intelligent query response about Aiolos with contextual understanding and follow-up suggestions"
+                            class="screenshot-img lazy-img"
+                            loading="lazy"
+                        >
+                        <div class="screenshot-overlay">
+                            <div class="screenshot-title">Intelligent Responses</div>
+                            <div class="screenshot-description">
+                                Get precise answers from your documents with contextual understanding and follow-up suggestions.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Key Features Highlight -->
+                <div style="text-align: center; margin-top: 4rem; padding: 2rem; background: rgba(59,130,246,0.1); border-radius: 1rem; border: 1px solid rgba(59,130,246,0.2);">
+                    <h3 style="color: #60a5fa; margin-bottom: 1rem;">What You're Seeing</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1.5rem;">
+                        <div style="color: #cbd5e1;">
+                            <div style="color: #86efac; font-weight: 600;">✓ Real-Time Processing</div>
+                            <div style="font-size: 0.9rem;">Watch documents transform into intelligent chunks</div>
+                        </div>
+                        <div style="color: #cbd5e1;">
+                            <div style="color: #86efac; font-weight: 600;">✓ Visual Analytics</div>
+                            <div style="font-size: 0.9rem;">Comprehensive insights and quality metrics</div>
+                        </div>
+                        <div style="color: #cbd5e1;">
+                            <div style="color: #86efac; font-weight: 600;">✓ Contextual Intelligence</div>
+                            <div style="font-size: 0.9rem;">Every chunk remembers its place in the story</div>
+                        </div>
+                        <div style="color: #cbd5e1;">
+                            <div style="color: #86efac; font-weight: 600;">✓ Enterprise Ready</div>
+                            <div style="font-size: 0.9rem;">Production interface built for scale</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <section class="features" style="background: rgba(30,41,59,0.6);">
             <div class="container">
                 <h2>Stop Losing the Plot</h2>
@@ -574,7 +965,7 @@
                     </div>
                     
                     <div style="margin-top: 3rem;">
-                        <a href="https://app.autollama.io" class="btn btn-large">Experience Understanding</a>
+                        <a href="#screenshots" class="btn btn-large">Experience Understanding</a>
                     </div>
                 </div>
             </div>
@@ -583,11 +974,32 @@
 
     <footer>
         <div class="container">
-            <p>&copy; 2024 AutoLlama. Your Knowledge Deserves Better Than Amnesia.</p>
-            <p>🦙 Made with ❤️ for developers who understand that <strong>context is everything</strong></p>
-            <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
-                The Difference Between Finding Words and Understanding Meaning
-            </p>
+            <div class="footer-content">
+                <!-- Contact Links -->
+                <div class="contact-links">
+                    <a href="https://twitter.com/AutoLlamaAI" target="_blank" rel="noopener noreferrer" class="contact-link">
+                        <span class="contact-icon">🐦</span>
+                        <span>@AutoLlamaAI</span>
+                    </a>
+                    <a href="https://instagram.com/autollama.io" target="_blank" rel="noopener noreferrer" class="contact-link">
+                        <span class="contact-icon">📷</span>
+                        <span>autollama.io</span>
+                    </a>
+                    <a href="https://discord.gg/xQHcPhr2rp" target="_blank" rel="noopener noreferrer" class="contact-link">
+                        <span class="contact-icon">💬</span>
+                        <span>Discord Community</span>
+                    </a>
+                </div>
+                
+                <!-- Taglines -->
+                <div class="footer-tagline">
+                    <p>&copy; 2024 AutoLlama. Your Knowledge Deserves Better Than Amnesia.</p>
+                    <p>🦙 Made with ❤️ for developers who understand that <strong>context is everything</strong></p>
+                    <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
+                        The Difference Between Finding Words and Understanding Meaning
+                    </p>
+                </div>
+            </div>
         </div>
     </footer>
 
@@ -604,6 +1016,15 @@
             <div class="modal-body" id="modalBody">
                 <!-- Content will be injected here -->
             </div>
+        </div>
+    </div>
+
+    <!-- Lightbox Modal Structure -->
+    <div id="lightboxModal" class="lightbox-overlay">
+        <div class="lightbox-content">
+            <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+            <img id="lightboxImg" class="lightbox-img" src="" alt="">
+            <div id="lightboxCaption" class="lightbox-caption"></div>
         </div>
     </div>
 
@@ -698,7 +1119,7 @@
                         </div>
 
                         <div class="modal-cta">
-                            <a href="https://app.autollama.io" class="btn">Try It Now</a>
+                            <a href="#screenshots" class="btn">See Screenshots</a>
                             <a href="#docs" class="btn btn-secondary">View Documentation</a>
                         </div>
                     `
@@ -784,7 +1205,7 @@ With Context: "This chunk is from AutoLlama Inc's Q3 2024 financial report, sect
                         </div>
 
                         <div class="modal-cta">
-                            <a href="https://app.autollama.io" class="btn">Experience Better RAG</a>
+                            <a href="#screenshots" class="btn">See Screenshots</a>
                             <a href="https://www.anthropic.com/research/contextual-retrieval" class="btn btn-secondary">Read Anthropic's Research</a>
                         </div>
                     `
@@ -896,7 +1317,7 @@ Stage 2 Context Generation:
                         </div>
 
                         <div class="modal-cta">
-                            <a href="https://app.autollama.io" class="btn">See the Analysis in Action</a>
+                            <a href="#screenshots" class="btn">See Screenshots</a>
                             <a href="#features" class="btn btn-secondary">Learn More Features</a>
                         </div>
                     `
@@ -1028,7 +1449,7 @@ JavaScript RAG Stack:
                         </div>
 
                         <div class="modal-cta">
-                            <a href="https://app.autollama.io" class="btn">Build with JavaScript</a>
+                            <a href="#screenshots" class="btn">See Screenshots</a>
                             <a href="https://github.com/snedea/autollama" class="btn btn-secondary">View Source Code</a>
                         </div>
                     `
@@ -1158,7 +1579,7 @@ JavaScript RAG Stack:
                         </div>
 
                         <div class="modal-cta">
-                            <a href="https://app.autollama.io" class="btn">Test Performance Yourself</a>
+                            <a href="#screenshots" class="btn">See Screenshots</a>
                             <a href="https://www.anthropic.com/research/contextual-retrieval" class="btn btn-secondary">Read the Research</a>
                         </div>
                     `
@@ -1329,7 +1750,7 @@ AutoLlama Benefits:
 
                         <div class="modal-cta">
                             <a href="https://github.com/snedea/autollama" class="btn">View Source Code</a>
-                            <a href="https://app.autollama.io" class="btn btn-secondary">Try It Free</a>
+                            <a href="#screenshots" class="btn btn-secondary">See Screenshots</a>
                         </div>
                     `
                 }
@@ -1363,6 +1784,132 @@ AutoLlama Benefits:
             if (e.target === this) {
                 closeModal();
             }
+        });
+
+        // Screenshot and Lightbox functionality
+        function openLightbox(imageSrc, caption) {
+            const lightbox = document.getElementById('lightboxModal');
+            const img = document.getElementById('lightboxImg');
+            const captionEl = document.getElementById('lightboxCaption');
+            
+            img.src = imageSrc;
+            img.alt = caption;
+            captionEl.textContent = caption;
+            lightbox.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            const lightbox = document.getElementById('lightboxModal');
+            lightbox.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Screenshot click handlers
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add click handlers to screenshot containers
+            const screenshotContainers = document.querySelectorAll('.screenshot-container');
+            screenshotContainers.forEach(container => {
+                container.addEventListener('click', function() {
+                    const img = this.querySelector('.screenshot-img');
+                    const title = this.querySelector('.screenshot-title').textContent;
+                    const description = this.querySelector('.screenshot-description').textContent;
+                    const caption = `${title}: ${description}`;
+                    openLightbox(img.src, caption);
+                });
+            });
+
+            // Lazy loading for images - simplified for direct src loading
+            const lazyImages = document.querySelectorAll('.lazy-img');
+            const imageObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        // If image has data-src, use it (proper lazy loading)
+                        if (img.dataset.src) {
+                            img.src = img.dataset.src;
+                            img.removeAttribute('data-src');
+                        }
+                        // For images that already have src, just mark as loaded
+                        img.addEventListener('load', () => {
+                            img.classList.add('loaded');
+                        });
+                        // If image is already loaded, mark immediately
+                        if (img.complete && img.naturalHeight !== 0) {
+                            img.classList.add('loaded');
+                        }
+                        observer.unobserve(img);
+                    }
+                });
+            });
+
+            lazyImages.forEach(img => {
+                imageObserver.observe(img);
+            });
+
+            // Scroll animations for screenshot containers
+            const animateObserver = new IntersectionObserver((entries) => {
+                entries.forEach((entry, index) => {
+                    if (entry.isIntersecting) {
+                        setTimeout(() => {
+                            entry.target.classList.add('animate-in');
+                        }, index * 100); // Stagger animation
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '-50px'
+            });
+
+            screenshotContainers.forEach(container => {
+                animateObserver.observe(container);
+            });
+
+            // Keyboard navigation for lightbox
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeModal();
+                    closeLightbox();
+                }
+            });
+
+            // Close lightbox when clicking overlay
+            document.getElementById('lightboxModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeLightbox();
+                }
+            });
+
+            // Preload images for better performance
+            const imagesToPreload = [
+                'assets/screenshots/dashboard-main.webp',
+                'assets/screenshots/document-analysis.webp',
+                'assets/screenshots/chunks-grid.webp',
+                'assets/screenshots/processing-queue.webp',
+                'assets/screenshots/ai-analysis-panel.webp'
+            ];
+
+            imagesToPreload.forEach(src => {
+                const link = document.createElement('link');
+                link.rel = 'preload';
+                link.as = 'image';
+                link.href = src;
+                document.head.appendChild(link);
+            });
+
+            // Add smooth scrolling for anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
         });
     </script>
 </body>
