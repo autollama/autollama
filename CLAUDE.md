@@ -37,9 +37,19 @@ curl -X POST http://localhost:8080/api/process-url-stream -H "Content-Type: appl
 curl -X POST http://localhost:8080/api/process-file-stream -F "file=@test.pdf" -N
 ```
 
-## v2.3 Flow View Optimization ✨
+## v2.3 Improvements ✨
 
-### Smooth Animation Performance
+### Direct AI Chat Access (2025-08-17)
+- **Eliminated Intermediary Screen**: Clicking "AI Chat" now takes users directly to the chat interface
+- **No Screen Jump**: Fixed auto-scroll behavior that caused page jumping when loading chat
+- **Instant Chat Access**: Removed the "Start Chatting" button requirement for better UX
+
+**Technical Details**:
+- **RAGChat.jsx**: Changed `showWelcome` initial state from `true` to `false`
+- **ChatInterface.jsx**: Modified auto-scroll logic to prevent scrolling on initial load (`lastMessageCount > 0` condition)
+- **User Experience**: One-click access to AI chat without navigation interruptions
+
+### Flow View Optimization
 - **Fixed Flow Stalling**: Eliminated the 20% stall and restart issue in Flow View tab
 - **Lane-Based Flow**: Objects now flow in organized lanes instead of random clustering
 - **60fps Animation**: Frame rate limiting ensures smooth, consistent performance

@@ -19,11 +19,11 @@ const ChatInterface = () => {
   const [lastMessageCount, setLastMessageCount] = useState(0);
 
   useEffect(() => {
-    // Only auto-scroll if the last message was from the assistant or if it's the initial load
-    if (messages.length > lastMessageCount && shouldAutoScroll) {
+    // Only auto-scroll if the last message was from the assistant (but not on initial load)
+    if (messages.length > lastMessageCount && shouldAutoScroll && lastMessageCount > 0) {
       const lastMessage = messages[messages.length - 1];
-      // Only scroll if the last message is from assistant or if it's the welcome message
-      if (lastMessage && (lastMessage.type === 'assistant' || messages.length === 1)) {
+      // Only scroll if the last message is from assistant
+      if (lastMessage && lastMessage.type === 'assistant') {
         scrollToBottom();
       }
     }

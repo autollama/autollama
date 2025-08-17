@@ -11,7 +11,7 @@ const RAGChat = () => {
     knowledgeBaseSize: 0,
     ragAccuracy: 0,
   });
-  const [showWelcome, setShowWelcome] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   // Load chat statistics
   useEffect(() => {
