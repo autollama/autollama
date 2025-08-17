@@ -324,54 +324,66 @@ class SettingsController {
     
     try {
       const db = this.services.database || require('../../database');
-      const settings = await db.getApiSettings();
+      const dbSettings = await db.getApiSettings();
+      
+      // Use settings from request body if provided, fallback to database settings
+      const frontendConnections = req.body?.connections || {};
+      const settings = {
+        // Merge database settings with frontend overrides
+        ...dbSettings,
+        // Map frontend camelCase to backend snake_case
+        openai_api_key: frontendConnections.openaiApiKey || dbSettings.openai_api_key,
+        qdrant_url: frontendConnections.qdrantUrl || dbSettings.qdrant_url,
+        qdrant_api_key: frontendConnections.qdrantApiKey || dbSettings.qdrant_api_key,
+      };
       
       const results = {
-        database: false,
         openai: false,
         qdrant: false,
-        bm25: false
       };
 
-      // Test database connection
-      try {
-        results.database = await db.testConnection();
-      } catch (error) {
-        this.logger.warn('Database connection test failed', { error: error.message });
-      }
-
-      // Test OpenAI connection
+      // Test OpenAI connection - Direct API call
       if (settings.openai_api_key) {
         try {
-          if (this.services.aiServices?.openaiService) {
-            const openaiHealth = await this.services.aiServices.openaiService.testConnection();
-            results.openai = openaiHealth.status === 'healthy';
-          }
+          const axios = require('axios');
+          const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+            model: 'gpt-3.5-turbo',
+            messages: [{ role: 'user', content: 'test' }],
+            max_tokens: 1
+          }, {
+            headers: {
+              'Authorization': `Bearer ${settings.openai_api_key}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: 10000
+          });
+          results.openai = response.status === 200;
+          this.logger.debug('OpenAI connection test passed');
         } catch (error) {
           this.logger.warn('OpenAI connection test failed', { error: error.message });
+          // Check if it's an auth error vs connection error
+          results.openai = error.response?.status === 401 ? false : false;
         }
       }
 
-      // Test Qdrant connection
+      // Test Qdrant connection - Direct API call
       if (settings.qdrant_url && settings.qdrant_api_key) {
         try {
-          if (this.services.storageServices?.vectorService) {
-            const qdrantHealth = await this.services.storageServices.vectorService.healthCheck();
-            results.qdrant = qdrantHealth.status === 'healthy';
-          }
+          const axios = require('axios');
+          const cleanUrl = settings.qdrant_url.replace(/\/+$/, ''); // Remove trailing slashes
+          const response = await axios.get(`${cleanUrl}/collections`, {
+            headers: {
+              'api-key': settings.qdrant_api_key,
+              'Content-Type': 'application/json'
+            },
+            timeout: 10000
+          });
+          results.qdrant = response.status === 200;
+          this.logger.debug('Qdrant connection test passed');
         } catch (error) {
           this.logger.warn('Qdrant connection test failed', { error: error.message });
+          results.qdrant = false;
         }
-      }
-
-      // Test BM25 connection
-      try {
-        if (this.services.storageServices?.bm25Service) {
-          const bm25Health = await this.services.storageServices.bm25Service.healthCheck();
-          results.bm25 = bm25Health.status === 'healthy';
-        }
-      } catch (error) {
-        this.logger.warn('BM25 connection test failed', { error: error.message });
       }
 
       const successCount = Object.values(results).filter(Boolean).length;

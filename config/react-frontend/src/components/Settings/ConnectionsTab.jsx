@@ -7,7 +7,7 @@ const ConnectionsTab = ({ onSettingsChange }) => {
   const { settings, connectionStatus, updateCategory } = useAppContext();
   const [formData, setFormData] = useState(settings.connections);
   const [showKeys, setShowKeys] = useState({});
-  const [testing, setTesting] = useState({ all: false, claude: false });
+  const [testing, setTesting] = useState({ all: false });
   const [testResults, setTestResults] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -83,70 +83,21 @@ const ConnectionsTab = ({ onSettingsChange }) => {
       // Set all as failed on error
       setTestResults({
         openai: false,
-        claude: false,
         qdrant: false,
-        database: false,
-        bm25: false,
       });
     } finally {
       setTesting(prev => ({ ...prev, all: false }));
     }
   };
 
-  // Test individual connection
-  const testIndividualConnection = async (connectionId) => {
-    setTesting({ ...testing, [connectionId]: true });
-    try {
-      console.log(`🧪 Testing ${connectionId} connection...`);
-      
-      if (connectionId === 'claude') {
-        // Test Anthropic Claude API directly
-        const testResult = await testClaudeConnection(formData.claudeApiKey);
-        setTestResults(prev => ({ ...prev, claude: testResult.success }));
-        
-        if (testResult.success) {
-          console.log('✅ Claude connection successful:', testResult.model);
-        } else {
-          console.error('❌ Claude connection failed:', testResult.error);
-        }
-      }
-      
-    } catch (error) {
-      console.error(`❌ ${connectionId} test failed:`, error);
-      setTestResults(prev => ({ ...prev, [connectionId]: false }));
-    } finally {
-      setTesting(prev => ({ ...prev, [connectionId]: false }));
-    }
-  };
-
-  // Test Claude API connection
-  const testClaudeConnection = async (apiKey) => {
-    if (!apiKey || !apiKey.trim()) {
-      return { success: false, error: 'API key is required' };
-    }
-
-    try {
-      const response = await fetch('/api/test-claude', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ apiKey: apiKey.trim() }),
-      });
-
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  };
+  // Individual connection testing removed - using main validateConnections instead
 
   // Connection status indicator
   const getStatusIndicator = (service) => {
     const isConnected = connectionStatus[service];
     const testResult = testResults[service];
     
-    if (testing) {
+    if (testing.all) {
       return <RefreshCw className="w-4 h-4 text-yellow-400 animate-spin" />;
     }
     
@@ -161,7 +112,7 @@ const ConnectionsTab = ({ onSettingsChange }) => {
       : <AlertCircle className="w-4 h-4 text-gray-400" />;
   };
 
-  // Connection configurations
+  // Connection configurations - streamlined to show only OpenAI and Qdrant
   const connections = [
     {
       id: 'openai',
@@ -176,22 +127,6 @@ const ConnectionsTab = ({ onSettingsChange }) => {
           placeholder: 'sk-proj-...',
           required: true,
           help: 'Get your API key from https://platform.openai.com/api-keys',
-        },
-      ],
-    },
-    {
-      id: 'claude',
-      title: 'Anthropic Claude',
-      description: 'Claude models for advanced reasoning and analysis',
-      icon: MessageCircle,
-      fields: [
-        {
-          key: 'claudeApiKey',
-          label: 'API Key',
-          type: 'password',
-          placeholder: 'sk-ant-api03-...',
-          required: false,
-          help: 'Get your API key from https://console.anthropic.com/',
         },
       ],
     },
@@ -219,22 +154,6 @@ const ConnectionsTab = ({ onSettingsChange }) => {
         },
       ],
     },
-    {
-      id: 'database',
-      title: 'PostgreSQL Database',
-      description: 'Structured metadata and document storage',
-      icon: Database,
-      fields: [
-        {
-          key: 'databaseUrl',
-          label: 'Connection String',
-          type: 'password',
-          placeholder: 'postgresql://user:pass@host:5432/db',
-          required: true,
-          help: 'Full PostgreSQL connection string',
-        },
-      ],
-    },
   ];
 
   return (
@@ -253,7 +172,7 @@ const ConnectionsTab = ({ onSettingsChange }) => {
             )}
           </h3>
           <p className="text-gray-400 mt-1">
-            Configure API keys and database connections for AutoLlama services
+            Configure OpenAI and Qdrant connections for AutoLlama services
           </p>
         </div>
         
@@ -268,7 +187,7 @@ const ConnectionsTab = ({ onSettingsChange }) => {
       </div>
 
       {/* Connection Status Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <StatusCard
           title="OpenAI"
           status={connectionStatus.openai}
@@ -279,18 +198,6 @@ const ConnectionsTab = ({ onSettingsChange }) => {
           title="Qdrant"
           status={connectionStatus.qdrant}
           testResult={testResults.qdrant}
-          testing={testing}
-        />
-        <StatusCard
-          title="PostgreSQL"
-          status={connectionStatus.database}
-          testResult={testResults.database}
-          testing={testing}
-        />
-        <StatusCard
-          title="BM25 Search"
-          status={connectionStatus.bm25}
-          testResult={testResults.bm25}
           testing={testing}
         />
       </div>
@@ -362,21 +269,7 @@ const ConnectionsTab = ({ onSettingsChange }) => {
                         )}
                       </div>
                       
-                      {/* Individual test button for API keys */}
-                      {field.key === 'claudeApiKey' && formData[field.key] && (
-                        <button
-                          onClick={() => testIndividualConnection('claude')}
-                          disabled={testing.claude}
-                          className="btn-secondary px-3 py-2 text-sm"
-                          title="Test Claude API connection"
-                        >
-                          {testing.claude ? (
-                            <RefreshCw className="w-4 h-4 animate-spin" />
-                          ) : (
-                            'Test'
-                          )}
-                        </button>
-                      )}
+                      {/* Individual test buttons removed - using main "Test All" instead */}
                     </div>
                     
                     {field.help && (
@@ -438,7 +331,7 @@ const ConnectionsTab = ({ onSettingsChange }) => {
 // Status Card Component
 const StatusCard = ({ title, status, testResult, testing }) => {
   const getStatusColor = () => {
-    if (testing) return 'border-yellow-500 text-yellow-400';
+    if (testing.all) return 'border-yellow-500 text-yellow-400';
     if (testResult !== undefined) {
       return testResult ? 'border-green-500 text-green-400' : 'border-red-500 text-red-400';
     }
@@ -446,7 +339,7 @@ const StatusCard = ({ title, status, testResult, testing }) => {
   };
 
   const getStatusIcon = () => {
-    if (testing) return <RefreshCw className="w-4 h-4 animate-spin" />;
+    if (testing.all) return <RefreshCw className="w-4 h-4 animate-spin" />;
     if (testResult !== undefined) {
       return testResult ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />;
     }
@@ -454,7 +347,7 @@ const StatusCard = ({ title, status, testResult, testing }) => {
   };
 
   const getStatusText = () => {
-    if (testing) return 'Testing...';
+    if (testing.all) return 'Testing...';
     if (testResult !== undefined) {
       return testResult ? 'Connected' : 'Failed';
     }

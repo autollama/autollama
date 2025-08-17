@@ -132,10 +132,16 @@ export const useAPI = () => {
 
   // Statistics and health with appropriate caching
   const stats = {
-    getKnowledgeBase: useCallback(() => 
-      callAPI(apiEndpoints.getKnowledgeBaseStats, 'kb-stats', { ttl: cacheConfigs.stats }), [callAPI]),
-    getDatabase: useCallback(() => 
-      callAPI(apiEndpoints.getDatabaseStats, 'db-stats', { ttl: cacheConfigs.stats }), [callAPI]),
+    getKnowledgeBase: useCallback(async () => {
+      const result = await callAPI(apiEndpoints.getKnowledgeBaseStats, 'kb-stats', { ttl: cacheConfigs.stats });
+      // Return the stats object directly, not the wrapper
+      return result?.stats || result;
+    }, [callAPI]),
+    getDatabase: useCallback(async () => {
+      const result = await callAPI(apiEndpoints.getDatabaseStats, 'db-stats', { ttl: cacheConfigs.stats });
+      // Return the stats object directly, not the wrapper
+      return result?.stats || result;
+    }, [callAPI]),
     getHealth: useCallback(() => 
       callAPI(apiEndpoints.getHealth, 'health', { ttl: cacheConfigs.realtime }), [callAPI]),
     getPipelineHealth: useCallback(() => 

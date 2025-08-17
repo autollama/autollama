@@ -182,7 +182,7 @@ const PipelineTab = ({ onSettingsChange }) => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatusCard
           title="Pipeline Status"
-          status={pipelineStats?.status}
+          status={testResult?.success || pipelineStats?.status || (pipelineStats ? 'Ready' : null)}
           icon={Zap}
           description="OpenWebUI service connectivity"
         />

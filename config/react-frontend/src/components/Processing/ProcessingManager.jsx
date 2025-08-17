@@ -94,7 +94,7 @@ const ProcessingManager = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard
           title="Total Documents"
-          value={documents?.length || 0}
+          value={systemStats.knowledgeBase?.total_documents || 0}
           icon={FileText}
           color="text-blue-400"
           change="+12 today"
@@ -200,7 +200,8 @@ const ProcessingQueue = ({ queue, onRefresh }) => {
       }
     } catch (error) {
       console.error(`❌ Failed to stop processing session ${sessionId}:`, error.response?.data || error.message);
-      // TODO: Show user-friendly error message
+      // Show user-friendly error message - could be implemented with toast notification
+      alert('Failed to stop processing session. Please try again.');
     }
   };
 

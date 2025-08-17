@@ -427,7 +427,7 @@ function createRoutes(services = {}) {
       const { limit = 50, offset = 0 } = req.query;
       console.log(`📋 Documents endpoint: limit=${limit}, offset=${offset}`);
       
-      // FIXED: Get latest document per URL, ordered by newest first
+      // FIXED: Get latest document per URL with chunk count, ordered by newest first
       const query = `
         WITH latest_per_url AS (
           SELECT 
@@ -436,13 +436,23 @@ function createRoutes(services = {}) {
             ROW_NUMBER() OVER (PARTITION BY url ORDER BY created_time DESC) as rn
           FROM processed_content 
           WHERE url IS NOT NULL AND title IS NOT NULL
+        ),
+        chunk_counts AS (
+          SELECT 
+            url,
+            COUNT(*) FILTER (WHERE record_type = 'chunk') as chunk_count
+          FROM processed_content 
+          WHERE url IS NOT NULL 
+          GROUP BY url
         )
         SELECT 
-          url, title, summary, created_time, updated_at,
-          embedding_status, content_type, sentiment
-        FROM latest_per_url 
-        WHERE rn = 1
-        ORDER BY created_time DESC 
+          l.url, l.title, l.summary, l.created_time, l.updated_at,
+          l.embedding_status, l.content_type, l.sentiment,
+          COALESCE(c.chunk_count, 0) as chunk_count
+        FROM latest_per_url l
+        LEFT JOIN chunk_counts c ON l.url = c.url
+        WHERE l.rn = 1
+        ORDER BY l.created_time DESC 
         LIMIT $1 OFFSET $2
       `;
       

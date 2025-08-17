@@ -264,103 +264,42 @@ class SettingsManager {
   // Validate connection settings
   async validateConnections(settings = null) {
     const config = settings || this.loadSettings();
-    const results = {
-      openai: false,
-      claude: false,
-      qdrant: false,
-      database: false,
-      bm25: false,
-    };
-
-    // Test OpenAI connection
-    if (config.connections.openaiApiKey && config.connections.openaiApiKey.trim()) {
-      try {
-        const response = await fetch('https://api.openai.com/v1/models', {
-          headers: {
-            'Authorization': `Bearer ${config.connections.openaiApiKey}`,
-          }
-        });
-        results.openai = response.ok;
-      } catch (error) {
-        console.error('OpenAI connection test failed:', error);
-      }
-    }
-
-    // Test Claude connection
-    if (config.connections.claudeApiKey && config.connections.claudeApiKey.trim()) {
-      try {
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'x-api-key': config.connections.claudeApiKey,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: 'claude-3-haiku-20240307',
-            max_tokens: 1,
-            messages: [{ role: 'user', content: 'test' }]
-          })
-        });
-        results.claude = response.ok || response.status === 400; // 400 is also valid (request format error but auth worked)
-      } catch (error) {
-        console.error('Claude connection test failed:', error);
-      }
-    }
-
-
-    // Test Qdrant connection
-    if (config.connections.qdrantUrl && config.connections.qdrantApiKey && config.connections.qdrantApiKey.trim()) {
-      try {
-        const response = await fetch(`${config.connections.qdrantUrl}/collections`, {
-          headers: {
-            'api-key': config.connections.qdrantApiKey,
-          }
-        });
-        results.qdrant = response.ok;
-      } catch (error) {
-        console.error('Qdrant connection test failed:', error);
-      }
-    }
-
-    // Test database connection
-    if (config.connections.databaseUrl && config.connections.databaseUrl.trim()) {
-      try {
-        // Test through the comprehensive API health endpoint
-        const response = await fetch('/api/health');
-        if (response.ok) {
-          const healthData = await response.json();
-          // Check if PostgreSQL is connected
-          results.database = healthData.database?.postgresql === 'connected';
-        } else {
-          // Fallback to simple health endpoint
-          const fallbackResponse = await fetch('/health');
-          const fallbackData = await fallbackResponse.text();
-          results.database = fallbackData === 'healthy';
-        }
-      } catch (error) {
-        console.error('Database connection test failed:', error);
-        // Try fallback endpoint
-        try {
-          const fallbackResponse = await fetch('/health');
-          const fallbackData = await fallbackResponse.text();
-          results.database = fallbackData === 'healthy';
-        } catch (fallbackError) {
-          console.error('Fallback database test failed:', fallbackError);
-          results.database = false;
-        }
-      }
-    }
-
-    // Test BM25 service
+    
     try {
-      const response = await fetch('/bm25/health');
-      results.bm25 = response.ok;
-    } catch (error) {
-      console.error('BM25 service test failed:', error);
-    }
+      // Use the backend API to test connections properly
+      const response = await fetch('/api/settings/test-connections', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          connections: config.connections
+        })
+      });
 
-    return results;
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Connection test results from backend:', result);
+        
+        // Return only the connections we care about
+        return {
+          openai: result.connections?.openai || false,
+          qdrant: result.connections?.qdrant || false,
+        };
+      } else {
+        console.error('❌ Backend connection test failed:', response.status);
+        return {
+          openai: false,
+          qdrant: false,
+        };
+      }
+    } catch (error) {
+      console.error('❌ Connection validation failed:', error);
+      return {
+        openai: false,
+        qdrant: false,
+      };
+    }
   }
 }
 

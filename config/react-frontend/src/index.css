@@ -291,7 +291,7 @@
   }
 
   .animate-highlight-new {
-    animation: highlight-new-document 1.5s ease-in-out infinite;
+    animation: highlight-new-document 2s ease-in-out 1;
   }
 
   .animate-fade-to-normal {

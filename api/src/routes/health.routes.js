@@ -126,18 +126,74 @@ router.get('/pipeline/health', async (req, res) => {
   }
 });
 
-router.get('/knowledge-base/stats', (req, res) => {
-  res.status(501).json({ 
-    error: 'Route extraction in progress',
-    message: 'This endpoint will be implemented in Day 6-7 of refactoring'
-  });
+router.get('/knowledge-base/stats', async (req, res) => {
+  try {
+    console.log('📊 Knowledge-base stats requested');
+    const db = require('../../database');
+    
+    // Get database stats (this endpoint works)
+    const stats = await db.getDatabaseStats();
+    
+    // Format for frontend compatibility
+    const knowledgeBaseStats = {
+      success: true,
+      stats: {
+        total_documents: stats.total_urls || 0,
+        total_chunks: stats.total_chunks || 0,
+        embedded_count: stats.embedded_count || 0,
+        contextual_count: stats.contextual_count || 0,
+        recent_count: stats.recent_count || 0,
+        latest_content: stats.latest_content,
+        postgres_size: stats.postgres_size_pretty || 'Unknown',
+        qdrant_status: stats.qdrant?.status || 'unknown'
+      },
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('📊 Knowledge-base stats delivered:', knowledgeBaseStats.stats.total_documents, 'documents');
+    res.json(knowledgeBaseStats);
+    
+  } catch (error) {
+    console.error('❌ Knowledge-base stats error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch knowledge-base stats',
+      details: error.message
+    });
+  }
 });
 
-router.get('/quick-stats', (req, res) => {
-  res.status(501).json({ 
-    error: 'Route extraction in progress',
-    message: 'This endpoint will be implemented in Day 6-7 of refactoring'
-  });
+router.get('/quick-stats', async (req, res) => {
+  try {
+    console.log('⚡ Quick-stats requested');
+    const db = require('../../database');
+    
+    // Get database stats directly 
+    const stats = await db.getDatabaseStats();
+    
+    // Format for frontend dashboard compatibility
+    const quickStats = {
+      success: true,
+      totalDocuments: stats.total_urls || 0,
+      totalChunks: stats.total_chunks || 0,
+      embeddedCount: stats.embedded_count || 0,
+      contextualCount: stats.contextual_count || 0,
+      processingQueue: stats.active_sessions || 0,
+      recentCount: stats.recent_count || 0,
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('⚡ Quick-stats delivered:', quickStats.totalDocuments, 'documents');
+    res.json(quickStats);
+    
+  } catch (error) {
+    console.error('❌ Quick-stats error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch quick stats',
+      details: error.message
+    });
+  }
 });
 
 router.get('/debug-test', (req, res) => {

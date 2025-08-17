@@ -258,7 +258,7 @@ const QueueItem = ({ item }) => {
             </div>
             
             <div className="flex items-center gap-4 mt-1 text-sm text-gray-400">
-              <span>{progress.currentChunk || 0} / {progress.totalChunks || 0} chunks</span>
+              <span>{item.processedChunks || progress.currentChunk || 0} / {item.totalChunks || progress.totalChunks || 0} chunks</span>
               {progress.percentage && (
                 <span>{Math.round(progress.percentage)}% complete</span>
               )}

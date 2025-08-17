@@ -11,7 +11,7 @@ const { v4: uuidv4 } = require('uuid');
 const router = express.Router();
 
 // Database and services
-const db = require('../../database');
+const db = require('/app/database');
 
 // Configure multer for chunk uploads
 const storage = multer.memoryStorage();
@@ -31,10 +31,12 @@ const uploadSessions = new Map();
  */
 router.post('/initialize', async (req, res) => {
   try {
+    console.log('📤 Upload initialization request:', req.body);
     const { filename, fileSize, fileType, totalChunks, enableContextual, source } = req.body;
 
     // Validate input
     if (!filename || !fileSize || !totalChunks) {
+      console.log('❌ Missing required fields');
       return res.status(400).json({
         success: false,
         error: 'Missing required fields: filename, fileSize, totalChunks'
@@ -58,6 +60,7 @@ router.post('/initialize', async (req, res) => {
     await fs.mkdir(uploadDir, { recursive: true });
 
     // Create upload session record in database
+    console.log('📊 Creating database record...');
     const query = `
       INSERT INTO upload_sessions (
         id, url, filename, file_size, content_type, status, 
@@ -67,11 +70,14 @@ router.post('/initialize', async (req, res) => {
       RETURNING id, upload_id, created_at
     `;
     
-    const result = await db.pool.query(query, [
+    const queryParams = [
       sessionId, `file://${filename}`, filename, fileSize, fileType || 'application/octet-stream',
-      'uploading', uploadId, totalChunks, 0,
+      'pending', uploadId, totalChunks, 0,
       enableContextual || false, source || 'user'
-    ]);
+    ];
+    console.log('📊 Query params:', queryParams);
+    
+    const result = await db.pool.query(query, queryParams);
 
     // Store session in memory for fast access
     uploadSessions.set(uploadId, {
@@ -101,9 +107,11 @@ router.post('/initialize', async (req, res) => {
 
   } catch (error) {
     console.error('Failed to initialize upload:', error);
+    console.error('Error details:', error.message, error.stack);
     res.status(500).json({
       success: false,
-      error: 'Failed to initialize upload session'
+      error: 'Failed to initialize upload session',
+      details: error.message
     });
   }
 });
@@ -287,7 +295,7 @@ router.get('/progress/:uploadId', async (req, res) => {
       totalChunks: session.totalChunks,
       receivedChunks: session.receivedChunks,
       progress: progressPercent,
-      status: session.status || 'uploading'
+      status: session.status || 'pending'
     });
 
   } catch (error) {

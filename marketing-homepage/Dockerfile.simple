@@ -1,0 +1,9 @@
+FROM nginx:alpine
+
+# Copy a simple HTML file
+COPY index.html /usr/share/nginx/html/index.html
+
+# Simple nginx config
+RUN echo 'server { listen 80; server_name _; location / { root /usr/share/nginx/html; index index.html; add_header Cache-Control "no-cache, must-revalidate"; expires 0; } location /health { access_log off; return 200 "healthy\n"; add_header Content-Type text/plain; } }' > /etc/nginx/conf.d/default.conf
+
+EXPOSE 80

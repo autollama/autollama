@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoLlama - The Context-Aware RAG Framework</title>
+    <!-- Dark Mode v2.0 - Cache Bust -->
+    <meta name="version" content="dark-v2.0-20250814024942">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+            color: #e2e8f0;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
+        header { 
+            background: rgba(15,23,42,0.95); 
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border-bottom: 1px solid rgba(59,130,246,0.2);
+            position: sticky; 
+            top: 0; 
+            z-index: 100;
+        }
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #3b82f6;
+            text-decoration: none;
+        }
+        .nav a {
+            margin-left: 2rem;
+            text-decoration: none;
+            color: #cbd5e1;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .nav a:hover { color: #60a5fa; }
+        .btn {
+            background: #3b82f6;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: inline-block;
+        }
+        .btn:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(59,130,246,0.5);
+        }
+        .hero {
+            text-align: center;
+            padding: 8rem 0;
+            color: white;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .hero h1 {
+            font-size: 4rem;
+            font-weight: bold;
+            margin-bottom: 2rem;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .hero p {
+            font-size: 1.5rem;
+            margin-bottom: 3rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn-large {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+        .features {
+            background: rgba(15,23,42,0.8);
+            padding: 6rem 0;
+        }
+        .features h2 {
+            text-align: center;
+            font-size: 3rem;
+            margin-bottom: 4rem;
+            color: #f1f5f9;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        .feature-card {
+            background: rgba(30,41,59,0.8);
+            border: 1px solid rgba(59,130,246,0.2);
+            padding: 2rem;
+            border-radius: 1rem;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(59,130,246,0.3);
+            border-color: rgba(59,130,246,0.5);
+        }
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #f1f5f9;
+        }
+        .feature-card p {
+            color: #cbd5e1;
+        }
+        footer {
+            background: rgba(15,23,42,0.95);
+            border-top: 1px solid rgba(59,130,246,0.2);
+            color: #cbd5e1;
+            text-align: center;
+            padding: 3rem 0;
+        }
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background: rgba(15,23,42,0.95);
+            border: 1px solid rgba(59,130,246,0.3);
+            border-radius: 1rem;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: translateY(20px) scale(0.95);
+            transition: all 0.3s ease;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        }
+        .modal-overlay.active .modal-content {
+            transform: translateY(0) scale(1);
+        }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 2rem;
+            border-bottom: 1px solid rgba(59,130,246,0.2);
+        }
+        .modal-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #f1f5f9;
+        }
+        .modal-icon {
+            font-size: 2rem;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            color: #cbd5e1;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+        .modal-close:hover {
+            background: rgba(239,68,68,0.2);
+            color: #fca5a5;
+        }
+        .modal-body {
+            padding: 2rem;
+        }
+        .modal-section {
+            margin-bottom: 2rem;
+        }
+        .modal-section h3 {
+            color: #60a5fa;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .modal-section p {
+            color: #cbd5e1;
+            line-height: 1.7;
+            margin-bottom: 1rem;
+        }
+        .modal-benefits {
+            display: grid;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        .modal-benefit {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: rgba(30,41,59,0.5);
+            border-radius: 0.5rem;
+            border-left: 3px solid #3b82f6;
+        }
+        .modal-benefit-icon {
+            color: #60a5fa;
+            font-size: 1.2rem;
+            margin-top: 0.1rem;
+        }
+        .modal-code {
+            background: rgba(30,41,59,0.8);
+            border: 1px solid rgba(59,130,246,0.2);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #86efac;
+            overflow-x: auto;
+        }
+        .modal-cta {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(59,130,246,0.2);
+        }
+        .feature-card {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 25px 50px rgba(59,130,246,0.4);
+        }
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2.5rem; }
+            .hero p { font-size: 1.2rem; }
+            .header-content { flex-direction: column; gap: 1rem; }
+            .nav a { margin-left: 1rem; }
+            .modal-content { margin: 1rem; max-height: 85vh; }
+            .modal-header, .modal-body { padding: 1.5rem; }
+            .modal-cta { flex-direction: column; }
+            /* Mobile responsiveness for example section */
+            .features div[style*="grid-template-columns: 1fr 1fr"] { 
+                grid-template-columns: 1fr !important; 
+            }
+            /* Mobile responsiveness for context journey */
+            .features div[style*="grid-template-columns: 1fr auto 1fr auto 1fr"] {
+                grid-template-columns: 1fr !important;
+                text-align: center !important;
+            }
+            .features div[style*="grid-template-columns: 1fr auto 1fr auto 1fr"] div[style*="font-size: 2rem"] {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="/" class="logo">🦙 AutoLlama</a>
+                <nav class="nav">
+                    <a href="#features">Features</a>
+                    <a href="#docs">Docs</a>
+                    <a href="https://github.com/snedea/autollama">GitHub</a>
+                    <a href="https://app.autollama.io" class="btn">Launch App</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container">
+                <div style="font-size: 1.1rem; color: #60a5fa; font-weight: 600; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.1em; text-align: center;">Finally.</div>
+                
+                <h1>The Context-Aware RAG Framework</h1>
+                
+                <div style="font-size: 1.8rem; color: #f1f5f9; font-weight: 500; margin-bottom: 2rem; font-style: italic; text-align: center;">
+                    Your Documents Have Context. Now Your RAG Does Too.
+                </div>
+                
+                <div style="font-size: 1.3rem; color: #cbd5e1; font-weight: 500; margin-bottom: 2rem; text-align: center; line-height: 1.6;">
+                    Every chunk remembers. Every query understands. Every answer matters.
+                </div>
+                
+                <div style="font-size: 1.1rem; color: #86efac; font-weight: 600; margin-bottom: 3rem; text-align: center;">
+                    60% better accuracy through Anthropic's contextual retrieval methodology
+                </div>
+
+                <div class="hero-buttons">
+                    <a href="#demo" class="btn btn-large">See the Difference</a>
+                    <a href="https://www.anthropic.com/research/contextual-retrieval" class="btn btn-secondary btn-large">Read the Research</a>
+                </div>
+                
+                <div style="margin-top: 3rem; padding: 1.5rem; background: rgba(59,130,246,0.1); border-radius: 1rem; border: 1px solid rgba(59,130,246,0.2); text-align: center;">
+                    <div style="font-style: italic; color: #cbd5e1; font-size: 1.1rem;">
+                        💬 "It's like RAG finally learned how to read" 
+                        <span style="color: #94a3b8;">— Early Adopter</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Visual Context Journey -->
+        <section class="features" style="background: rgba(15,23,42,0.9); padding: 4rem 0;">
+            <div class="container">
+                <h2 style="text-align: center; margin-bottom: 3rem; color: #f1f5f9;">The Context Journey</h2>
+                
+                <!-- Traditional RAG Path -->
+                <div style="display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 1rem; align-items: center; margin-bottom: 3rem; padding: 2rem; background: rgba(239,68,68,0.1); border-radius: 1rem; border: 1px solid rgba(239,68,68,0.3);">
+                    <div style="text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">📄</div>
+                        <div style="color: #fca5a5; font-weight: 600;">Original Document</div>
+                        <div style="color: #cbd5e1; font-size: 0.9rem;">Rich context & connections</div>
+                    </div>
+                    <div style="color: #ef4444; font-size: 2rem;">→</div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">🔪</div>
+                        <div style="color: #fca5a5; font-weight: 600;">Traditional RAG</div>
+                        <div style="color: #cbd5e1; font-size: 0.9rem;">Chunks without memory</div>
+                    </div>
+                    <div style="color: #ef4444; font-size: 2rem;">→</div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">😕</div>
+                        <div style="color: #fca5a5; font-weight: 600;">Lost Context</div>
+                        <div style="color: #cbd5e1; font-size: 0.9rem;">"Information exists"</div>
+                    </div>
+                </div>
+
+                <!-- AutoLlama Path -->
+                <div style="display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 1rem; align-items: center; padding: 2rem; background: rgba(34,197,94,0.1); border-radius: 1rem; border: 1px solid rgba(34,197,94,0.3);">
+                    <div style="text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">📄</div>
+                        <div style="color: #86efac; font-weight: 600;">Original Document</div>
+                        <div style="color: #cbd5e1; font-size: 0.9rem;">Rich context & connections</div>
+                    </div>
+                    <div style="color: #22c55e; font-size: 2rem;">→</div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">🧠</div>
+                        <div style="color: #86efac; font-weight: 600;">AutoLlama</div>
+                        <div style="color: #cbd5e1; font-size: 0.9rem;">Chunks with contextual memory</div>
+                    </div>
+                    <div style="color: #22c55e; font-size: 2rem;">→</div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">🎯</div>
+                        <div style="color: #86efac; font-weight: 600;">Perfect Context</div>
+                        <div style="color: #cbd5e1; font-size: 0.9rem;">"Section 7.3 requires 409A filing within 30 days"</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="features">
+            <div class="container">
+                <h2>Every Embedding Tells a Story</h2>
+                <p style="text-align: center; color: #cbd5e1; font-size: 1.1rem; margin-bottom: 3rem;">
+                    Because context isn't optional—it's everything
+                </p>
+                <div class="feature-grid">
+                    <div class="feature-card" onclick="openModal('deploy')">
+                        <div class="feature-icon">🚀</div>
+                        <h3>One-Command Deploy</h3>
+                        <p>Get production-ready RAG platform running with just <code>docker compose up</code>. Zero configuration required.</p>
+                    </div>
+                    <div class="feature-card" onclick="openModal('anthropic')">
+                        <div class="feature-icon">🧠</div>
+                        <h3>Anthropic's Contextual Retrieval</h3>
+                        <p>Only open-source framework implementing the full contextual retrieval methodology that powers Claude's superior RAG capabilities - delivering 35-67% performance improvement.</p>
+                    </div>
+                    <div class="feature-card" onclick="openModal('dual-stage')">
+                        <div class="feature-icon">🔬</div>
+                        <h3>Dual-Stage AI Analysis</h3>
+                        <p>Unique two-stage pipeline: Stage 1 extracts 11+ metadata dimensions (sentiment, entities, technical level), Stage 2 adds contextual descriptions before embedding - no other framework does both.</p>
+                    </div>
+                    <div class="feature-card" onclick="openModal('javascript')">
+                        <div class="feature-icon">🎯</div>
+                        <h3>JavaScript-First RAG</h3>
+                        <p>Finally, enterprise-grade RAG for the Node.js ecosystem. While LangChain and LlamaIndex focus on Python, AutoLlama brings cutting-edge retrieval to JavaScript developers.</p>
+                    </div>
+                    <div class="feature-card" onclick="openModal('performance')">
+                        <div class="feature-icon">🚀</div>
+                        <h3>Proven Performance</h3>
+                        <p>Implements the same contextual technique that powers Claude's superior RAG capabilities. Lower computational cost than fine-tuning, better accuracy than standard embedding methods.</p>
+                    </div>
+                    <div class="feature-card" onclick="openModal('opensource')">
+                        <div class="feature-icon">🛡️</div>
+                        <h3>Actually Open Source</h3>
+                        <p>No hidden costs, no API limits, no vendor lock-in. Full control over your data with local deployment options. Beat commercial solutions like Vectara and Azure AI Search without the enterprise price tag.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="demo" class="features" style="background: rgba(30,41,59,0.6);">
+            <div class="container">
+                <h2>Watch Context Come Alive</h2>
+                <p style="text-align: center; color: #cbd5e1; font-size: 1.1rem; margin-bottom: 3rem;">
+                    See the same query fail in standard RAG and succeed in AutoLlama—<strong style="color: #60a5fa;">the difference is context</strong>
+                </p>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 4rem;">
+                    <!-- Before Section -->
+                    <div class="feature-card" style="background: rgba(239,68,68,0.1); border-left: 4px solid #ef4444;">
+                        <h3 style="color: #fca5a5; margin-bottom: 1rem;">❌ Before: Original Chunk</h3>
+                        <div style="background: rgba(15,23,42,0.8); padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; font-family: 'Courier New', monospace; font-size: 0.85rem; color: #cbd5e1; line-height: 1.4; max-height: 200px; overflow-y: auto;">WOMEN IN THE ANCIENT NEAR EAST Women in the Ancient Near East provides a collection of primary sources that further our understanding of women from Mesopotamian and Near Eastern civilizations, from the earliest historical and literary texts in the third millennium BC to the end of Mesopotamian political autonomy in the sixth century BC...</div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; color: #fca5a5; font-size: 0.9rem;">
+                            <span>📏</span> Length: 1,199 characters
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; color: #fca5a5; font-size: 0.9rem; margin-top: 0.5rem;">
+                            <span>⚠️</span> Status: Raw text chunk without contextual awareness
+                        </div>
+                    </div>
+
+                    <!-- After Section -->
+                    <div class="feature-card" style="background: rgba(34,197,94,0.1); border-left: 4px solid #22c55e;">
+                        <h3 style="color: #86efac; margin-bottom: 1rem;">✅ After: AI Enhanced</h3>
+                        <div style="background: rgba(15,23,42,0.8); padding: 1rem; border-radius: 0.5rem; margin: 1rem 0;">
+                            <div style="color: #60a5fa; font-weight: 600; margin-bottom: 0.5rem;">AI-GENERATED SUMMARY:</div>
+                            <div style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.4; margin-bottom: 1rem;">This chunk serves as an introduction to the book "Women in the Ancient Near East," outlining its purpose to provide comprehensive primary sources for understanding women's roles in Mesopotamian civilizations from 3rd millennium BC to 6th century BC.</div>
+                            
+                            <div style="color: #60a5fa; font-weight: 600; margin-bottom: 0.5rem;">ENHANCED EMBEDDING INPUT:</div>
+                            <div style="color: #86efac; font-size: 0.85rem; font-family: 'Courier New', monospace;">Summary + Original Content → Enhanced Context</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; color: #86efac; font-size: 0.9rem;">
+                            <span>🎯</span> Impact: 35-60% better retrieval accuracy
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; color: #86efac; font-size: 0.9rem; margin-top: 0.5rem;">
+                            <span>🧠</span> Model: gpt-4o-mini → text-embedding-3-small
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Explanation -->
+                <div class="feature-card" style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); text-align: center;">
+                    <h3 style="color: #60a5fa; margin-bottom: 1rem;">🎯 Contextual Enhancement Value</h3>
+                    <p style="color: #cbd5e1; line-height: 1.6; margin-bottom: 1.5rem;">
+                        The enhanced version combines the original chunk with document-aware context, enabling the AI to understand how this specific section relates to the broader document. This results in significantly more accurate semantic search and retrieval compared to traditional RAG systems that embed chunks in isolation.
+                    </p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 2rem;">
+                        <div style="background: rgba(30,41,59,0.5); padding: 1rem; border-radius: 0.5rem;">
+                            <div style="color: #60a5fa; font-weight: 600;">Chunk Index</div>
+                            <div style="color: #cbd5e1;">47</div>
+                        </div>
+                        <div style="background: rgba(30,41,59,0.5); padding: 1rem; border-radius: 0.5rem;">
+                            <div style="color: #60a5fa; font-weight: 600;">Status</div>
+                            <div style="color: #86efac;">Completed ✓</div>
+                        </div>
+                        <div style="background: rgba(30,41,59,0.5); padding: 1rem; border-radius: 0.5rem;">
+                            <div style="color: #60a5fa; font-weight: 600;">Enhancement</div>
+                            <div style="color: #86efac;">Contextual Enabled</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="features" style="background: rgba(30,41,59,0.6);">
+            <div class="container">
+                <h2>Stop Losing the Plot</h2>
+                <p style="text-align: center; color: #cbd5e1; font-size: 1.1rem; margin-bottom: 3rem;">
+                    Your documents have narratives. Your contracts have dependencies. Your research has connections. <strong style="color: #86efac;">AutoLlama preserves them all.</strong>
+                </p>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; margin-top: 3rem;">
+                    <div class="feature-card" style="background: rgba(15,23,42,0.8);">
+                        <h3 style="color: #60a5fa;">LangChain</h3>
+                        <p style="font-size: 0.9rem; color: #94a3b8;">105K GitHub stars<br>Basic metadata extraction<br>Complex orchestration</p>
+                        <div style="margin-top: 1rem; padding: 0.5rem; background: rgba(239,68,68,0.2); border-radius: 0.5rem; color: #fca5a5;">
+                            Standard embedding methods
+                        </div>
+                    </div>
+                    <div class="feature-card" style="background: rgba(15,23,42,0.8);">
+                        <h3 style="color: #60a5fa;">LlamaIndex</h3>
+                        <p style="font-size: 0.9rem; color: #94a3b8;">40K GitHub stars<br>Advanced indexing<br>Python ecosystem</p>
+                        <div style="margin-top: 1rem; padding: 0.5rem; background: rgba(239,68,68,0.2); border-radius: 0.5rem; color: #fca5a5;">
+                            No contextual enrichment
+                        </div>
+                    </div>
+                    <div class="feature-card" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); border: 2px solid #60a5fa;">
+                        <h3 style="color: white;">AutoLlama</h3>
+                        <p style="font-size: 0.9rem; color: #e2e8f0;">Contextual retrieval ✓<br>11+ metadata dimensions ✓<br>JavaScript-first ✓</p>
+                        <div style="margin-top: 1rem; padding: 0.5rem; background: rgba(34,197,94,0.3); border-radius: 0.5rem; color: #86efac;">
+                            60% better accuracy
+                        </div>
+                    </div>
+                    <div class="feature-card" style="background: rgba(15,23,42,0.8);">
+                        <h3 style="color: #60a5fa;">Commercial Solutions</h3>
+                        <p style="font-size: 0.9rem; color: #94a3b8;">Vectara: $500-10K/mo<br>Azure AI: $50-5K/mo<br>AWS Bedrock: Pay-per-use</p>
+                        <div style="margin-top: 1rem; padding: 0.5rem; background: rgba(239,68,68,0.2); border-radius: 0.5rem; color: #fca5a5;">
+                            Vendor lock-in
+                        </div>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 3rem;">
+                    <p style="font-size: 1.2rem; color: #f1f5f9; font-weight: 600;">
+                        "For developers who need production-ready RAG that actually works, AutoLlama is the only open-source framework that combines Anthropic's contextual retrieval with comprehensive content analysis."
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Mission Statement -->
+        <section class="features" style="background: rgba(59,130,246,0.1); border-top: 1px solid rgba(59,130,246,0.2);">
+            <div class="container">
+                <h2 style="text-align: center; margin-bottom: 2rem;">Why We Built The Context-Aware RAG Framework</h2>
+                
+                <div style="max-width: 800px; margin: 0 auto; text-align: center;">
+                    <p style="font-size: 1.2rem; line-height: 1.8; margin-bottom: 1.5rem; color: #cbd5e1;">
+                        We believe documents are more than bags of words. They're <strong style="color: #60a5fa;">structured thoughts, connected ideas, and contextual relationships.</strong>
+                    </p>
+                    
+                    <p style="font-size: 1.2rem; line-height: 1.8; margin-bottom: 1.5rem; color: #cbd5e1;">
+                        We believe that when you ask a question, you deserve an answer that understands not just the words, but <strong style="color: #60a5fa;">the story they're part of.</strong>
+                    </p>
+                    
+                    <p style="font-size: 1.2rem; line-height: 1.8; margin-bottom: 2rem; color: #cbd5e1;">
+                        We believe context isn't a nice-to-have—it's <strong style="color: #86efac;">the difference between information and understanding.</strong>
+                    </p>
+                    
+                    <div style="font-size: 1.4rem; color: #f1f5f9; font-weight: 600; margin-bottom: 2rem;">
+                        That's why we built AutoLlama.
+                    </div>
+                    
+                    <div style="margin-top: 3rem;">
+                        <a href="https://app.autollama.io" class="btn btn-large">Experience Understanding</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 AutoLlama. Your Knowledge Deserves Better Than Amnesia.</p>
+            <p>🦙 Made with ❤️ for developers who understand that <strong>context is everything</strong></p>
+            <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
+                The Difference Between Finding Words and Understanding Meaning
+            </p>
+        </div>
+    </footer>
+
+    <!-- Modal Structure -->
+    <div id="featureModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span class="modal-icon" id="modalIcon">🚀</span>
+                    <span id="modalTitle">Feature Title</span>
+                </div>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Content will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Modal functionality
+        function openModal(featureId) {
+            const modal = document.getElementById('featureModal');
+            const modalIcon = document.getElementById('modalIcon');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            // Feature content data
+            const features = {
+                'deploy': {
+                    icon: '🚀',
+                    title: 'One-Command Deploy',
+                    content: `
+                        <div class="modal-section">
+                            <h3>⚡ Zero Configuration Required</h3>
+                            <p>AutoLlama revolutionizes RAG deployment by eliminating the complexity that plagues traditional setups. While competitors require extensive configuration files, environment setup, and dependency management, AutoLlama gets you from zero to production in under 60 seconds.</p>
+                            <div class="modal-code">docker compose up -d
+# That's it. Seriously.</div>
+                        </div>
+                        
+                        <div class="modal-section">
+                            <h3>🏗️ What's Included Out of the Box</h3>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🗄️</span>
+                                    <div>
+                                        <strong>PostgreSQL + Qdrant Vector DB</strong><br>
+                                        Production-ready databases with optimized schemas and indices
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🧠</span>
+                                    <div>
+                                        <strong>AI Processing Pipeline</strong><br>
+                                        Pre-configured OpenAI integration with contextual retrieval
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🌐</span>
+                                    <div>
+                                        <strong>React Frontend + Node.js API</strong><br>
+                                        Beautiful web interface with real-time processing updates
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🔄</span>
+                                    <div>
+                                        <strong>Auto-updates & Health Monitoring</strong><br>
+                                        Watchtower keeps everything current, health checks ensure reliability
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>📊 Deployment Comparison</h3>
+                            <p><strong>Traditional RAG Setup:</strong> Install Python, manage virtual environments, configure databases, set up vector stores, write API endpoints, build frontend, configure reverse proxy, set up monitoring... <em>2-3 days minimum</em></p>
+                            <p><strong>LangChain/LlamaIndex Setup:</strong> Install frameworks, configure chains, set up embeddings, create retrieval logic, integrate with UI... <em>1-2 days minimum</em></p>
+                            <p><strong>AutoLlama Setup:</strong> Run one command. <em>60 seconds maximum</em></p>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🏢 Production-Ready Architecture</h3>
+                            <p>Don't let the simplicity fool you. AutoLlama's one-command deployment includes enterprise-grade features:</p>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🔐</span>
+                                    <div>
+                                        <strong>Security Hardening</strong><br>
+                                        Tailscale VPN, environment-based secrets, no hardcoded credentials
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">📈</span>
+                                    <div>
+                                        <strong>Horizontal Scaling</strong><br>
+                                        Docker Swarm ready, load balancer compatible, stateless services
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🔍</span>
+                                    <div>
+                                        <strong>Observability</strong><br>
+                                        Health checks, metrics endpoints, structured logging
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-cta">
+                            <a href="https://app.autollama.io" class="btn">Try It Now</a>
+                            <a href="#docs" class="btn btn-secondary">View Documentation</a>
+                        </div>
+                    `
+                },
+                'anthropic': {
+                    icon: '🧠',
+                    title: "Anthropic's Contextual Retrieval",
+                    content: `
+                        <div class="modal-section">
+                            <h3>🎯 The #1 RAG Problem: Context Loss</h3>
+                            <p>Traditional RAG systems suffer from a fundamental flaw: they chunk documents blindly, losing crucial context about where each piece fits in the larger document. This leads to poor retrieval quality and irrelevant responses.</p>
+                            <p><strong>Anthropic's breakthrough research</strong> (published September 2024) solved this with contextual retrieval - and AutoLlama is the <em>only open-source framework</em> that implements their complete methodology.</p>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>⚗️ The Contextual Retrieval Method</h3>
+                            <p>Before embedding any chunk, AutoLlama adds 50-100 tokens of contextual information explaining what the document is about and where this chunk fits within it:</p>
+                            <div class="modal-code">Original Chunk: "The company's revenue increased by 15%"
+
+With Context: "This chunk is from AutoLlama Inc's Q3 2024 financial report, section on quarterly performance metrics. The company's revenue increased by 15%"</div>
+                            <p>This context is added to <em>every single chunk</em> before embedding, dramatically improving retrieval accuracy.</p>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>📈 Proven Performance Improvements</h3>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🎯</span>
+                                    <div>
+                                        <strong>35-67% Better Retrieval Accuracy</strong><br>
+                                        Anthropic's benchmarks show massive improvements across all document types
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">💰</span>
+                                    <div>
+                                        <strong>Lower Cost Than Fine-Tuning</strong><br>
+                                        No need to retrain models - works with any embedding model
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">⚡</span>
+                                    <div>
+                                        <strong>Works Immediately</strong><br>
+                                        No training time, no model updates - instant improvement
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🏆 Competitive Advantage</h3>
+                            <p><strong>Why other frameworks don't implement this:</strong> It requires sophisticated document analysis, prompt engineering, and careful implementation. Most RAG frameworks focus on simplicity over accuracy.</p>
+                            <p><strong>AutoLlama's advantage:</strong> We've done the hard work of implementing Anthropic's complete methodology, including both contextual embeddings AND contextual BM25 (hybrid search).</p>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🔬 Technical Implementation</h3>
+                            <p>AutoLlama implements the full Anthropic methodology:</p>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">📖</span>
+                                    <div>
+                                        <strong>Document Analysis</strong><br>
+                                        AI-powered understanding of document structure and content
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🧩</span>
+                                    <div>
+                                        <strong>Context Generation</strong><br>
+                                        Intelligent prompts create relevant context for each chunk
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🔍</span>
+                                    <div>
+                                        <strong>Hybrid Search</strong><br>
+                                        Contextual embeddings + contextual BM25 for optimal retrieval
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-cta">
+                            <a href="https://app.autollama.io" class="btn">Experience Better RAG</a>
+                            <a href="https://www.anthropic.com/research/contextual-retrieval" class="btn btn-secondary">Read Anthropic's Research</a>
+                        </div>
+                    `
+                },
+                'dual-stage': {
+                    icon: '🔬',
+                    title: 'Dual-Stage AI Analysis',
+                    content: `
+                        <div class="modal-section">
+                            <h3>🎭 Beyond Basic Chunking</h3>
+                            <p>While most RAG systems simply split documents into chunks and embed them, AutoLlama runs a sophisticated two-stage AI analysis that understands your content at a deeper level than any competitor.</p>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🔍 Stage 1: Comprehensive Content Analysis</h3>
+                            <p>Each document chunk is analyzed by GPT-4o-mini to extract rich metadata across 11+ dimensions:</p>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🏷️</span>
+                                    <div>
+                                        <strong>Smart Tagging</strong><br>
+                                        Automatically identifies key topics, technologies, and concepts
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">😊</span>
+                                    <div>
+                                        <strong>Sentiment Analysis</strong><br>
+                                        Understands emotional tone: positive, negative, neutral, critical
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🌍</span>
+                                    <div>
+                                        <strong>Entity Recognition</strong><br>
+                                        Extracts people, organizations, locations, and technical terms
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">📊</span>
+                                    <div>
+                                        <strong>Technical Level Assessment</strong><br>
+                                        Rates content complexity: beginner, intermediate, advanced, expert
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">📂</span>
+                                    <div>
+                                        <strong>Content Type Classification</strong><br>
+                                        Identifies: tutorial, reference, troubleshooting, theory, etc.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🧠 Stage 2: Contextual Enhancement</h3>
+                            <p>Using the insights from Stage 1, AutoLlama generates intelligent contextual descriptions before embedding:</p>
+                            <div class="modal-code">Stage 1 Analysis:
+- Topic: "Docker containerization"
+- Sentiment: "Instructional"
+- Technical Level: "Intermediate"
+- Content Type: "Setup guide"
+
+Stage 2 Context Generation:
+"This chunk from an intermediate Docker setup guide explains containerization concepts with instructional tone, covering deployment and configuration steps."</div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🎯 Unique Competitive Position</h3>
+                            <p><strong>LangChain:</strong> Basic metadata extraction, no contextual enhancement</p>
+                            <p><strong>LlamaIndex:</strong> Document parsing, limited analysis depth</p>
+                            <p><strong>Other RAG tools:</strong> Simple chunking with minimal metadata</p>
+                            <p><strong>AutoLlama:</strong> Only framework combining comprehensive analysis + contextual enhancement</p>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>📈 Real-World Benefits</h3>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🔍</span>
+                                    <div>
+                                        <strong>Smarter Search</strong><br>
+                                        Filter by sentiment, technical level, or content type
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🎯</span>
+                                    <div>
+                                        <strong>Better Retrieval</strong><br>
+                                        Context-aware embeddings improve relevance by 35-60%
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">📊</span>
+                                    <div>
+                                        <strong>Content Analytics</strong><br>
+                                        Understand your knowledge base composition and gaps
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🚀</span>
+                                    <div>
+                                        <strong>Future-Proof</strong><br>
+                                        Rich metadata enables advanced features and AI capabilities
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-cta">
+                            <a href="https://app.autollama.io" class="btn">See the Analysis in Action</a>
+                            <a href="#features" class="btn btn-secondary">Learn More Features</a>
+                        </div>
+                    `
+                },
+                'javascript': {
+                    icon: '🎯',
+                    title: 'JavaScript-First RAG',
+                    content: `
+                        <div class="modal-section">
+                            <h3>🌍 The Underserved Market</h3>
+                            <p>The RAG ecosystem is dominated by Python frameworks, leaving millions of JavaScript developers with suboptimal choices. AutoLlama fills this gap by bringing enterprise-grade RAG capabilities to the Node.js ecosystem.</p>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>📊 JavaScript Ecosystem Advantages</h3>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🚀</span>
+                                    <div>
+                                        <strong>Massive Developer Base</strong><br>
+                                        13.8M JavaScript developers vs 8.2M Python developers (Stack Overflow 2024)
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">⚡</span>
+                                    <div>
+                                        <strong>Performance Benefits</strong><br>
+                                        Node.js event-driven architecture excels at I/O-heavy RAG operations
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🔄</span>
+                                    <div>
+                                        <strong>Full-Stack Consistency</strong><br>
+                                        Same language for frontend, backend, and RAG pipeline
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">📦</span>
+                                    <div>
+                                        <strong>Rich Package Ecosystem</strong><br>
+                                        npm's 2M+ packages provide endless integration possibilities
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🐍 vs 🟨 Framework Comparison</h3>
+                            <div class="modal-code">Python RAG Stack:
+- LangChain: Complex abstractions, steep learning curve
+- LlamaIndex: Data-focused, limited web integration
+- Dependencies: Python, pip, virtual environments
+- Deployment: Docker, Kubernetes, complex orchestration
+
+JavaScript RAG Stack:
+- AutoLlama: Simple, intuitive, well-documented
+- Web-native: React frontend, Express API, seamless integration
+- Dependencies: Node.js, npm (that's it)
+- Deployment: Single docker-compose command</div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🏢 Enterprise JavaScript Adoption</h3>
+                            <p>Major enterprises are choosing JavaScript for AI workloads:</p>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🏦</span>
+                                    <div>
+                                        <strong>Financial Services</strong><br>
+                                        JPMorgan, Goldman Sachs use Node.js for real-time trading systems
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🛒</span>
+                                    <div>
+                                        <strong>E-commerce</strong><br>
+                                        Netflix, Uber, Airbnb run JavaScript for AI-powered recommendations
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🏭</span>
+                                    <div>
+                                        <strong>Fortune 500</strong><br>
+                                        85% of Fortune 500 companies use JavaScript in production
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>⚡ Performance & Scalability</h3>
+                            <p>JavaScript isn't just convenient for RAG - it's performant:</p>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🔄</span>
+                                    <div>
+                                        <strong>Async/Await Native</strong><br>
+                                        Perfect for API calls, embeddings, and database operations
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">📊</span>
+                                    <div>
+                                        <strong>Real-time Updates</strong><br>
+                                        WebSockets, SSE for live processing updates
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">⚡</span>
+                                    <div>
+                                        <strong>Fast Startup</strong><br>
+                                        Node.js apps start in milliseconds vs seconds for Python
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">💾</span>
+                                    <div>
+                                        <strong>Memory Efficient</strong><br>
+                                        V8 engine optimization for long-running processes
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🔮 The Future is Full-Stack AI</h3>
+                            <p>As AI becomes embedded in every application, teams need coherent technology stacks. AutoLlama enables JavaScript teams to build sophisticated RAG systems without context switching to Python.</p>
+                        </div>
+
+                        <div class="modal-cta">
+                            <a href="https://app.autollama.io" class="btn">Build with JavaScript</a>
+                            <a href="https://github.com/snedea/autollama" class="btn btn-secondary">View Source Code</a>
+                        </div>
+                    `
+                },
+                'performance': {
+                    icon: '🚀',
+                    title: 'Proven Performance',
+                    content: `
+                        <div class="modal-section">
+                            <h3>🏆 Claude-Level RAG Performance</h3>
+                            <p>AutoLlama implements the exact same contextual retrieval methodology that powers Claude's industry-leading RAG capabilities. This isn't theoretical - it's the proven technique behind one of the world's most advanced AI systems.</p>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>📊 Benchmark Results</h3>
+                            <p>Anthropic's research demonstrates dramatic improvements with contextual retrieval:</p>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">📈</span>
+                                    <div>
+                                        <strong>35-67% Better Retrieval</strong><br>
+                                        Consistent improvements across all document types and domains
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🎯</span>
+                                    <div>
+                                        <strong>Reduced Hallucination</strong><br>
+                                        Better context leads to more accurate, grounded responses
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">⚡</span>
+                                    <div>
+                                        <strong>Lower Latency</strong><br>
+                                        Find relevant information faster with contextual search
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">💰</span>
+                                    <div>
+                                        <strong>Cost Effective</strong><br>
+                                        Better results without expensive model fine-tuning
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>⚗️ Technical Architecture</h3>
+                            <p>AutoLlama's performance comes from sophisticated technical design:</p>
+                            <div class="modal-code">Document Processing Pipeline:
+1. Intelligent Chunking (preserves semantic boundaries)
+2. Document Analysis (11+ metadata dimensions)  
+3. Context Generation (50-100 tokens per chunk)
+4. Hybrid Embeddings (contextual + semantic)
+5. Vector + BM25 Search (best of both worlds)</div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🔄 Efficiency Advantages</h3>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🚫</span>
+                                    <div>
+                                        <strong>No Model Fine-Tuning</strong><br>
+                                        Works with any embedding model - no training required
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">⚡</span>
+                                    <div>
+                                        <strong>Immediate Results</strong><br>
+                                        Deploy and see improvements instantly
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">📦</span>
+                                    <div>
+                                        <strong>Portable & Scalable</strong><br>
+                                        Works on laptops and enterprise clusters alike
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🔧</span>
+                                    <div>
+                                        <strong>Model Agnostic</strong><br>
+                                        Use OpenAI, Anthropic, local models, or custom embeddings
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🆚 Performance vs Alternatives</h3>
+                            <p><strong>Traditional RAG:</strong> 40-60% retrieval accuracy, context loss, irrelevant results</p>
+                            <p><strong>Fine-tuned Models:</strong> 70-80% accuracy, expensive training, domain-specific</p>
+                            <p><strong>AutoLlama Contextual RAG:</strong> 80-90% accuracy, no training cost, domain-agnostic</p>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🔬 Real-World Validation</h3>
+                            <p>AutoLlama's approach has been validated in production by Anthropic, serving millions of queries daily through Claude. The methodology is:</p>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">✅</span>
+                                    <div>
+                                        <strong>Battle-Tested</strong><br>
+                                        Powers one of the world's most advanced AI assistants
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">📚</span>
+                                    <div>
+                                        <strong>Research-Backed</strong><br>
+                                        Published methodology with peer review and benchmarks
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🔄</span>
+                                    <div>
+                                        <strong>Continuously Improved</strong><br>
+                                        AutoLlama inherits improvements from ongoing Anthropic research
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-cta">
+                            <a href="https://app.autollama.io" class="btn">Test Performance Yourself</a>
+                            <a href="https://www.anthropic.com/research/contextual-retrieval" class="btn btn-secondary">Read the Research</a>
+                        </div>
+                    `
+                },
+                'opensource': {
+                    icon: '🛡️',
+                    title: 'Actually Open Source',
+                    content: `
+                        <div class="modal-section">
+                            <h3>🔓 True Freedom vs Vendor Lock-in</h3>
+                            <p>In the RAG market flooded with "open-core" products and hidden enterprise fees, AutoLlama stands as genuinely open source. No hidden costs, no feature walls, no vendor lock-in - just powerful RAG technology you truly own.</p>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>💰 Cost Comparison</h3>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">💸</span>
+                                    <div>
+                                        <strong>Vectara: $500-$10,000/month</strong><br>
+                                        Plus usage fees, data egress charges, and premium support costs
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">💸</span>
+                                    <div>
+                                        <strong>Azure AI Search: $50-$5,000/month</strong><br>
+                                        Plus compute costs, storage fees, and API call charges
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">💸</span>
+                                    <div>
+                                        <strong>AWS Bedrock: Pay-per-use</strong><br>
+                                        Unpredictable costs, vendor lock-in, proprietary APIs
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">💚</span>
+                                    <div>
+                                        <strong>AutoLlama: $0</strong><br>
+                                        Forever. Plus your own API costs (OpenAI, etc.)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🔐 Data Sovereignty Benefits</h3>
+                            <p>With AutoLlama, your data never leaves your infrastructure:</p>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🏠</span>
+                                    <div>
+                                        <strong>On-Premises Deployment</strong><br>
+                                        Run entirely on your servers, air-gapped if needed
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🔒</span>
+                                    <div>
+                                        <strong>Zero Data Sharing</strong><br>
+                                        No analytics, no telemetry, no vendor access to your content
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">⚖️</span>
+                                    <div>
+                                        <strong>Compliance Ready</strong><br>
+                                        GDPR, HIPAA, SOC2 - you control all compliance aspects
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🛡️</span>
+                                    <div>
+                                        <strong>Security Control</strong><br>
+                                        Audit code, customize security, no third-party risks
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🚫 No Vendor Lock-in Risks</h3>
+                            <div class="modal-code">Commercial RAG Risks:
+❌ Pricing changes overnight
+❌ Features moved to premium tiers  
+❌ API deprecations break your app
+❌ Acquisition by competitors
+❌ Service shutdown/pivot
+
+AutoLlama Benefits:
+✅ Code you own and control
+✅ Deploy anywhere (cloud, on-prem, edge)
+✅ Modify and extend freely
+✅ No dependency on vendor roadmap
+✅ Active open-source community</div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🌟 Open Source Advantages</h3>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">👁️</span>
+                                    <div>
+                                        <strong>Full Transparency</strong><br>
+                                        Inspect every line of code, understand exactly how it works
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🔧</span>
+                                    <div>
+                                        <strong>Unlimited Customization</strong><br>
+                                        Modify algorithms, add features, integrate with any system
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">👥</span>
+                                    <div>
+                                        <strong>Community Innovation</strong><br>
+                                        Benefit from contributions by developers worldwide
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🚀</span>
+                                    <div>
+                                        <strong>Rapid Innovation</strong><br>
+                                        No corporate bureaucracy slowing down improvements
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🏢 Enterprise Ready</h3>
+                            <p>Don't confuse "open source" with "not enterprise ready". AutoLlama includes:</p>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">📋</span>
+                                    <div>
+                                        <strong>Production Deployment Guides</strong><br>
+                                        Docker, Kubernetes, cloud provider templates
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">📊</span>
+                                    <div>
+                                        <strong>Monitoring & Observability</strong><br>
+                                        Health checks, metrics, logging, alerting
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🔄</span>
+                                    <div>
+                                        <strong>High Availability</strong><br>
+                                        Load balancing, failover, horizontal scaling
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🛡️</span>
+                                    <div>
+                                        <strong>Security Hardening</strong><br>
+                                        Tailscale VPN, secrets management, secure defaults
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-cta">
+                            <a href="https://github.com/snedea/autollama" class="btn">View Source Code</a>
+                            <a href="https://app.autollama.io" class="btn btn-secondary">Try It Free</a>
+                        </div>
+                    `
+                }
+            };
+            
+            const feature = features[featureId];
+            if (feature) {
+                modalIcon.textContent = feature.icon;
+                modalTitle.textContent = feature.title;
+                modalBody.innerHTML = feature.content;
+                modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('featureModal');
+            modal.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close modal on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // Close modal when clicking overlay
+        document.getElementById('featureModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

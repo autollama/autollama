@@ -494,10 +494,18 @@ const FileUploader = ({ onSuccess, onError }) => {
     } else if (event === 'analyze') {
       // AI analysis progress (60-80%)
       const analysisProgress = eventData.progress || 70;
-      updateUploadStatus(fileData.id, {
+      const updateData = {
         status: 'processing',
         progress: Math.max(analysisProgress, 60)
-      });
+      };
+      
+      // Extract chunk data if available
+      if (eventData.chunkData) {
+        updateData.processedChunks = eventData.chunkData.currentChunk || 0;
+        updateData.totalChunks = eventData.chunkData.totalChunks || 0;
+      }
+      
+      updateUploadStatus(fileData.id, updateData);
     } else if (event === 'embedding') {
       // Embedding generation progress (80-90%)
       const embeddingProgress = eventData.progress || 85;

@@ -80,21 +80,28 @@ function setupRoutes(app, services) {
 
     // Create search routes with services (fix for document listing)
     // Use the existing database.js functions as storageService
-    const db = services.database;
+    const db = require('../../database');
+    console.log('🔧 DEBUG: db object keys:', Object.keys(db || {}));
+    console.log('🔧 DEBUG: db type:', typeof db);
+    console.log('🔧 DEBUG: getSmartContentMix available:', typeof (db && db.getSmartContentMix));
     const storageServiceAdapter = {
       getDocuments: async (options = {}) => {
-        console.log('🔍 storageServiceAdapter.getDocuments called with options:', options);
+        console.log('🔍 ADAPTER: storageServiceAdapter.getDocuments called with options:', options);
+        console.log('🔍 ADAPTER: db object type:', typeof db);
+        console.log('🔍 ADAPTER: db.getSmartContentMix type:', typeof db.getSmartContentMix);
         const { limit = 20, offset = 0 } = options;
         // Use getSmartContentMix but only return unique documents (1 per URL)
         const result = await db.getSmartContentMix();
         const documents = result.records || [];
         console.log('🔍 getSmartContentMix returned', documents.length, 'documents');
+        console.log('🔍 First 3 documents:', documents.slice(0,3).map(d => ({title: d.title?.substring(0,30), created_time: d.created_time})));
         
         // Apply pagination
         const startIndex = offset;
         const endIndex = offset + limit;
         const paginatedDocs = documents.slice(startIndex, endIndex);
         console.log('🔍 After pagination:', paginatedDocs.length, 'documents');
+        console.log('🔍 Paginated docs:', paginatedDocs.map(d => ({title: d.title?.substring(0,30), created_time: d.created_time})));
         
         return {
           rows: paginatedDocs,
@@ -149,11 +156,13 @@ function setupRoutes(app, services) {
       }
     };
 
+    console.log('🔧 CREATING SEARCH ROUTES with storageServiceAdapter!');
     const searchRoutes = createSearchRoutes({
       storageService: storageServiceAdapter,
       searchService: searchService,
       vectorService: services.vectorService || {}
     });
+    console.log('🔧 SEARCH ROUTES CREATED!');
     routeLogger.debug('Search routes created with services');
 
     // API route prefix middleware
@@ -189,7 +198,9 @@ function setupRoutes(app, services) {
     apiRouter.use('/openwebui', openwebuiRoutes);
     
     // Upload routes for chunked uploads
+    console.log('🔧 Mounting upload routes...');
     apiRouter.use('/upload', uploadRoutes);
+    console.log('✅ Upload routes mounted successfully');
     
     // Session routes first to ensure /in-progress is handled correctly
     apiRouter.use('/', sessionRoutes);

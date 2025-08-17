@@ -88,9 +88,7 @@ const UnifiedSearch = () => {
 
   // Synchronize local query with global searchQuery from context
   useEffect(() => {
-    console.log('🔍 Search useEffect triggered:', { searchQuery, currentQuery: query });
     if (searchQuery && searchQuery !== query) {
-      console.log('🔄 Updating search query and triggering search:', searchQuery);
       setQuery(searchQuery);
       // Trigger search if we have a query from context
       if (searchQuery.trim()) {

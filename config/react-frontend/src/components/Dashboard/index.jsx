@@ -96,7 +96,7 @@ const Dashboard = () => {
       processingDocs,
       completedDocs,
       totalChunks,
-      contextualDocs: systemStats.knowledgeBase?.contextual_documents || 0,
+      contextualDocs: systemStats.knowledgeBase?.contextual_count || 0,
       uploadQueue: uploadStats,
       totalProcessingCount,
       apiProcessingCount,

@@ -7,8 +7,6 @@ export const useSettings = () => {
   const [connectionStatus, setConnectionStatus] = useState({
     openai: false,
     qdrant: false,
-    database: false,
-    bm25: false,
   });
 
   // Load fresh settings from storage
@@ -82,15 +80,22 @@ export const useSettings = () => {
 
   // Auto-test connections on app startup and when connection settings change
   useEffect(() => {
-    // Always test connections on startup or when settings change
-    testConnections();
+    // Test connections on startup only if not prone to CORS issues
+    if (typeof window === 'undefined' || window.location.hostname === 'localhost') {
+      testConnections();
+    } else {
+      console.log('Skipping automatic connection tests to avoid CORS errors');
+    }
   }, [testConnections]);
 
-  // Set up periodic validation every 30 seconds for real-time status
+  // Set up periodic validation every 5 minutes for real-time status (reduced to avoid CORS spam)
   useEffect(() => {
     const interval = setInterval(() => {
-      testConnections();
-    }, 30000); // 30 seconds
+      // Only test if not in a browser environment or if explicitly enabled
+      if (typeof window === 'undefined' || window.location.hostname === 'localhost') {
+        testConnections();
+      }
+    }, 300000); // 5 minutes (300000ms) - reduced from 30 seconds to avoid CORS errors
 
     return () => clearInterval(interval);
   }, [testConnections]);

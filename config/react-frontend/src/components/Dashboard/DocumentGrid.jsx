@@ -6,7 +6,9 @@ const DocumentGrid = () => {
   const { 
     documents, 
     handleDocumentSelect, 
-    settings 
+    settings,
+    newlyCreatedDocumentIds,
+    clearNewlyCreatedFlag
   } = useAppContext();
 
   // Track new documents for animation
@@ -15,7 +17,6 @@ const DocumentGrid = () => {
   const [shiftingDocumentIds, setShiftingDocumentIds] = useState(new Set());
   const [highlightedDocumentIds, setHighlightedDocumentIds] = useState(new Set());
   const [fadingDocumentIds, setFadingDocumentIds] = useState(new Set());
-  const [tilesPerRow, setTilesPerRow] = useState(8); // Default estimate
   const previousDocumentsRef = useRef([]);
   const animationTimeoutsRef = useRef(new Map());
   const containerRef = useRef(null);
@@ -37,9 +38,9 @@ const DocumentGrid = () => {
       pulse: true 
     },
     completed: { 
-      bg: 'bg-green-900', 
-      text: 'text-green-300', 
-      border: 'border-green-700', 
+      bg: 'bg-gray-700', 
+      text: 'text-blue-300', 
+      border: 'border-gray-600', 
       icon: CheckCircle,
       pulse: false 
     },
@@ -52,100 +53,66 @@ const DocumentGrid = () => {
     },
   };
 
-  // Calculate how many tiles fit in one row based on container width
-  const calculateTilesPerRow = () => {
-    if (!containerRef.current) return 8; // Default fallback
-    
-    const containerWidth = containerRef.current.offsetWidth;
-    // Responsive tile widths: 160px (mobile), 176px (sm), 192px (md+)
-    const tileWidth = window.innerWidth >= 768 ? 192 : (window.innerWidth >= 640 ? 176 : 160);
-    const gap = 16; // gap-4 = 16px
-    
-    const tilesPerRow = Math.floor((containerWidth + gap) / (tileWidth + gap));
-    return Math.max(1, tilesPerRow); // At least 1 tile
-  };
 
-  // Update tiles per row on window resize and initial mount
-  useEffect(() => {
-    const updateTilesPerRow = () => {
-      const newTilesPerRow = calculateTilesPerRow();
-      if (newTilesPerRow !== tilesPerRow) {
-        console.log(`📐 Single row capacity: ${newTilesPerRow} tiles`);
-        setTilesPerRow(newTilesPerRow);
-      }
-    };
-
-    // Calculate on mount and window resize
-    updateTilesPerRow();
-    window.addEventListener('resize', updateTilesPerRow);
-    
-    return () => window.removeEventListener('resize', updateTilesPerRow);
-  }, [tilesPerRow]);
-
-  // Track new documents and animate them in
+  // Track new documents and animate them in - ONLY for truly new documents from SSE events
   useEffect(() => {
     console.log(`📋 DocumentGrid: Documents changed, total: ${documents.length}`);
+    console.log(`📋 DocumentGrid: Currently marked as newly created:`, Array.from(newlyCreatedDocumentIds));
     
-    const previousIds = new Set(previousDocumentsRef.current.map(doc => doc.id));
-    const currentIds = new Set(documents.map(doc => doc.id));
+    // Check if any of the current documents are marked as newly created
+    const currentlyNewIds = new Set();
+    documents.forEach(doc => {
+      // Multiple fallback strategies for ID matching
+      const possibleIdentifiers = [
+        doc.id,
+        doc.url,
+        doc.title,
+        // Also check for partial URL matches in case of encoding differences
+        doc.url && decodeURIComponent(doc.url),
+        doc.title && doc.title.substring(0, 50) // Match by title prefix
+      ].filter(Boolean);
+      
+      const isMarkedAsNew = possibleIdentifiers.some(identifier => 
+        newlyCreatedDocumentIds.has(identifier)
+      );
+      
+      if (isMarkedAsNew) {
+        console.log(`📋 DocumentGrid: Found newly created document:`, {
+          docId: doc.id,
+          docUrl: doc.url,
+          docTitle: doc.title,
+          matchedIdentifier: possibleIdentifiers.find(id => newlyCreatedDocumentIds.has(id))
+        });
+        currentlyNewIds.add(doc.id);
+      }
+    });
     
-    console.log(`📋 DocumentGrid: Previous: ${previousIds.size}, Current: ${currentIds.size}`);
-    
-    // Find new documents that weren't in the previous list
-    const newIds = new Set([...currentIds].filter(id => !previousIds.has(id)));
-    
-    if (newIds.size > 0) {
-      console.log(`📋 DocumentGrid: Found ${newIds.size} completely new document IDs`);
+    // If we have newly created IDs but no matching documents yet, set up retry logic
+    if (newlyCreatedDocumentIds.size > 0 && currentlyNewIds.size === 0) {
+      console.log(`⏳ Documents not yet loaded for newly created IDs, setting up retry...`);
+      console.log(`⏳ Waiting for documents with IDs:`, Array.from(newlyCreatedDocumentIds));
+      console.log(`⏳ Current documents:`, documents.map(d => ({ id: d.id, url: d.url, title: d.title?.substring(0, 30) })));
+      
+      // Retry after a short delay if documents haven't appeared yet
+      const retryTimeout = setTimeout(() => {
+        console.log(`🔄 Retrying animation check after delay...`);
+        // This will trigger the useEffect again with the same data
+        setDisplayedDocuments(prev => [...prev]);
+      }, 500);
+      
+      return () => clearTimeout(retryTimeout);
     }
-    
-    // Also find documents that have moved to the front (newer timestamps)
-    // This handles the case where refreshDocuments() gets the latest 20 documents
-    const currentDocumentsByTime = documents.slice().sort((a, b) => 
-      new Date(b.created_time || b.processedAt) - new Date(a.created_time || a.processedAt)
-    );
-    const previousDocumentsByTime = previousDocumentsRef.current.slice().sort((a, b) => 
-      new Date(b.created_time || b.processedAt) - new Date(a.created_time || a.processedAt)
-    );
-    
-    // Check if the newest document is actually new (not just re-ordered)
-    const newestCurrent = currentDocumentsByTime[0];
-    const newestPrevious = previousDocumentsByTime[0];
-    
-    // If we have a newest document and it's different from before, it might be new
-    if (newestCurrent && (!newestPrevious || newestCurrent.id !== newestPrevious.id)) {
-      newIds.add(newestCurrent.id);
-    }
-    
-    // Also check for documents that just completed processing
-    const previousCompleted = new Set(
-      previousDocumentsRef.current
-        .filter(doc => doc.processingStatus === 'completed')
-        .map(doc => doc.id)
-    );
-    const currentCompleted = new Set(
-      documents
-        .filter(doc => doc.processingStatus === 'completed')
-        .map(doc => doc.id)
-    );
-    const newlyCompleted = new Set([...currentCompleted].filter(id => !previousCompleted.has(id)));
-    
-    // Combine both new documents and newly completed ones for animation
-    const allNewIds = new Set([...newIds, ...newlyCompleted]);
-    
-    if (allNewIds.size > 0) {
-      console.log(`🎬 Multi-phase mempool animation starting for documents:`, {
-        newDocuments: newIds.size,
-        newlyCompleted: newlyCompleted.size,
-        total: allNewIds.size,
-        existingDocuments: previousDocumentsRef.current.length,
-        newDocumentTitles: [...allNewIds].map(id => {
+
+    if (currentlyNewIds.size > 0) {
+      console.log(`🎬 Found ${currentlyNewIds.size} truly new documents from SSE events for animation:`, {
+        newDocumentTitles: [...currentlyNewIds].map(id => {
           const doc = documents.find(d => d.id === id);
           return doc ? doc.title?.substring(0, 40) : 'Unknown';
         })
       });
       
       // Clear any existing timeouts for these documents
-      allNewIds.forEach(id => {
+      currentlyNewIds.forEach(id => {
         if (animationTimeoutsRef.current.has(id)) {
           clearTimeout(animationTimeoutsRef.current.get(id));
           animationTimeoutsRef.current.delete(id);
@@ -154,65 +121,85 @@ const DocumentGrid = () => {
       
       // Identify existing documents that need to shift right (mempool-style)
       const existingIds = new Set(
-        previousDocumentsRef.current
-          .filter(doc => !allNewIds.has(doc.id))
+        documents
+          .filter(doc => !currentlyNewIds.has(doc.id))
           .map(doc => doc.id)
       );
       
       console.log(`🎬 Mempool shift: ${existingIds.size} existing documents will shift right`);
       
       // Phase 1: Simultaneous shift-right + slide-in (0-600ms)
-      setNewDocumentIds(allNewIds);        // New documents slide in from left
+      setNewDocumentIds(currentlyNewIds);        // New documents slide in from left
       setShiftingDocumentIds(existingIds); // Existing documents shift right
       
       // Phase 2: Stop shift animation, start highlighting (600ms)
       const highlightTimeout = setTimeout(() => {
         setNewDocumentIds(new Set());       // Stop slide animation
         setShiftingDocumentIds(new Set());  // Stop shift animation  
-        setHighlightedDocumentIds(allNewIds); // Start highlight animation on new docs
+        setHighlightedDocumentIds(currentlyNewIds); // Start highlight animation on new docs
         
         // Phase 3: Start fading to normal (after 2.5 seconds total)
         const fadeTimeout = setTimeout(() => {
           setHighlightedDocumentIds(new Set()); // Stop highlight animation
-          setFadingDocumentIds(allNewIds); // Start fade animation
+          setFadingDocumentIds(currentlyNewIds); // Start fade animation
           
           // Phase 4: Complete animation cycle (after 3.5 seconds total)
           const completeTimeout = setTimeout(() => {
             setFadingDocumentIds(prev => {
               const newSet = new Set(prev);
-              allNewIds.forEach(id => newSet.delete(id));
+              currentlyNewIds.forEach(id => newSet.delete(id));
               return newSet;
             });
             
-            // Clean up timeouts
-            allNewIds.forEach(id => {
+            // Clean up timeouts and clear the newly created flags
+            currentlyNewIds.forEach(id => {
               animationTimeoutsRef.current.delete(id);
+              // Clear the newly created flag so this document won't animate again
+              const doc = documents.find(d => d.id === id);
+              if (doc) {
+                console.log(`🧹 Clearing newly created flags for animated document:`, {
+                  docId: doc.id,
+                  docUrl: doc.url,
+                  docTitle: doc.title
+                });
+                
+                // Clear all possible identifiers that might have been used
+                const identifiersToClean = [
+                  doc.id,
+                  doc.url,
+                  doc.title,
+                  doc.url && decodeURIComponent(doc.url),
+                  doc.title && doc.title.substring(0, 50)
+                ].filter(Boolean);
+                
+                identifiersToClean.forEach(identifier => {
+                  clearNewlyCreatedFlag(identifier);
+                });
+              }
             });
           }, 1000); // Fade animation duration
           
-          allNewIds.forEach(id => {
+          currentlyNewIds.forEach(id => {
             animationTimeoutsRef.current.set(id, completeTimeout);
           });
         }, 1900); // Highlight duration
         
-        allNewIds.forEach(id => {
+        currentlyNewIds.forEach(id => {
           animationTimeoutsRef.current.set(id, fadeTimeout);
         });
       }, 600); // Slide-in + shift duration
       
-      allNewIds.forEach(id => {
+      currentlyNewIds.forEach(id => {
         animationTimeoutsRef.current.set(id, highlightTimeout);
       });
     }
     
-    // Update displayed documents (limit to single row) and previous reference
-    const visibleDocuments = documents.slice(0, tilesPerRow);
-    console.log(`📐 Showing ${visibleDocuments.length} of ${documents.length} documents in single row`);
+    // Show all available documents in a proper grid layout
+    const visibleDocuments = documents; // Show all documents, no artificial limit
+    console.log(`📐 Showing ${visibleDocuments.length} of ${documents.length} documents in grid layout`);
     
     setDisplayedDocuments(visibleDocuments);
-    // CRITICAL FIX: Store full document list for animation detection, not just visible slice
-    previousDocumentsRef.current = documents;
-  }, [documents, tilesPerRow]);
+  }, [documents, newlyCreatedDocumentIds, clearNewlyCreatedFlag]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -272,10 +259,11 @@ const DocumentGrid = () => {
 
   return (
     <div className="space-y-6">
-      {/* Documents Grid - Single Row */}
+      
+      {/* Documents Grid - Proper Grid Layout */}
       <div 
         ref={containerRef}
-        className="flex gap-4 justify-start overflow-hidden" 
+        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4" 
         style={{ alignItems: 'flex-start' }}>
         {displayedDocuments.map((doc, index) => {
           const config = statusConfig[doc.processingStatus] || statusConfig.queued;
@@ -303,7 +291,7 @@ const DocumentGrid = () => {
                 ${isHighlighted ? 'animate-highlight-new' : ''}
                 ${isFading ? 'animate-fade-to-normal' : ''}
                 ${isNewlyCompleted ? 'animate-mempool-glow' : ''}
-                w-40 h-40 sm:w-44 sm:h-44 md:w-48 md:h-48 flex-shrink-0
+                h-40 sm:h-44 md:h-48 flex-shrink-0
               `}
               title={`${title} - ${doc.processingStatus}`}
               style={{

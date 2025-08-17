@@ -86,7 +86,6 @@ api.interceptors.response.use(
 // BM25 API interceptors
 bm25Api.interceptors.request.use(
   (config) => {
-    console.log(`🔍 BM25 Request: ${config.method?.toUpperCase()} ${config.url}`);
     return config;
   },
   (error) => Promise.reject(error)
@@ -110,7 +109,6 @@ export const apiEndpoints = {
   getDocumentChunks: (encodedUrl, params = {}) => api.get(`/document-chunks`, { params: { url: atob(encodedUrl), ...params } }),
   getChunkByIndex: async (encodedUrl, chunkIndex) => {
     const url = atob(encodedUrl);
-    console.log(`🔍 Getting chunk by index: ${chunkIndex} for URL: ${url.substring(0, 80)}...`);
     
     try {
       // Try to load a reasonable number of chunks and find the right one

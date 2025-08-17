@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Search, Brain, FileText, Copy, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Search, Brain, FileText, Copy, ExternalLink, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAppContext } from '../../App';
 import VectorHeatmap from './VectorHeatmap';
 
@@ -357,7 +357,11 @@ const ChunkInspector = ({ chunk, document, chunkIndex, totalChunks, onClose, onN
 };
 
 // Content Tab Component
-const ContentTab = ({ chunk, onCopy, copied, safeChunkIndex }) => (
+const ContentTab = ({ chunk, onCopy, copied, safeChunkIndex }) => {
+  // State for collapsible Contextual Enhancement Value section
+  const [isEnhancementExpanded, setIsEnhancementExpanded] = useState(false);
+  
+  return (
   <div className="space-y-6">
     {/* Before/After Comparison Header */}
     <div className="text-center mb-6">
@@ -444,20 +448,35 @@ const ContentTab = ({ chunk, onCopy, copied, safeChunkIndex }) => (
       </div>
     </div>
 
-    {/* Value Proposition */}
+    {/* Value Proposition - Collapsible */}
     {(chunk.contextualSummary || chunk.contextual_summary) && (
-      <div className="bg-gradient-to-r from-blue-900 to-purple-900 bg-opacity-20 border border-blue-500 border-opacity-20 rounded-lg p-4">
+      <div 
+        className="bg-gradient-to-r from-blue-900 to-purple-900 bg-opacity-20 border border-blue-500 border-opacity-20 rounded-lg p-4 cursor-pointer transition-all duration-300 ease-in-out hover:bg-opacity-30"
+        onClick={() => setIsEnhancementExpanded(!isEnhancementExpanded)}
+      >
         <div className="flex items-start gap-3">
           <div className="w-8 h-8 bg-blue-500 bg-opacity-20 rounded-full flex items-center justify-center flex-shrink-0">
             <Brain className="w-4 h-4 text-blue-400" />
           </div>
-          <div>
-            <h4 className="font-bold text-blue-300 mb-2">Contextual Enhancement Value</h4>
-            <p className="text-sm text-blue-200 leading-relaxed">
-              The enhanced version combines the original chunk with document-aware context, enabling the AI to understand 
-              how this specific section relates to the broader document. This results in significantly more accurate 
-              semantic search and retrieval compared to traditional RAG systems that embed chunks in isolation.
-            </p>
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-blue-300 mb-2">Contextual Enhancement Value</h4>
+              <div className="ml-2 text-blue-400 transition-transform duration-300 ease-in-out" 
+                   style={{ transform: isEnhancementExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                <ChevronDown className="w-4 h-4" />
+              </div>
+            </div>
+            {isEnhancementExpanded ? (
+              <p className="text-sm text-blue-200 leading-relaxed transition-all duration-300 ease-in-out">
+                The enhanced version combines the original chunk with document-aware context, enabling the AI to understand 
+                how this specific section relates to the broader document. This results in significantly more accurate 
+                semantic search and retrieval compared to traditional RAG systems that embed chunks in isolation.
+              </p>
+            ) : (
+              <p className="text-sm text-blue-200 leading-relaxed opacity-75 transition-all duration-300 ease-in-out">
+                ▶ Click to see how AutoLlama enhances chunks for better retrieval accuracy...
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -514,7 +533,8 @@ const ContentTab = ({ chunk, onCopy, copied, safeChunkIndex }) => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // Analysis Tab Component
 const AnalysisTab = ({ chunk, document }) => (

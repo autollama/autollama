@@ -1014,7 +1014,7 @@ async function getDocumentChunks(url, page = 1, limit = 10) {
                 contextual_summary,
                 uses_contextual_embedding
             FROM processed_content
-            WHERE url = $1
+            WHERE url = $1 AND record_type = 'chunk'
             ORDER BY chunk_index ASC
             LIMIT $2 OFFSET $3
         `;

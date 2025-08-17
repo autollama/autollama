@@ -7,6 +7,9 @@ import { useSettings } from './hooks/useSettings';
 import { useSSE } from './hooks/useSSE';
 import { useAPI } from './hooks/useAPI';
 
+// Import utilities
+import { transformDocument } from './utils/dataTransforms';
+
 // Import components with lazy loading
 const Dashboard = React.lazy(() => import('./components/Dashboard'));
 const Search = React.lazy(() => import('./components/Search'));
@@ -49,6 +52,13 @@ if (typeof window !== 'undefined') {
 // Main App Component
 function App() {
   console.log('🔥 APP COMPONENT STARTING - REACT IS RUNNING');
+  
+  // Add immediate visible alert for debugging
+  if (typeof window !== 'undefined') {
+    window.AUTOLLAMA_DEBUG = window.AUTOLLAMA_DEBUG || {};
+    window.AUTOLLAMA_DEBUG.appStarted = true;
+    console.log('🔥 AUTOLLAMA DEBUG: App component mounted successfully');
+  }
   // Global state
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedDocument, setSelectedDocument] = useState(null);
@@ -62,6 +72,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [uploadQueue, setUploadQueue] = useState([]);
+  const [newlyCreatedDocumentIds, setNewlyCreatedDocumentIds] = useState(new Set());
 
   // EventSource tracking for memory leak prevention
   const eventSourcesRef = useRef(new Map());
@@ -124,6 +135,62 @@ function App() {
   // Handle real-time updates from SSE
   const handleRealTimeUpdate = (data) => {
     const eventType = data.type || data.step; // Handle both type and step fields
+    
+    // Add comprehensive diagnostic logging for SSE events
+    console.log('🔄 SSE Event received:', {
+      type: data.type,
+      step: data.step,
+      eventType: eventType,
+      documentId: data.documentId,
+      url: data.url,
+      title: data.title,
+      sessionId: data.sessionId,
+      nestedData: data.data,
+      fullData: data
+    });
+    
+    // Check if this is a nested event structure (like processing_progress with embedded events)
+    if (data.data && typeof data.data === 'object') {
+      console.log('🔍 Checking nested event data:', {
+        nestedType: data.data.type,
+        nestedEvent: data.data.event,
+        nestedStep: data.data.step,
+        nestedData: data.data.data
+      });
+      
+      // If there's a nested event with document_created step, handle it
+      if (data.data.data && data.data.data.step === 'document_created') {
+        console.log('📄 Found nested document_created event!', data.data.data);
+        const nestedEventData = data.data.data;
+        
+        // Extract identifiers from nested structure
+        const documentIdentifiers = [
+          nestedEventData.documentId,
+          nestedEventData.url,
+          nestedEventData.title
+        ].filter(Boolean);
+        
+        if (documentIdentifiers.length > 0) {
+          console.log('📄 Adding nested document identifiers to newly created set:', documentIdentifiers);
+          setNewlyCreatedDocumentIds(prev => {
+            const updated = new Set(prev);
+            documentIdentifiers.forEach(id => updated.add(id));
+            return updated;
+          });
+          
+          // Trigger document refresh with delay
+          api.utils.invalidateCache.stats();
+          api.utils.invalidateCache.documents();
+          loadSystemStats();
+          
+          setTrackedTimeout(() => {
+            console.log('📄 Delayed document refresh for nested animation');
+            refreshDocuments();
+          }, 250);
+        }
+      }
+    }
+    
     switch (eventType) {
       case 'connection':
         console.log('✅ SSE Connected:', data.message);
@@ -174,6 +241,38 @@ function App() {
         break;
 
       case 'processing_progress':
+        // Check if this processing_progress event contains document creation info
+        if (data.data && data.data.data && data.data.data.step === 'document_created') {
+          console.log('📄 Document created via processing_progress event!', data.data.data);
+          const nestedEventData = data.data.data;
+          
+          // Extract identifiers
+          const documentIdentifiers = [
+            nestedEventData.documentId,
+            nestedEventData.url,
+            nestedEventData.title
+          ].filter(Boolean);
+          
+          if (documentIdentifiers.length > 0) {
+            console.log('📄 Adding processing_progress document identifiers:', documentIdentifiers);
+            setNewlyCreatedDocumentIds(prev => {
+              const updated = new Set(prev);
+              documentIdentifiers.forEach(id => updated.add(id));
+              return updated;
+            });
+            
+            // Trigger document refresh
+            api.utils.invalidateCache.stats();
+            api.utils.invalidateCache.documents();
+            loadSystemStats();
+            
+            setTrackedTimeout(() => {
+              console.log('📄 Delayed document refresh for processing_progress animation');
+              refreshDocuments();
+            }, 250);
+          }
+        }
+        
         updateDocumentProgress(data.sessionId, data.progress);
         break;
       case 'chunk_update':
@@ -186,6 +285,12 @@ function App() {
       // Document creation - immediate stats refresh for real-time count update
       case 'document_created':
         console.log('📄 Document created, refreshing selectively:', data);
+        // Track this as a newly created document for animation
+        if (data.documentId || data.url) {
+          const documentId = data.documentId || data.url;
+          setNewlyCreatedDocumentIds(prev => new Set([...prev, documentId]));
+          console.log('📄 Marked document as newly created for animation:', documentId);
+        }
         // Only invalidate stats and documents, not all cache
         api.utils.invalidateCache.stats();
         api.utils.invalidateCache.documents();
@@ -231,6 +336,41 @@ function App() {
           api.utils.invalidateCache.documents();
           refreshDocuments();
           loadSystemStats();
+        }
+        break;
+        
+      // Handle session_updated events that contain step-based updates
+      case 'session_updated':
+        console.log('📋 Session updated event:', data);
+        // Check if this is a document creation step
+        if (data.step === 'document_created') {
+          console.log('📄 Document created via session_updated, processing...', data);
+          // Extract all possible identifiers for matching
+          const documentIdentifiers = [
+            data.documentId,
+            data.url,
+            data.title
+          ].filter(Boolean);
+          
+          if (documentIdentifiers.length > 0) {
+            console.log('📄 Adding document identifiers to newly created set:', documentIdentifiers);
+            setNewlyCreatedDocumentIds(prev => {
+              const updated = new Set(prev);
+              documentIdentifiers.forEach(id => updated.add(id));
+              return updated;
+            });
+          }
+          
+          // Trigger document refresh with delay to ensure DB commit is visible
+          api.utils.invalidateCache.stats();
+          api.utils.invalidateCache.documents();
+          loadSystemStats();
+          
+          // Add delay to ensure document appears in list before animation
+          setTrackedTimeout(() => {
+            console.log('📄 Delayed document refresh for animation');
+            refreshDocuments();
+          }, 250);
         }
         break;
         
@@ -456,12 +596,15 @@ function App() {
       });
       
       // Documents are already sorted by database (ORDER BY created_time DESC)
-      const documents = docs?.documents || [];
+      const rawDocuments = docs?.documents || [];
       const totalCount = docs?.pagination?.total || 0;
+      
+      // Transform documents to standardize field names and status
+      const documents = rawDocuments.map(transformDocument);
       
       console.log('📅 LATEST DOCUMENTS from API (first 5):');
       documents.slice(0, 5).forEach((doc, i) => {
-        console.log(`  ${i+1}. "${doc.title?.substring(0, 50)}" - ${doc.created_time}`);
+        console.log(`  ${i+1}. "${doc.title?.substring(0, 50)}" - ${doc.created_time} - Status: ${doc.processingStatus}`);
       });
       
       console.log('📋 Setting documents in state:', documents.length, 'visible,', totalCount, 'total documents');
@@ -754,6 +897,7 @@ function App() {
     searchQuery,
     searchResults,
     uploadQueue,
+    newlyCreatedDocumentIds,
     
     // Settings and API
     settings: settings.settings,
@@ -773,6 +917,15 @@ function App() {
     handleSearchQueryChange,
     refreshDocuments,
     loadSystemStats,
+    
+    // Document animation management
+    clearNewlyCreatedFlag: (documentId) => {
+      setNewlyCreatedDocumentIds(prev => {
+        const updated = new Set(prev);
+        updated.delete(documentId);
+        return updated;
+      });
+    },
     
     // Upload queue management
     addToUploadQueue,

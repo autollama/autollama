@@ -432,18 +432,9 @@ const DocumentViewer = () => {
     setLoading(true);
     try {
       const encodedUrl = btoa(selectedDocument.url);
-      console.log('🔍 DocumentViewer: Loading chunks for URL:', selectedDocument.url);
-      console.log('🔍 DocumentViewer: Encoded URL:', encodedUrl);
-      console.log('🔍 DocumentViewer: Decoded back:', atob(encodedUrl));
       
       const response = await api.documents.getChunks(encodedUrl, { limit: 1000 });
       const chunks = response?.chunks || [];
-      console.log('DEBUG: Loaded chunks:', chunks.length, 'first chunk keys:', chunks[0] ? Object.keys(chunks[0]) : 'no chunks');
-      console.log('DEBUG: First chunk text info:', chunks[0] ? {
-        text: chunks[0].text?.length || 0,
-        chunk_text: chunks[0].chunk_text?.length || 0,
-        all_text_keys: Object.keys(chunks[0]).filter(k => k.includes('text'))
-      } : 'no chunks');
       setChunks(chunks);
     } catch (error) {
       console.error('Failed to load chunks:', error);
@@ -666,7 +657,6 @@ const ViewTab = ({ id, label, icon: Icon, active, onClick, badge }) => (
 
 // Document Overview Component
 const DocumentOverview = ({ document, chunks }) => {
-  console.log('DEBUG: DocumentOverview loaded with chunks:', chunks.length);
   const processingStats = {
     total: chunks.length,
     completed: chunks.filter(c => 
@@ -776,17 +766,7 @@ const DocumentOverview = ({ document, chunks }) => {
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-400">Total Characters:</span>
-              <span>{(() => {
-                console.log('DEBUG: First 3 chunks text data:', chunks.slice(0, 3).map(c => ({
-                  id: c.id,
-                  text_length: c.text?.length || 0,
-                  chunk_text_length: c.chunk_text?.length || 0,
-                  text_preview: c.text?.substring(0, 50),
-                  chunk_text_preview: c.chunk_text?.substring(0, 50),
-                  all_keys: Object.keys(c).filter(k => k.includes('text'))
-                })));
-                return chunks.reduce((sum, c) => sum + (c.text?.length || 0), 0).toLocaleString();
-              })()}</span>
+              <span>{chunks.reduce((sum, c) => sum + (c.text?.length || 0), 0).toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Avg Chunk Size:</span>
@@ -799,7 +779,12 @@ const DocumentOverview = ({ document, chunks }) => {
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Processing Time:</span>
-              <span>~{Math.round(chunks.length * 2.3)} seconds</span>
+              <span>~{(() => {
+                const totalSeconds = Math.round(chunks.length * 2.3);
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
+                return minutes > 0 ? `${minutes} min, ${seconds} sec` : `${seconds} sec`;
+              })()}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Storage Size:</span>
