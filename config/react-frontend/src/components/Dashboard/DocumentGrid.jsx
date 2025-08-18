@@ -54,21 +54,9 @@ const DocumentGrid = () => {
   };
 
 
-  // Update displayed documents whenever documents change - ALWAYS refresh grid
+  // Track new documents and animate them in - ONLY for truly new documents from SSE events
   useEffect(() => {
     console.log(`📋 DocumentGrid: Documents changed, total: ${documents.length}`);
-    
-    // Show all available documents in a proper grid layout
-    const visibleDocuments = documents; // Show all documents, no artificial limit
-    console.log(`📐 Showing ${visibleDocuments.length} of ${documents.length} documents in grid layout`);
-    
-    setDisplayedDocuments(visibleDocuments);
-  }, [documents]);
-
-  // Handle animations separately for newly created documents
-  useEffect(() => {
-    if (newlyCreatedDocumentIds.size === 0) return;
-    
     console.log(`📋 DocumentGrid: Currently marked as newly created:`, Array.from(newlyCreatedDocumentIds));
     
     // Check if any of the current documents are marked as newly created
@@ -99,96 +87,118 @@ const DocumentGrid = () => {
       }
     });
     
-    if (currentlyNewIds.size === 0) {
-      console.log(`⏳ Documents not yet loaded for newly created IDs, waiting...`);
+    // If we have newly created IDs but no matching documents yet, set up retry logic
+    if (newlyCreatedDocumentIds.size > 0 && currentlyNewIds.size === 0) {
+      console.log(`⏳ Documents not yet loaded for newly created IDs, setting up retry...`);
       console.log(`⏳ Waiting for documents with IDs:`, Array.from(newlyCreatedDocumentIds));
-      return;
+      console.log(`⏳ Current documents:`, documents.map(d => ({ id: d.id, url: d.url, title: d.title?.substring(0, 30) })));
+      
+      // Retry after a short delay if documents haven't appeared yet
+      const retryTimeout = setTimeout(() => {
+        console.log(`🔄 Retrying animation check after delay...`);
+        // This will trigger the useEffect again with the same data
+        setDisplayedDocuments(prev => [...prev]);
+      }, 500);
+      
+      return () => clearTimeout(retryTimeout);
     }
 
-    console.log(`🎬 Found ${currentlyNewIds.size} newly created documents for animation:`, {
-      newDocumentTitles: [...currentlyNewIds].map(id => {
-        const doc = documents.find(d => d.id === id);
-        return doc ? doc.title?.substring(0, 40) : 'Unknown';
-      })
-    });
-    
-    // Clear any existing timeouts for these documents
-    currentlyNewIds.forEach(id => {
-      if (animationTimeoutsRef.current.has(id)) {
-        clearTimeout(animationTimeoutsRef.current.get(id));
-        animationTimeoutsRef.current.delete(id);
-      }
-    });
-    
-    // Identify existing documents that need to shift right (mempool-style)
-    const existingIds = new Set(
-      documents
-        .filter(doc => !currentlyNewIds.has(doc.id))
-        .map(doc => doc.id)
-    );
-    
-    console.log(`🎬 Mempool shift: ${existingIds.size} existing documents will shift right`);
-    
-    // Phase 1: Simultaneous shift-right + slide-in (0-600ms)
-    setNewDocumentIds(currentlyNewIds);        // New documents slide in from left
-    setShiftingDocumentIds(existingIds); // Existing documents shift right
-    
-    // Phase 2: Stop shift animation, start highlighting (600ms)
-    const highlightTimeout = setTimeout(() => {
-      setNewDocumentIds(new Set());       // Stop slide animation
-      setShiftingDocumentIds(new Set());  // Stop shift animation  
-      setHighlightedDocumentIds(currentlyNewIds); // Start highlight animation on new docs
+    if (currentlyNewIds.size > 0) {
+      console.log(`🎬 Found ${currentlyNewIds.size} truly new documents from SSE events for animation:`, {
+        newDocumentTitles: [...currentlyNewIds].map(id => {
+          const doc = documents.find(d => d.id === id);
+          return doc ? doc.title?.substring(0, 40) : 'Unknown';
+        })
+      });
       
-      // Phase 3: Start fading to normal (after 2.5 seconds total)
-      const fadeTimeout = setTimeout(() => {
-        setHighlightedDocumentIds(new Set()); // Stop highlight animation
-        setFadingDocumentIds(currentlyNewIds); // Start fade animation
+      // Clear any existing timeouts for these documents
+      currentlyNewIds.forEach(id => {
+        if (animationTimeoutsRef.current.has(id)) {
+          clearTimeout(animationTimeoutsRef.current.get(id));
+          animationTimeoutsRef.current.delete(id);
+        }
+      });
+      
+      // Identify existing documents that need to shift right (mempool-style)
+      const existingIds = new Set(
+        documents
+          .filter(doc => !currentlyNewIds.has(doc.id))
+          .map(doc => doc.id)
+      );
+      
+      console.log(`🎬 Mempool shift: ${existingIds.size} existing documents will shift right`);
+      
+      // Phase 1: Simultaneous shift-right + slide-in (0-600ms)
+      setNewDocumentIds(currentlyNewIds);        // New documents slide in from left
+      setShiftingDocumentIds(existingIds); // Existing documents shift right
+      
+      // Phase 2: Stop shift animation, start highlighting (600ms)
+      const highlightTimeout = setTimeout(() => {
+        setNewDocumentIds(new Set());       // Stop slide animation
+        setShiftingDocumentIds(new Set());  // Stop shift animation  
+        setHighlightedDocumentIds(currentlyNewIds); // Start highlight animation on new docs
         
-        // Phase 4: Complete animation cycle (after 3.5 seconds total)
-        const completeTimeout = setTimeout(() => {
-          setFadingDocumentIds(prev => {
-            const newSet = new Set(prev);
-            currentlyNewIds.forEach(id => newSet.delete(id));
-            return newSet;
-          });
+        // Phase 3: Start fading to normal (after 2.5 seconds total)
+        const fadeTimeout = setTimeout(() => {
+          setHighlightedDocumentIds(new Set()); // Stop highlight animation
+          setFadingDocumentIds(currentlyNewIds); // Start fade animation
           
-          // Clean up timeouts and clear flags after successful animation
+          // Phase 4: Complete animation cycle (after 3.5 seconds total)
+          const completeTimeout = setTimeout(() => {
+            setFadingDocumentIds(prev => {
+              const newSet = new Set(prev);
+              currentlyNewIds.forEach(id => newSet.delete(id));
+              return newSet;
+            });
+            
+            // Clean up timeouts and clear the newly created flags
+            currentlyNewIds.forEach(id => {
+              animationTimeoutsRef.current.delete(id);
+              // Clear the newly created flag so this document won't animate again
+              const doc = documents.find(d => d.id === id);
+              if (doc) {
+                console.log(`🧹 Clearing newly created flags for animated document:`, {
+                  docId: doc.id,
+                  docUrl: doc.url,
+                  docTitle: doc.title
+                });
+                
+                // Clear all possible identifiers that might have been used
+                const identifiersToClean = [
+                  doc.id,
+                  doc.url,
+                  doc.title,
+                  doc.url && decodeURIComponent(doc.url),
+                  doc.title && doc.title.substring(0, 50)
+                ].filter(Boolean);
+                
+                identifiersToClean.forEach(identifier => {
+                  clearNewlyCreatedFlag(identifier);
+                });
+              }
+            });
+          }, 1000); // Fade animation duration
+          
           currentlyNewIds.forEach(id => {
-            animationTimeoutsRef.current.delete(id);
-            // Clear the newly created flag for this specific document
-            const doc = documents.find(d => d.id === id);
-            if (doc) {
-              console.log(`🧹 Clearing newly created flags for animated document: ${doc.title?.substring(0, 30)}`);
-              
-              // Clear all possible identifiers that might have been used
-              const identifiersToClean = [
-                doc.id,
-                doc.url,
-                doc.title,
-                doc.url && decodeURIComponent(doc.url),
-                doc.title && doc.title.substring(0, 50)
-              ].filter(Boolean);
-              
-              identifiersToClean.forEach(identifier => {
-                clearNewlyCreatedFlag(identifier);
-              });
-            }
+            animationTimeoutsRef.current.set(id, completeTimeout);
           });
-        }, 1000); // Fade animation duration
+        }, 1900); // Highlight duration
         
         currentlyNewIds.forEach(id => {
-          animationTimeoutsRef.current.set(id, completeTimeout);
+          animationTimeoutsRef.current.set(id, fadeTimeout);
         });
-      }, 1900); // Highlight duration
+      }, 600); // Slide-in + shift duration
       
       currentlyNewIds.forEach(id => {
-        animationTimeoutsRef.current.set(id, fadeTimeout);
+        animationTimeoutsRef.current.set(id, highlightTimeout);
       });
-    }, 600); // Slide-in + shift duration
+    }
     
-    currentlyNewIds.forEach(id => {
-      animationTimeoutsRef.current.set(id, highlightTimeout);
-    });
+    // Show all available documents in a proper grid layout
+    const visibleDocuments = documents; // Show all documents, no artificial limit
+    console.log(`📐 Showing ${visibleDocuments.length} of ${documents.length} documents in grid layout`);
+    
+    setDisplayedDocuments(visibleDocuments);
   }, [documents, newlyCreatedDocumentIds, clearNewlyCreatedFlag]);
 
   // Cleanup timeouts on unmount

@@ -1,47 +1,27 @@
 /**
- * Vector Service v2.3.4
- * Handles Qdrant vector database operations with mode switching support
- * Supports both local air-gapped and cloud deployments
+ * Vector Service
+ * Handles Qdrant vector database operations for embeddings storage and retrieval
  */
 
 const axios = require('axios');
 const { logPerformanceMetric, logError } = require('../../utils/logger');
 const { ERROR_CODES, HEALTH_STATUS } = require('../../utils/constants');
-const { getQdrantConfig, validateModeConfiguration, VECTOR_DB_MODE } = require('../../config/database.config');
 
 class VectorService {
-  constructor(customConfig = {}) {
-    // Use mode-aware configuration
-    const dbConfig = getQdrantConfig();
-    
+  constructor(config = {}) {
     this.config = {
-      url: customConfig.url || dbConfig.url,
-      apiKey: customConfig.apiKey || dbConfig.apiKey,
-      collection: customConfig.collection || dbConfig.collection,
-      timeoutMs: customConfig.timeoutMs || dbConfig.timeout,
-      retries: customConfig.retries || dbConfig.maxRetries,
-      dimensions: customConfig.dimensions || 1536,
-      mode: dbConfig.mode,
-      telemetryDisabled: dbConfig.telemetryDisabled
+      url: config.url || 'http://localhost:6333',
+      apiKey: config.apiKey,
+      collection: config.collection || 'autollama-content',
+      timeoutMs: config.timeoutMs || 30000,
+      retries: config.retries || 3,
+      dimensions: config.dimensions || 1536
     };
 
     this.isInitialized = false;
-    this.connectionHealthy = false;
-    this.lastHealthCheck = null;
-    this.logger = require('../../utils/logger').createChildLogger({ 
-      component: 'vector-service',
-      mode: this.config.mode 
-    });
+    this.logger = require('../../utils/logger').createChildLogger({ component: 'vector-service' });
 
-    // Validate configuration for selected mode
-    try {
-      validateModeConfiguration();
-    } catch (error) {
-      this.logger.error('Vector service configuration validation failed', { error: error.message });
-      throw error;
-    }
-
-    // Initialize HTTP client with mode-specific settings
+    // Initialize HTTP client
     this.httpClient = axios.create({
       baseURL: this.config.url,
       timeout: this.config.timeoutMs,
@@ -52,11 +32,9 @@ class VectorService {
     });
 
     this.logger.info('Vector service initialized', {
-      mode: this.config.mode,
       url: this.config.url,
       collection: this.config.collection,
-      hasApiKey: !!this.config.apiKey,
-      telemetryDisabled: this.config.telemetryDisabled
+      hasApiKey: !!this.config.apiKey
     });
   }
 
@@ -413,7 +391,7 @@ class VectorService {
   }
 
   /**
-   * Test Qdrant connectivity and health with mode-aware error handling
+   * Test Qdrant connectivity and health
    * @returns {Promise<Object>} Health check result
    */
   async healthCheck() {
@@ -445,12 +423,8 @@ class VectorService {
         ? HEALTH_STATUS.HEALTHY 
         : HEALTH_STATUS.UNHEALTHY;
 
-      this.connectionHealthy = overallStatus === HEALTH_STATUS.HEALTHY;
-      this.lastHealthCheck = new Date();
-
       return {
         status: overallStatus,
-        mode: this.config.mode,
         connectivity: connectivityOk,
         collection: {
           initialized: this.isInitialized,
@@ -464,46 +438,19 @@ class VectorService {
 
     } catch (error) {
       const duration = Date.now() - startTime;
-      this.connectionHealthy = false;
-      this.lastHealthCheck = new Date();
-      
-      // Mode-specific error guidance
-      let errorGuidance = '';
-      let errorType = 'connection_failed';
-      
-      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
-        errorType = 'service_unavailable';
-        if (this.config.mode === 'local') {
-          errorGuidance = 'Local Qdrant not running. Start with: docker-compose -f docker-compose.local.yml up -d qdrant-local';
-        } else {
-          errorGuidance = 'Qdrant Cloud service unavailable. Check your QDRANT_URL and network connectivity.';
-        }
-      } else if (error.response && error.response.status === 401) {
-        errorType = 'authentication_failed';
-        errorGuidance = this.config.mode === 'local' 
-          ? 'Local Qdrant does not require API key. Remove QDRANT_API_KEY from environment.'
-          : 'Invalid Qdrant Cloud API key. Check your QDRANT_API_KEY configuration.';
-      }
       
       logError(error, {
         operation: 'qdrant_health_check',
-        mode: this.config.mode,
-        errorType,
         duration,
-        url: this.config.url,
-        guidance: errorGuidance
+        url: this.config.url
       });
 
       return {
         status: HEALTH_STATUS.UNHEALTHY,
-        mode: this.config.mode,
         connectivity: false,
         error: error.message,
-        errorType,
-        guidance: errorGuidance,
         responseTime: duration,
-        url: this.config.url,
-        lastCheck: this.lastHealthCheck
+        url: this.config.url
       };
     }
   }

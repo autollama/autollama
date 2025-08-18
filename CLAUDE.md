@@ -1,79 +1,26 @@
-# CLAUDE.md - AutoLlama v2.3.5
+# CLAUDE.md - AutoLlama v2.3.2
 
-**Mode-Aware Data Isolation & Vector Database Abstraction**
-
-Enhanced RAG platform with complete data isolation between deployment modes, multi-vendor vector database support, and enterprise-grade security.
+Enhanced RAG platform with document refresh fix and improved animation performance.
 
 ## Quick Start
-
-### 🏠 Pure Local Mode (Recommended for Enterprise)
-```bash
-cd autollama && cp .env.local.example .env.local && docker-compose -f docker-compose.local.yml up -d
-```
-
-### ☁️ Cloud Mode (Development)
 ```bash
 cd autollama && cp example.env .env && docker compose up -d
 ```
 
-## Architecture v2.3.5 - Mode-Aware Data Isolation ✨
-
-### Deployment Modes (Mutually Exclusive)
-- **🏠 Local Mode**: Complete air-gapped deployment with zero external dependencies (except optional OpenAI API)
-- **☁️ Cloud Mode**: Traditional cloud-first deployment for development and small teams
-
-### Local Mode Stack
-- **Frontend**: React (8080) - Air-gapped UI with mode-aware components
-- **API**: Node.js (3001) - Mode-switching architecture with local fallbacks
-- **Services**: BM25 (3002), SSE (3003), OpenWebUI Pipeline (9099)
-- **Data Layer**: PostgreSQL (5432) + Qdrant (6333) + Redis (6379) - All local containers
-- **Security**: Isolated Docker networks, no external connections, enterprise compliance ready
-
-### Enhanced Processing Pipeline  
-- **Fetch→IntelligentChunk→AdvancedAnalyze→ContextualGenerate→Embed→Store**
-- **Document Type Detection**: Automatic content classification (academic, legal, technical, etc.)
-- **Semantic Boundary Detection**: Preserves natural content flow
-- **Hierarchical Chunking**: Structure-aware segmentation respects headers and sections
+## Architecture v2.3
+- React (8080), API (3001), BM25 (3002), SSE (3003), **OpenWebUI Pipeline (9099)**
+- PostgreSQL + Qdrant, Tailscale VPN
+- **Enhanced Processing Pipeline**: Fetch→IntelligentChunk→AdvancedAnalyze→ContextualGenerate→Embed→Store
+- **New Features**: Document type detection, semantic boundary detection, hierarchical chunking
 - **Enhanced Metadata**: 11 new contextual fields for performance analysis
-- **Mode-Aware Error Handling**: Smart fallbacks and guidance for each deployment mode
-
-### NEW in v2.3.5: Mode-Aware Data Isolation ✨
-- **Complete Data Isolation**: Local and cloud deployments maintain separate data universes
-- **Multi-Vendor Vector Database Support**: Future-ready abstraction layer for Qdrant, Pinecone, Weaviate, Chroma, Milvus
-- **Mode Detection Middleware**: Automatic deployment mode detection for all API endpoints
-- **Vendor-Aware APIs**: All search, document, and chunk endpoints filter by current vector database
-- **Database Migration**: Existing data properly tagged and isolated by deployment mode
-- **Enterprise Compliance**: Air-gapped local mode shows zero cloud data, ensuring complete isolation
-
-### Enterprise Features v2.3.5
-- **Air-Gapped Security**: Complete network isolation with optional OpenAI API access
-- **Compliance Ready**: SOC 2, GDPR, HIPAA, ISO 27001 configurations
-- **Enterprise Hardware Optimization**: Tuned for 2x Xeon, 64GB RAM, 2x RTX 3060
-- **Backup & Recovery**: Automated local backups with encryption
-- **LDAP/AD Integration**: Enterprise authentication and RBAC
-- **Audit Logging**: Comprehensive security and compliance tracking
+- **Domain Architecture** ✨:
+  - `https://autollama.io` → Dark mode marketing homepage with feature showcase
+  - `https://app.autollama.io` → AutoLlama RAG application (production interface)
+- **Native OpenWebUI Integration**: Built-in RAG pipeline accessible via app subdomain
 
 ## Critical Commands
-
-### Local Mode Commands  
 ```bash
-# Start complete air-gapped stack
-docker-compose -f docker-compose.local.yml up -d
-
-# Logs & restart (local mode)
-docker-compose -f docker-compose.local.yml logs -f autollama-api
-docker-compose -f docker-compose.local.yml restart autollama-api
-docker-compose -f docker-compose.local.yml build autollama-api --no-cache && docker-compose -f docker-compose.local.yml up -d
-
-# Test local services health
-curl -f http://localhost:3001/api/health  # API health
-curl -f http://localhost:6333/health      # Local Qdrant health
-curl -f http://localhost:8080/            # Frontend health
-```
-
-### Cloud Mode Commands
-```bash
-# Logs & restart (cloud mode)
+# Logs & restart
 docker compose logs -f autollama-api
 docker compose restart autollama-api
 docker compose build autollama-api --no-cache && docker compose up -d
@@ -90,15 +37,7 @@ curl -X POST http://localhost:8080/api/process-url-stream -H "Content-Type: appl
 curl -X POST http://localhost:8080/api/process-file-stream -F "file=@test.pdf" -N
 ```
 
-## v2.3.4 Pure Local Mode ✨
-
-### Air-Gapped Enterprise Deployment (2025-08-17)
-- **Complete Isolation**: Zero external dependencies except optional OpenAI API
-- **Mutually Exclusive Modes**: Mode switching architecture prevents accidental cloud connections  
-- **Enterprise Security**: SOC 2, GDPR, HIPAA, ISO 27001 compliance configurations
-- **Local Service Stack**: PostgreSQL (5432) + Qdrant (6333) + Redis (6379) + BM25 (3002)
-- **Mode-Aware Error Handling**: Smart fallbacks and guidance for each deployment mode
-- **Hardware Optimization**: Tuned for enterprise hardware (2x Xeon, 64GB RAM, 2x RTX 3060)
+## v2.3 Improvements ✨
 
 ### Direct AI Chat Access (2025-08-17)
 - **Eliminated Intermediary Screen**: Clicking "AI Chat" now takes users directly to the chat interface

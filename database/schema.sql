@@ -4,7 +4,7 @@
 -- Create extension for UUID generation
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Main processed content table for AutoLlama
+-- Main processed content table (replaces Airtable main table)
 CREATE TABLE IF NOT EXISTS processed_content (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     
@@ -40,13 +40,14 @@ CREATE TABLE IF NOT EXISTS processed_content (
     is_recent BOOLEAN GENERATED ALWAYS AS (created_time > NOW() - INTERVAL '24 hours') STORED,
     
     -- Metadata
-    source VARCHAR(50) DEFAULT 'autollama.io'
+    source VARCHAR(50) DEFAULT 'autollama.io',
+    airtable_record_id TEXT, -- For sync tracking
     
     -- Constraints
     CONSTRAINT unique_chunk_id UNIQUE(chunk_id)
 );
 
--- Upload sessions table for AutoLlama
+-- Upload sessions table (replaces Airtable upload sessions)
 CREATE TABLE IF NOT EXISTS upload_sessions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     
@@ -74,8 +75,8 @@ CREATE TABLE IF NOT EXISTS upload_sessions (
         last_activity > NOW() - INTERVAL '1 hour'
     ) STORED,
     
-    -- Session metadata
-    source VARCHAR(50) DEFAULT 'local'  
+    -- Metadata
+    airtable_session_id TEXT -- For sync tracking  
 );
 
 -- Performance indexes - OPTIMIZED FOR TIME-BASED QUERIES

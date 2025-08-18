@@ -728,11 +728,11 @@ async function getRecordById(recordId) {
 /**
  * Enhanced search content with full-text search capabilities
  */
-async function searchContent(searchQuery, limit = 50, vectorDbMode = 'cloud', vectorDbVendor = 'qdrant') {
+async function searchContent(searchQuery, limit = 50) {
     try {
-        console.log(`🔍 OPTIMIZED search for: "${searchQuery}" (mode: ${vectorDbMode}, vendor: ${vectorDbVendor})`);
+        console.log(`🔍 OPTIMIZED search for: "${searchQuery}"`);
         
-        // ULTRA-OPTIMIZED: Use indexes, minimal data, fast queries with mode/vendor filtering
+        // ULTRA-OPTIMIZED: Use indexes, minimal data, fast queries
         const query = `
             WITH ranked_results AS (
                 SELECT DISTINCT ON (url)
@@ -740,27 +740,21 @@ async function searchContent(searchQuery, limit = 50, vectorDbMode = 'cloud', ve
                     url, title, summary, chunk_text, chunk_id, chunk_index,
                     sentiment, category, content_type, technical_level, main_topics,
                     tags, key_entities, processing_status, created_time, source, contextual_summary,
-                    vector_db_mode, vector_db_vendor,
                     -- Use indexed full-text search with ranking
                     ts_rank_cd(to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(summary, '') || ' ' || COALESCE(tags, '')), plainto_tsquery('english', $1)) as rank
                 FROM processed_content
                 WHERE 
-                    -- Vector database isolation filters
-                    vector_db_mode = $3 AND vector_db_vendor = $4
-                    AND (
-                        -- Primary: Use GIN full-text search index (fastest)
-                        to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(summary, '') || ' ' || COALESCE(tags, '')) @@ plainto_tsquery('english', $1)
-                        -- Secondary: Use trigram indexes for fuzzy matching
-                        OR title % $1
-                        OR tags % $1
-                    )
+                    -- Primary: Use GIN full-text search index (fastest)
+                    to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(summary, '') || ' ' || COALESCE(tags, '')) @@ plainto_tsquery('english', $1)
+                    -- Secondary: Use trigram indexes for fuzzy matching
+                    OR title % $1
+                    OR tags % $1
                 ORDER BY url, created_time DESC
             )
             SELECT 
                 url, title, summary, chunk_text, chunk_id, chunk_index,
                 sentiment, category, content_type, technical_level, main_topics,
                 tags, key_entities, processing_status, created_time, source, contextual_summary,
-                vector_db_mode, vector_db_vendor,
                 -- Add score for frontend sorting
                 rank as score
             FROM ranked_results
@@ -769,9 +763,9 @@ async function searchContent(searchQuery, limit = 50, vectorDbMode = 'cloud', ve
             LIMIT $2
         `;
         
-        const result = await cachedQuery(query, [searchQuery, limit, vectorDbMode, vectorDbVendor], false); // No cache for search results
+        const result = await cachedQuery(query, [searchQuery, limit], false); // No cache for search results
         
-        console.log(`✅ OPTIMIZED search found ${result.rows.length} results for ${vectorDbMode}/${vectorDbVendor}`);
+        console.log(`✅ OPTIMIZED search found ${result.rows.length} results`);
         
         return result.rows.map(row => ({
             // Essential fields with optimized naming for frontend
@@ -792,8 +786,6 @@ async function searchContent(searchQuery, limit = 50, vectorDbMode = 'cloud', ve
             created_time: row.created_time,
             source: row.source,
             contextual_summary: row.contextual_summary,
-            vector_db_mode: row.vector_db_mode,
-            vector_db_vendor: row.vector_db_vendor,
             score: row.score || 0 // Relevance score for sorting
         }));
     } catch (error) {
@@ -808,12 +800,12 @@ async function searchContent(searchQuery, limit = 50, vectorDbMode = 'cloud', ve
  * @param {string} tagField - Which field to search in (tags, main_topics, sentiment, content_type, technical_level)
  * @param {number} limit - Maximum number of results to return
  */
-async function searchContentByTag(tag, tagField = 'tags', limit = 50, vectorDbMode = 'cloud', vectorDbVendor = 'qdrant') {
+async function searchContentByTag(tag, tagField = 'tags', limit = 50) {
     try {
-        console.log(`🏷️ Searching for tag: "${tag}" in field: "${tagField}" (mode: ${vectorDbMode}, vendor: ${vectorDbVendor})`);
+        console.log(`🏷️ Searching for tag: "${tag}" in field: "${tagField}"`);
         
         let whereClause;
-        let queryParams = [tag, limit, vectorDbMode, vectorDbVendor];
+        let queryParams = [tag, limit];
         
         switch (tagField) {
             case 'tags':
@@ -845,18 +837,16 @@ async function searchContentByTag(tag, tagField = 'tags', limit = 50, vectorDbMo
                     sentiment, emotions, category, content_type, technical_level, main_topics,
                     key_concepts, tags, key_entities, embedding_status, processing_status,
                     created_time, processed_date, sent_to_li, source, contextual_summary, uses_contextual_embedding,
-                    vector_db_mode, vector_db_vendor,
                     ROW_NUMBER() OVER (PARTITION BY url ORDER BY created_time DESC) as rn
                 FROM processed_content
-                WHERE ${whereClause} AND vector_db_mode = $3 AND vector_db_vendor = $4
+                WHERE ${whereClause}
             )
             SELECT 
                 id, airtable_id, url, title, summary, chunk_text, chunk_id, chunk_index,
                 sentiment, emotions, category, content_type, technical_level, main_topics,
                 key_concepts, tags, key_entities, 
                 embedding_status as "embeddingStatus",
-                processing_status, created_time, processed_date, sent_to_li, source, contextual_summary, uses_contextual_embedding,
-                vector_db_mode, vector_db_vendor
+                processing_status, created_time, processed_date, sent_to_li, source, contextual_summary, uses_contextual_embedding
             FROM tag_results
             WHERE rn = 1
             ORDER BY created_time DESC
@@ -865,7 +855,7 @@ async function searchContentByTag(tag, tagField = 'tags', limit = 50, vectorDbMo
         
         const result = await cachedQuery(query, queryParams, true);
         
-        console.log(`✅ Found ${result.rows.length} results for tag "${tag}" in field "${tagField}" for ${vectorDbMode}/${vectorDbVendor}`);
+        console.log(`✅ Found ${result.rows.length} results for tag "${tag}" in field "${tagField}"`);
         
         return result.rows.map(row => ({
             ...row,
@@ -883,9 +873,7 @@ async function searchContentByTag(tag, tagField = 'tags', limit = 50, vectorDbMo
             chunkIndex: row.chunk_index,
             airtableId: row.airtable_id,
             contextualSummary: row.contextual_summary,
-            usesContextualEmbedding: row.uses_contextual_embedding,
-            vectorDbMode: row.vector_db_mode,
-            vectorDbVendor: row.vector_db_vendor
+            usesContextualEmbedding: row.uses_contextual_embedding
         }));
     } catch (error) {
         console.error('❌ Error searching content by tag:', error.message);
@@ -1060,7 +1048,7 @@ async function getDocumentChunks(url, page = 1, limit = 10) {
                 mainTopics: row.main_topics,
                 keyConcepts: row.key_concepts,
                 tags: row.tags,
-                keyEntities: row.key_entities || {},
+                keyEntities: row.key_entities,
                 embeddingStatus: row.embedding_status,
                 processingStatus: row.processing_status,
                 createdTime: row.created_time,
@@ -1072,118 +1060,31 @@ async function getDocumentChunks(url, page = 1, limit = 10) {
                 currentPage: page,
                 totalPages: totalPages,
                 totalChunks: totalChunks,
-                hasMore: page < totalPages
+                hasNextPage: page < totalPages,
+                hasPreviousPage: page > 1
             }
         };
     } catch (error) {
         console.error('❌ Error fetching document chunks:', error.message);
-        return { chunks: [], pagination: { currentPage: 1, totalPages: 0, totalChunks: 0, hasMore: false } };
-    }
-}
-
-/**
- * Get all chunks for a specific document with mode and vendor filtering (v2.3.4 data isolation)
- */
-async function getDocumentChunksWithModeFilter(url, page = 1, limit = 10, vectorDbMode = 'cloud', vectorDbVendor = 'qdrant') {
-    try {
-        const offset = (page - 1) * limit;
-        
-        const query = `
-            SELECT 
-                id,
-                chunk_id,
-                chunk_index,
-                title,
-                summary,
-                chunk_text,
-                sentiment,
-                emotions,
-                category,
-                content_type,
-                technical_level,
-                main_topics,
-                key_concepts,
-                tags,
-                key_entities,
-                embedding_status,
-                processing_status,
-                created_time,
-                processed_date,
-                contextual_summary,
-                uses_contextual_embedding,
-                vector_db_mode,
-                vector_db_vendor
-            FROM processed_content
-            WHERE url = $1 AND record_type = 'chunk' 
-              AND vector_db_mode = $4 AND vector_db_vendor = $5
-            ORDER BY chunk_index ASC
-            LIMIT $2 OFFSET $3
-        `;
-        
-        // Also get total count for pagination with mode/vendor filtering
-        const countQuery = `
-            SELECT COUNT(*) as total 
-            FROM processed_content 
-            WHERE url = $1 AND record_type = 'chunk'
-              AND vector_db_mode = $2 AND vector_db_vendor = $3
-        `;
-        
-        const [chunksResult, countResult] = await Promise.all([
-            pool.query(query, [url, limit, offset, vectorDbMode, vectorDbVendor]),
-            pool.query(countQuery, [url, vectorDbMode, vectorDbVendor])
-        ]);
-        
-        const totalChunks = parseInt(countResult.rows[0].total);
-        const totalPages = Math.ceil(totalChunks / limit);
-        
-        console.log(`✅ Fetched ${chunksResult.rows.length} chunks for document (${vectorDbMode}/${vectorDbVendor}) (page ${page}/${totalPages})`);
-        
         return {
-            chunks: chunksResult.rows.map(row => ({
-                id: row.id,
-                chunkId: row.chunk_id,
-                chunkIndex: row.chunk_index,
-                title: row.title,
-                summary: row.summary,
-                chunkText: row.chunk_text,
-                sentiment: row.sentiment,
-                emotions: row.emotions,
-                category: row.category,
-                contentType: row.content_type,
-                technicalLevel: row.technical_level,
-                mainTopics: row.main_topics,
-                keyConcepts: row.key_concepts,
-                tags: row.tags,
-                keyEntities: row.key_entities || {},
-                embeddingStatus: row.embedding_status,
-                processingStatus: row.processing_status,
-                createdTime: row.created_time,
-                processedDate: row.processed_date,
-                contextualSummary: row.contextual_summary,
-                usesContextualEmbedding: row.uses_contextual_embedding,
-                // Include mode and vendor information for data isolation awareness
-                vectorDbMode: row.vector_db_mode,
-                vectorDbVendor: row.vector_db_vendor
-            })),
+            chunks: [],
             pagination: {
-                currentPage: page,
-                totalPages: totalPages,
-                totalChunks: totalChunks,
-                hasMore: page < totalPages
+                currentPage: 1,
+                totalPages: 0,
+                totalChunks: 0,
+                hasNextPage: false,
+                hasPreviousPage: false
             }
         };
-    } catch (error) {
-        console.error(`❌ Error fetching document chunks (${vectorDbMode}/${vectorDbVendor}):`, error.message);
-        return { chunks: [], pagination: { currentPage: 1, totalPages: 0, totalChunks: 0, hasMore: false } };
     }
 }
 
 /**
  * Search content grouped by document
  */
-async function searchContentGrouped(searchQuery, limit = 50, vectorDbMode = 'cloud', vectorDbVendor = 'qdrant') {
+async function searchContentGrouped(searchQuery, limit = 50) {
     try {
-        console.log(`🔍 Searching for: "${searchQuery}" (grouped by document) (mode: ${vectorDbMode}, vendor: ${vectorDbVendor})`);
+        console.log(`🔍 Searching for: "${searchQuery}" (grouped by document)`);
         
         const query = `
             WITH search_results AS (
@@ -1210,8 +1111,6 @@ async function searchContentGrouped(searchQuery, limit = 50, vectorDbMode = 'clo
                     processed_date,
                     contextual_summary,
                     uses_contextual_embedding,
-                    vector_db_mode,
-                    vector_db_vendor,
                     CASE 
                         WHEN title ILIKE $1 THEN 1
                         WHEN summary ILIKE $1 THEN 2
@@ -1223,21 +1122,17 @@ async function searchContentGrouped(searchQuery, limit = 50, vectorDbMode = 'clo
                     END as match_priority
                 FROM processed_content
                 WHERE 
-                    -- Vector database isolation filters
-                    vector_db_mode = $3 AND vector_db_vendor = $4
-                    AND (
-                        title ILIKE $1 OR
-                        summary ILIKE $1 OR
-                        chunk_text ILIKE $1 OR
-                        tags ILIKE $1 OR
-                        category ILIKE $1 OR
-                        key_entities::text ILIKE $1 OR
-                        main_topics::text ILIKE $1 OR
-                        key_concepts ILIKE $1 OR
-                        (key_entities->>'people')::text ILIKE $1 OR
-                        (key_entities->>'organizations')::text ILIKE $1 OR
-                        (key_entities->>'locations')::text ILIKE $1
-                    )
+                    title ILIKE $1 OR
+                    summary ILIKE $1 OR
+                    chunk_text ILIKE $1 OR
+                    tags ILIKE $1 OR
+                    category ILIKE $1 OR
+                    key_entities::text ILIKE $1 OR
+                    main_topics::text ILIKE $1 OR
+                    key_concepts ILIKE $1 OR
+                    (key_entities->>'people')::text ILIKE $1 OR
+                    (key_entities->>'organizations')::text ILIKE $1 OR
+                    (key_entities->>'locations')::text ILIKE $1
                 ORDER BY match_priority, created_time DESC
                 LIMIT $2
             ),
@@ -1254,14 +1149,17 @@ async function searchContentGrouped(searchQuery, limit = 50, vectorDbMode = 'clo
                 sr.*,
                 ds.document_title,
                 ds.document_summary,
-                ds.total_matching_chunks
+                ds.total_matching_chunks,
+                doc_sum.total_chunks,
+                doc_sum.document_status
             FROM search_results sr
             JOIN document_stats ds ON sr.url = ds.url
+            JOIN document_summaries doc_sum ON sr.url = doc_sum.url
             ORDER BY ds.total_matching_chunks DESC, sr.match_priority, sr.created_time DESC
         `;
         
         const searchPattern = `%${searchQuery}%`;
-        const result = await pool.query(query, [searchPattern, limit, vectorDbMode, vectorDbVendor]);
+        const result = await pool.query(query, [searchPattern, limit]);
         
         // Group results by document
         const groupedResults = {};
@@ -1271,9 +1169,9 @@ async function searchContentGrouped(searchQuery, limit = 50, vectorDbMode = 'clo
                     url: row.url,
                     documentTitle: row.document_title,
                     documentSummary: row.document_summary,
+                    totalChunks: row.total_chunks,
                     matchingChunks: row.total_matching_chunks,
-                    vectorDbMode: row.vector_db_mode,
-                    vectorDbVendor: row.vector_db_vendor,
+                    status: row.document_status,
                     chunks: []
                 };
             }
@@ -1297,14 +1195,12 @@ async function searchContentGrouped(searchQuery, limit = 50, vectorDbMode = 'clo
                 embeddingStatus: row.embedding_status,
                 processingStatus: row.processing_status,
                 createdTime: row.created_time,
-                processedDate: row.processed_date,
-                vectorDbMode: row.vector_db_mode,
-                vectorDbVendor: row.vector_db_vendor
+                processedDate: row.processed_date
             });
         });
         
         const groupedArray = Object.values(groupedResults);
-        console.log(`✅ Found ${result.rows.length} chunks across ${groupedArray.length} documents for ${vectorDbMode}/${vectorDbVendor}`);
+        console.log(`✅ Found ${result.rows.length} chunks across ${groupedArray.length} documents`);
         
         return groupedArray;
     } catch (error) {
@@ -1726,7 +1622,6 @@ module.exports = {
     // New chunk explorer functions
     getAllDocuments,
     getDocumentChunks,
-    getDocumentChunksWithModeFilter,
     searchContentGrouped,
     getDocumentSummary,
     getAllChunks,

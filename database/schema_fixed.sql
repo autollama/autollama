@@ -8,7 +8,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 DROP TABLE IF EXISTS processed_content CASCADE;
 DROP TABLE IF EXISTS upload_sessions CASCADE;
 
--- Main processed content table for AutoLlama
+-- Main processed content table (replaces Airtable main table)
 CREATE TABLE processed_content (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     
@@ -41,13 +41,14 @@ CREATE TABLE processed_content (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     
     -- Metadata
-    source VARCHAR(50) DEFAULT 'autollama.io'
+    source VARCHAR(50) DEFAULT 'autollama.io',
+    airtable_record_id TEXT, -- For sync tracking
     
     -- Constraints
     CONSTRAINT unique_chunk_id UNIQUE(chunk_id)
 );
 
--- Upload sessions table for AutoLlama
+-- Upload sessions table (replaces Airtable upload sessions)
 CREATE TABLE upload_sessions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     
@@ -69,8 +70,8 @@ CREATE TABLE upload_sessions (
     last_activity TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     completed_at TIMESTAMP WITH TIME ZONE,
     
-    -- Session metadata
-    source VARCHAR(50) DEFAULT 'local'  
+    -- Metadata
+    airtable_session_id TEXT -- For sync tracking  
 );
 
 -- Performance indexes - OPTIMIZED FOR TIME-BASED QUERIES

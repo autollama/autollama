@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Database, Monitor, Palette, Zap, Bug, Clock, Eye, Trash2, RefreshCw, Upload, X, CheckCircle, Home, Cloud } from 'lucide-react';
+import { Database, Monitor, Palette, Zap, Bug, Clock, Eye, Trash2, RefreshCw, Upload, X, CheckCircle } from 'lucide-react';
 import { useAppContext } from '../../App';
 
 const SystemTab = ({ onSettingsChange }) => {
@@ -29,38 +29,18 @@ const SystemTab = ({ onSettingsChange }) => {
         api.stats.getHealth(),
       ]);
       
-      // Determine deployment mode from environment or database stats
-      const deploymentMode = {
-        mode: process.env.REACT_APP_MODE || 'local', // Default to local for air-gapped safety
-        locked: false, // Will be updated from API
-        description: process.env.REACT_APP_MODE === 'local' 
-          ? 'All data stored locally - No external connections'
-          : 'Connected to external cloud services'
-      };
-      
       setSystemInfo({
         database: dbStats?.stats || dbStats, // Extract stats field if it exists
         health: health,
-        deploymentMode: deploymentMode,
         memory: {
           used: Math.round(Math.random() * 512) + 256, // Mock data
           total: 1024,
         },
         uptime: '2d 14h 32m',
-        version: '2.3.4',
+        version: '2.0.0',
       });
     } catch (error) {
       console.error('Failed to load system info:', error);
-      // Fallback for error case
-      setSystemInfo({
-        deploymentMode: {
-          mode: 'local',
-          description: 'Air-gapped local deployment'
-        },
-        version: '2.3.4',
-        memory: { used: 0, total: 1024 },
-        uptime: 'Unknown'
-      });
     }
   };
 
@@ -254,7 +234,7 @@ const SystemTab = ({ onSettingsChange }) => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <SystemCard
           title="Version"
-          value={systemInfo?.version || '2.3.4'}
+          value={systemInfo?.version || '2.0.0'}
           icon={Monitor}
           description="AutoLlama release"
         />
@@ -271,66 +251,12 @@ const SystemTab = ({ onSettingsChange }) => {
           description={systemInfo ? `of ${systemInfo.memory.total}MB` : 'Memory usage'}
         />
         <SystemCard
-          title="Deployment Mode"
-          value={systemInfo?.deploymentMode?.mode === 'local' ? '🏠 LOCAL' : '☁️ CLOUD'}
-          icon={systemInfo?.deploymentMode?.mode === 'local' ? Home : Cloud}
-          description={systemInfo?.deploymentMode?.description || 'Air-gapped local deployment'}
-          status={systemInfo?.deploymentMode?.mode === 'local'}
+          title="Debug Mode"
+          value={formData.debugLogging ? 'ON' : 'OFF'}
+          icon={Bug}
+          description="Development logging"
+          status={formData.debugLogging}
         />
-      </div>
-
-      {/* Deployment Mode Information */}
-      <div className="card">
-        <h4 className="text-lg font-bold mb-6 flex items-center gap-2">
-          {systemInfo?.deploymentMode?.mode === 'local' ? (
-            <Home className="w-5 h-5 text-green-400" />
-          ) : (
-            <Cloud className="w-5 h-5 text-blue-400" />
-          )}
-          Deployment Configuration
-        </h4>
-        
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-gray-800 bg-opacity-50 rounded-lg">
-            <div className="flex items-center gap-3">
-              <div className={`w-3 h-3 rounded-full ${
-                systemInfo?.deploymentMode?.mode === 'local' ? 'bg-green-400' : 'bg-blue-400'
-              }`}></div>
-              <div>
-                <span className="font-medium">
-                  {systemInfo?.deploymentMode?.mode === 'local' ? '🏠 Local Mode' : '☁️ Cloud Mode'}
-                </span>
-                {systemInfo?.deploymentMode?.locked && (
-                  <span className="ml-2 px-2 py-1 bg-orange-600 text-orange-100 text-xs rounded">
-                    🔒 LOCKED
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-sm text-gray-400">
-                {systemInfo?.deploymentMode?.description}
-              </div>
-              {systemInfo?.deploymentMode?.mode === 'local' && (
-                <div className="text-xs text-green-400 mt-1">
-                  ✓ Air-gapped security enabled
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {systemInfo?.deploymentMode?.mode === 'local' && (
-            <div className="text-sm text-gray-400 bg-gray-800 bg-opacity-30 p-3 rounded-lg">
-              <div className="font-medium text-gray-300 mb-2">Local Mode Benefits:</div>
-              <ul className="space-y-1 text-xs">
-                <li>• Complete data isolation and privacy</li>
-                <li>• No external dependencies (except OpenAI API)</li>
-                <li>• Compliance-ready for enterprise environments</li>
-                <li>• Full control over data processing and storage</li>
-              </ul>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* UI Preferences */}
@@ -772,11 +698,9 @@ const SystemTab = ({ onSettingsChange }) => {
                 <div className="flex justify-between">
                   <span className="text-gray-400">Qdrant Vectors:</span>
                   <span className="font-mono">
-                    {systemInfo.database?.qdrant?.status === 'error' ? 
-                      'Not Connected' :
-                      systemInfo.database?.qdrant?.vector_count !== undefined ? 
-                        `${systemInfo.database.qdrant.vector_count.toLocaleString()} vectors` :
-                        'Unknown'
+                    {systemInfo.database?.qdrant?.vector_count ? 
+                      `${systemInfo.database.qdrant.vector_count.toLocaleString()} (${systemInfo.database.qdrant.estimated_size_mb})` :
+                      'Unknown'
                     }
                   </span>
                 </div>

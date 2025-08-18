@@ -19,12 +19,6 @@ const ChunkInspector = ({ chunk, document, chunkIndex, totalChunks, onClose, onN
   // Use refreshed chunk if available, otherwise use the passed chunk
   const displayChunk = refreshedChunk || chunk;
 
-  // Clear refreshed chunk when chunk prop changes (navigation)
-  useEffect(() => {
-    setRefreshedChunk(null);
-    setChunkValidationError(null);
-  }, [chunk?.chunkId, chunk?.id, chunkIndex]);
-
   // Chunk validation and refresh logic
   useEffect(() => {
     const validateAndRefreshChunk = async () => {
@@ -50,7 +44,7 @@ const ChunkInspector = ({ chunk, document, chunkIndex, totalChunks, onClose, onN
           // Import API utilities
           const { apiEndpoints } = await import('../../utils/api');
           
-          // Try to get the chunk by index with enhanced fallback logic
+          // Try to get the chunk by index
           const encodedUrl = btoa(document.url);
           const response = await apiEndpoints.getChunkByIndex(encodedUrl, safeChunkIndex - 1);
           
@@ -63,10 +57,7 @@ const ChunkInspector = ({ chunk, document, chunkIndex, totalChunks, onClose, onN
           }
         } catch (error) {
           console.error('❌ Failed to refresh chunk:', error);
-          // Don't show error for expected navigation scenarios
-          if (!error.message.includes('not found. Available range')) {
-            setChunkValidationError(`Failed to load chunk content: ${error.message}`);
-          }
+          setChunkValidationError(`Failed to load chunk content: ${error.message}`);
         } finally {
           setIsValidatingChunk(false);
         }

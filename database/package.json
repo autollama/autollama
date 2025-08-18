@@ -1,9 +1,10 @@
 {
-  "name": "autollama-database",
-  "version": "2.3.4",
-  "description": "Database tools and schema for AutoLlama",
-  "main": "index.js",
+  "name": "autollama-migration",
+  "version": "1.0.0",
+  "description": "Data migration tools for AutoLlama",
+  "main": "migrate_airtable.js",
   "scripts": {
+    "migrate": "node migrate_airtable.js",
     "test-connection": "node -e \"console.log('Testing PostgreSQL connection...'); const { Client } = require('pg'); const client = new Client({ host: 'localhost', port: 5432, database: 'autollama', user: 'autollama_user', password: 'autollama_secure_password_2024' }); client.connect().then(() => { console.log('✅ PostgreSQL connection successful'); client.end(); }).catch(err => { console.error('❌ PostgreSQL connection failed:', err.message); process.exit(1); });\""
   },
   "dependencies": {

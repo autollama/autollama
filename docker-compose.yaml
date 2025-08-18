@@ -1,5 +1,5 @@
-# AutoLlama v2.3.4 - Hybrid Cloud/Local Deployment
-# Supports both cloud services and local fallbacks for flexible deployment
+# AutoLlama v2.3.1 - Production Deployment
+# For production environments with external database and advanced configuration
 
 services:
   # React Frontend
@@ -137,44 +137,8 @@ services:
     networks:
       - autollama-network
 
-  # Local Qdrant Vector Database (Fallback for air-gapped/local mode)
-  qdrant:
-    image: qdrant/qdrant:latest
-    ports:
-      - "6333:6333"
-      - "6334:6334"
-    volumes:
-      - qdrant-data:/qdrant/storage
-    environment:
-      - QDRANT__SERVICE__HTTP_PORT=6333
-      - QDRANT__SERVICE__GRPC_PORT=6334
-    networks:
-      - autollama-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-          cpus: '0.5'
-        reservations:
-          memory: 512M
-          cpus: '0.25'
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "3"
-
 volumes:
   autollama-bm25-data:
-    driver: local
-  qdrant-data:
     driver: local
 
 networks:

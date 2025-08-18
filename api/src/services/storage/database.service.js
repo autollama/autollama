@@ -132,10 +132,6 @@ class DatabaseService {
     const startTime = Date.now();
 
     try {
-      // Get current vector database mode and vendor for data isolation
-      const { vectorDbFactory } = require('../vector-db/vector-db-factory');
-      const currentConfig = vectorDbFactory.getCurrentConfig();
-      
       const {
         url,
         title,
@@ -149,11 +145,9 @@ class DatabaseService {
         INSERT INTO processed_content (
           url, title, summary, chunk_text, chunk_id, chunk_index,
           upload_source, record_type, created_time, processed_date, updated_at,
-          processing_status, embedding_status,
-          vector_db_mode, vector_db_vendor, vector_db_config
+          processing_status, embedding_status
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW(), NOW(), $9, $10,
-          $11, $12, $13
+          $1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW(), NOW(), $9, $10
         ) RETURNING *
       `;
 
@@ -167,11 +161,7 @@ class DatabaseService {
         upload_source,
         RECORD_TYPES.DOCUMENT,
         PROCESSING_STATUS.COMPLETED,
-        EMBEDDING_STATUS.SKIPPED, // Documents don't get embedded directly
-        // Vector database isolation fields
-        currentConfig.mode,
-        currentConfig.vendor,
-        JSON.stringify(currentConfig.config || {})
+        EMBEDDING_STATUS.SKIPPED // Documents don't get embedded directly
       ];
 
       const result = await this.pool.query(query, values);
@@ -214,10 +204,6 @@ class DatabaseService {
     const startTime = Date.now();
 
     try {
-      // Get current vector database mode and vendor for data isolation
-      const { vectorDbFactory } = require('../vector-db/vector-db-factory');
-      const currentConfig = vectorDbFactory.getCurrentConfig();
-      
       const query = `
         INSERT INTO processed_content (
           url, title, summary, chunk_text, chunk_id, chunk_index,
@@ -230,12 +216,11 @@ class DatabaseService {
           semantic_boundary_type, structural_context, document_position,
           section_title, section_level, context_generation_method,
           context_generation_time, context_cache_hit,
-          vector_db_mode, vector_db_vendor, vector_db_config,
           created_time, processed_date, updated_at
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
           $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28,
-          $29, $30, $31, $32, $33, $34, $35, $36, NOW(), NOW(), NOW()
+          $29, $30, $31, $32, $33, NOW(), NOW(), NOW()
         ) RETURNING *
       `;
 
@@ -273,11 +258,7 @@ class DatabaseService {
         enhancedMetadata.section_level || null,
         enhancedMetadata.context_generation_method || null,
         enhancedMetadata.context_generation_time || null,
-        enhancedMetadata.context_cache_hit || false,
-        // Vector database isolation fields
-        currentConfig.mode,
-        currentConfig.vendor,
-        JSON.stringify(currentConfig.config || {})
+        enhancedMetadata.context_cache_hit || false
       ];
 
       const result = await this.pool.query(query, values);

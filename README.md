@@ -1,10 +1,10 @@
 <div align="center">
-  <img src="assets/images/autollama-dark.png" alt="AutoLlama Logo" width="200"/>
+  <img src="assets/images/autollama-logo.png" alt="AutoLlama Logo" width="200"/>
   
   <h1>The Context-Aware RAG Framework</h1>
   <h2><em>Your Documents Have Context. Now Your RAG Does Too.</em></h2>
   
-  [![Version](https://img.shields.io/badge/version-2.3.4-blue.svg)](https://github.com/autollama/autollama/releases/latest)
+  [![Version](https://img.shields.io/badge/version-2.3.2-blue.svg)](https://github.com/autollama/autollama/releases/latest)
   [![Docker](https://img.shields.io/badge/docker-supported-blue.svg)](https://docker.com)
   [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 </div>
@@ -21,69 +21,6 @@ For too long, RAG has been about finding chunks, not understanding documents. Au
 **AutoLlama**: "Here's how machine learning evolves through this research paper, building from foundational concepts in Chapter 2 to advanced applications in Chapter 7"
 
 See the difference? That's context at work.
-
-## 🏠 Pure Local Mode - NEW in v2.3.4
-
-**Complete Air-Gapped Deployment for Enterprise Environments**
-
-AutoLlama now offers **Pure Local Mode** - a completely isolated, air-gapped deployment perfect for:
-
-- 🏢 **Enterprise & Government**: Security-sensitive environments
-- 🔒 **Air-Gapped Networks**: Zero external dependencies (except optional OpenAI API)
-- 🛡️ **Compliance-Ready**: SOC 2, GDPR, HIPAA, ISO 27001 configurations
-- ⚡ **Enterprise Hardware**: Optimized for 2x Xeon, 64GB RAM, 2x RTX 3060
-
-### 5-Minute Local Setup
-
-```bash
-# Clone and deploy complete local stack
-git clone https://github.com/autollama/autollama.git
-cd autollama
-cp .env.local.example .env.local
-mkdir -p data/{postgres-local,qdrant-local,bm25-local,redis-local}
-docker-compose -f docker-compose.local.yml up -d
-
-# Access your air-gapped AutoLlama
-open http://localhost:8080
-```
-
-**That's it!** Your completely isolated, enterprise-grade RAG system is running.
-
-📚 **[Complete Local Deployment Guide →](docs/LOCAL_DEPLOYMENT.md)**
-🏢 **[Enterprise Configuration →](docs/ENTERPRISE.md)**
-
-### ⚙️ One-Click Mode Switching Interface
-
-**Toggle between air-gapped and cloud deployments with visual mode switching:**
-
-<div align="center">
-  <img src="marketing-homepage/assets/air-gapped-local-cloud-option.png" alt="AutoLlama v2.3.4 Mode Toggle Interface" width="800"/>
-  <p><em>Settings → Connections: Toggle between 🏠 Local Mode (air-gapped) and ☁️ Cloud Mode with real-time UI adaptation</em></p>
-</div>
-
-**Key Features:**
-- **🔄 Real-Time Switching**: Instantly toggle between deployment modes
-- **🛡️ Security Indicators**: Visual air-gapped vs cloud security level display  
-- **📝 Dynamic Configuration**: UI adapts field visibility based on selected mode
-- **🔒 Production Safety**: Mode locking prevents accidental changes in production
-- **⚡ Live Validation**: Real-time connection testing and health monitoring
-
-**Watch the Interface in Action:**
-
-<div align="center">
-  <video width="800" controls>
-    <source src="marketing-homepage/assets/air-gapped-and-cloud-vector-db.mov" type="video/mp4">
-    <img src="marketing-homepage/assets/air-gapped-local-cloud-option.png" alt="Mode switching demonstration" width="800"/>
-  </video>
-  <p><em>Live demonstration of switching between air-gapped local and cloud vector database configurations</em></p>
-</div>
-
-**How It Works:**
-1. **Navigate** to Settings → Connections in your AutoLlama interface
-2. **See the mode toggle** with 🏠 Local and ☁️ Cloud indicators
-3. **Click to switch** between deployment modes with visual feedback
-4. **Watch the UI adapt** - fields change from read-only (local) to editable (cloud)
-5. **Security indicators update** to show your current data sovereignty level
 
 ## What Makes AutoLlama Revolutionary
 
@@ -107,34 +44,14 @@ Chat with your documents instantly. Built-in RAG pipeline that OpenWebUI automat
 
 ## Prerequisites
 
-AutoLlama v2.3.4 supports two deployment modes:
+Before installing AutoLlama, ensure you have the following:
 
-### 🏠 Local Mode (Air-Gapped) - Recommended for Enterprise
+### System Requirements
 
-**System Requirements:**
-- **CPU**: 4+ cores (8+ recommended for enterprise)
-- **Memory**: 16GB RAM minimum (64GB recommended for enterprise)
-- **Storage**: 100GB+ SSD (500GB+ for enterprise)
-- **Network**: Isolated/air-gapped network (optional OpenAI API access)
-
-**Perfect for:**
-- Enterprise environments
-- Government/defense deployments  
-- Compliance-sensitive organizations
-- Privacy-focused installations
-
-### ☁️ Cloud Mode - For Development & Small Teams
-
-**System Requirements:**
-- **Memory**: 4GB RAM minimum (8GB+ recommended)
-- **Storage**: 10GB+ free space
-- **Network**: Internet connection for AI APIs and cloud services
-
-**Perfect for:**
-- Development environments
-- Small teams and startups
-- Quick prototyping
-- External service integrations
+- **Operating System**: Linux (Ubuntu/Debian/CentOS/RHEL), macOS, or Windows with WSL
+- **Memory**: Minimum 4GB RAM (8GB+ recommended)
+- **Storage**: At least 10GB free space
+- **Network**: Internet connection for downloading dependencies and AI API access
 
 ### Required Software
 
@@ -230,72 +147,40 @@ chmod 600 ~/.config/tsauthkey
 sudo tailscale status
 ```
 
+### Required Accounts & API Keys
+
+Before starting, obtain the following:
+
+- **OpenAI API key** from https://platform.openai.com/api-keys
+- **Qdrant Cloud account** from https://cloud.qdrant.io (or set up local Qdrant)
+- **PostgreSQL database** (can use cloud providers or local setup)
+
 ## Quick Start
 
-Choose your deployment mode:
+**Ready to experience contextual RAG? Here's your 60-second setup:**
 
-### 🏠 Pure Local Mode (Recommended for Enterprise)
+### Installation
 
-**Complete air-gapped deployment - zero external dependencies:**
-
+1. **Clone and Enter**
 ```bash
-# 1. Clone repository
 git clone https://github.com/autollama/autollama.git
 cd autollama
-
-# 2. Set up local environment  
-cp .env.local.example .env.local
-# Edit .env.local and add your OpenAI API key (optional)
-
-# 3. Create data directories
-mkdir -p data/{postgres-local,qdrant-local,bm25-local,redis-local}
-
-# 4. Deploy complete local stack
-docker-compose -f docker-compose.local.yml up -d
-
-# 5. Access your air-gapped AutoLlama
-open http://localhost:8080
 ```
 
-**Perfect for:** Enterprise, government, compliance-sensitive environments
-
-📚 **[Complete Local Deployment Guide →](docs/LOCAL_DEPLOYMENT.md)**
-
-### ☁️ Cloud Mode (Development & Small Teams)
-
-**Traditional cloud-first deployment:**
-
-**Required API Keys:**
-- **OpenAI API key** from https://platform.openai.com/api-keys  
-- **Qdrant Cloud account** from https://cloud.qdrant.io
-- **PostgreSQL database** (cloud providers or local setup)
-
+2. **Configure Your Keys**
 ```bash
-# 1. Clone repository
-git clone https://github.com/autollama/autollama.git
-cd autollama
-
-# 2. Configure environment
 cp example.env .env
-# Edit .env with your API keys and service URLs
-
-# 3. Deploy cloud services
-docker compose up -d
-
-# 4. Access your cloud-connected AutoLlama
-open http://localhost:8080
+# Add your OpenAI API key and database credentials
 ```
 
-**Perfect for:** Development environments, small teams, and external service integrations
+3. **Launch AutoLlama**
+```bash
+docker compose up -d
+```
 
-🔗 **[API Keys Setup Guide →](/docs/cloud-setup.md)**
-
-### Verification & Testing
-
-Both deployment modes provide the same powerful interface:
-
+4. **Start Building**
 - **Web Interface**: http://localhost:8080
-- **API Documentation**: http://localhost:8080/docs  
+- **API Documentation**: http://localhost:8080/docs
 - **Health Check**: http://localhost:8080/health
 
 **That's it.** No virtual environments, no dependency hell, no hours of configuration. Just intelligent, context-aware RAG running in production-ready containers.
@@ -719,7 +604,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**🦙 AutoLlama v2.3.4**
+**🦙 AutoLlama v2.3.2**
 
 *Your Documents Have Context. Now Your RAG Does Too.*
 
