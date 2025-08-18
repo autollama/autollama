@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/images/autollama-logo.png" alt="AutoLlama Logo" width="200"/>
+  <img src="assets/images/autollama-dark.png" alt="AutoLlama Logo" width="200"/>
   
   <h1>The Context-Aware RAG Framework</h1>
   <h2><em>Your Documents Have Context. Now Your RAG Does Too.</em></h2>
