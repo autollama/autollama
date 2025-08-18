@@ -52,6 +52,39 @@ open http://localhost:8080
 📚 **[Complete Local Deployment Guide →](docs/LOCAL_DEPLOYMENT.md)**
 🏢 **[Enterprise Configuration →](docs/ENTERPRISE.md)**
 
+### ⚙️ One-Click Mode Switching Interface
+
+**Toggle between air-gapped and cloud deployments with visual mode switching:**
+
+<div align="center">
+  <img src="marketing-homepage/assets/air-gapped-local-cloud-option.png" alt="AutoLlama v2.3.4 Mode Toggle Interface" width="800"/>
+  <p><em>Settings → Connections: Toggle between 🏠 Local Mode (air-gapped) and ☁️ Cloud Mode with real-time UI adaptation</em></p>
+</div>
+
+**Key Features:**
+- **🔄 Real-Time Switching**: Instantly toggle between deployment modes
+- **🛡️ Security Indicators**: Visual air-gapped vs cloud security level display  
+- **📝 Dynamic Configuration**: UI adapts field visibility based on selected mode
+- **🔒 Production Safety**: Mode locking prevents accidental changes in production
+- **⚡ Live Validation**: Real-time connection testing and health monitoring
+
+**Watch the Interface in Action:**
+
+<div align="center">
+  <video width="800" controls>
+    <source src="marketing-homepage/assets/air-gapped-and-cloud-vector-db.mov" type="video/mp4">
+    <img src="marketing-homepage/assets/air-gapped-local-cloud-option.png" alt="Mode switching demonstration" width="800"/>
+  </video>
+  <p><em>Live demonstration of switching between air-gapped local and cloud vector database configurations</em></p>
+</div>
+
+**How It Works:**
+1. **Navigate** to Settings → Connections in your AutoLlama interface
+2. **See the mode toggle** with 🏠 Local and ☁️ Cloud indicators
+3. **Click to switch** between deployment modes with visual feedback
+4. **Watch the UI adapt** - fields change from read-only (local) to editable (cloud)
+5. **Security indicators update** to show your current data sovereignty level
+
 ## What Makes AutoLlama Revolutionary
 
 ### 🧠 **Anthropic's Contextual Retrieval**

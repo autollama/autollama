@@ -642,10 +642,10 @@
                         <h3>JavaScript-First RAG</h3>
                         <p>Finally, enterprise-grade RAG for the Node.js ecosystem. While LangChain and LlamaIndex focus on Python, AutoLlama brings cutting-edge retrieval to JavaScript developers.</p>
                     </div>
-                    <div class="feature-card" onclick="openModal('performance')">
-                        <div class="feature-icon">🚀</div>
-                        <h3>Proven Performance</h3>
-                        <p>Implements the same contextual technique that powers Claude's superior RAG capabilities. Lower computational cost than fine-tuning, better accuracy than standard embedding methods.</p>
+                    <div class="feature-card" onclick="openModal('airgapped')">
+                        <div class="feature-icon">🏠</div>
+                        <h3>Air-Gapped Enterprise</h3>
+                        <p>Complete data sovereignty with v2.3.4 Pure Local Mode. Toggle between local air-gapped deployment and cloud services with one click. Enterprise compliance ready: SOC 2, GDPR, HIPAA, ISO 27001.</p>
                     </div>
                     <div class="feature-card" onclick="openModal('opensource')">
                         <div class="feature-icon">🛡️</div>
@@ -868,6 +868,39 @@
                             <div class="screenshot-title">Intelligent Responses</div>
                             <div class="screenshot-description">
                                 Get precise answers from your documents with contextual understanding and follow-up suggestions.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="screenshot-container" data-screenshot="mode-toggle-interface" onclick="openModal('mode-toggle-preview')">
+                        <div class="screenshot-badge">v2.3.4</div>
+                        <img 
+                            src="assets/air-gapped-local-cloud-option.png" 
+                            alt="AutoLlama v2.3.4 mode toggle interface showing air-gapped local and cloud deployment options with security indicators"
+                            class="screenshot-img lazy-img"
+                            loading="lazy"
+                        >
+                        <div class="screenshot-overlay">
+                            <div class="screenshot-title">One-Click Mode Toggle</div>
+                            <div class="screenshot-description">
+                                Toggle between air-gapped local and cloud deployment modes with visual security indicators and real-time validation
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="screenshot-container mode-demo-card" data-screenshot="mode-demo-video" onmouseenter="playModeVideo()" onmouseleave="pauseModeVideo()" onclick="openModal('mode-demo-video')">
+                        <div class="screenshot-badge">Live Demo</div>
+                        <div style="position: relative;">
+                            <video id="modeToggleVideo" style="width: 100%; height: auto; display: block;" muted loop preload="metadata" class="screenshot-img">
+                                <source src="assets/air-gapped-and-cloud-vector-db.mov" type="video/mp4">
+                                <img src="assets/air-gapped-local-cloud-option.png" alt="Mode switching demonstration fallback" style="width: 100%; height: auto; display: block;">
+                            </video>
+                            <div style="position: absolute; bottom: 0.75rem; right: 0.75rem; background: rgba(0,0,0,0.8); color: white; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.8rem; font-weight: 600;">▶️ Hover to Play</div>
+                        </div>
+                        <div class="screenshot-overlay">
+                            <div class="screenshot-title">Live Mode Switching Demo</div>
+                            <div class="screenshot-description">
+                                Watch the complete workflow: navigate to Settings → Connections and see real-time mode switching between air-gapped and cloud configurations
                             </div>
                         </div>
                     </div>
@@ -1753,6 +1786,255 @@ AutoLlama Benefits:
                             <a href="#screenshots" class="btn btn-secondary">See Screenshots</a>
                         </div>
                     `
+                },
+                'airgapped': {
+                    icon: '🏠',
+                    title: 'Air-Gapped Enterprise',
+                    content: `
+                        <div class="modal-section">
+                            <h3>🏢 Complete Data Sovereignty</h3>
+                            <p>AutoLlama v2.3.4 Pure Local Mode delivers what enterprises have been demanding: powerful RAG capabilities without sacrificing data control. For the first time, organizations can deploy production-grade contextual retrieval that operates entirely within their network perimeter.</p>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🔄 One-Click Mode Switching</h3>
+                            <p>Toggle between deployment modes with intelligent UI that adapts in real-time:</p>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🏠</span>
+                                    <div>
+                                        <strong>Local Mode (Air-Gapped)</strong><br>
+                                        Complete isolation: Local PostgreSQL + Qdrant + Redis. Zero external connections.
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">☁️</span>
+                                    <div>
+                                        <strong>Cloud Mode (Development)</strong><br>
+                                        External services: Qdrant Cloud integration for rapid prototyping.
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🔒</span>
+                                    <div>
+                                        <strong>Production Safety</strong><br>
+                                        Mode locking prevents accidental changes in production environments.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🏗️ Enterprise-Grade Architecture</h3>
+                            <div class="modal-code">🏠 LOCAL MODE STACK
+├─ PostgreSQL Database (local:5432)
+├─ Qdrant Vector Store (local:6333) 
+├─ Redis Cache Layer (local:6379)
+├─ React Frontend (local:8080)
+├─ Node.js API (local:3001)
+└─ ZERO EXTERNAL CONNECTIONS</div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🛡️ Compliance Frameworks</h3>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">📋</span>
+                                    <div>
+                                        <strong>SOC 2 Type II</strong><br>
+                                        Automated access control, session management, comprehensive audit trails
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🌍</span>
+                                    <div>
+                                        <strong>GDPR Compliance</strong><br>
+                                        Data minimization, right to be forgotten, consent management
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🏥</span>
+                                    <div>
+                                        <strong>HIPAA Healthcare</strong><br>
+                                        PHI protection, minimum necessary access, encryption safeguards
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🔐</span>
+                                    <div>
+                                        <strong>ISO 27001</strong><br>
+                                        Information security management, risk assessment, cryptography policy
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>⚡ 5-Minute Air-Gapped Deployment</h3>
+                            <div class="modal-code">git clone https://github.com/autollama/autollama.git
+cd autollama
+cp .env.local.example .env.local
+docker-compose -f docker-compose.local.yml up -d
+
+# Your air-gapped RAG platform is live
+open http://localhost:8080</div>
+                        </div>
+
+                        <div class="modal-cta">
+                            <a href="#screenshots" class="btn">See Interface Screenshots</a>
+                            <a href="https://github.com/snedea/autollama" class="btn btn-secondary">View Source Code</a>
+                        </div>
+                    `
+                },
+                'mode-toggle-preview': {
+                    icon: '⚙️',
+                    title: 'One-Click Mode Toggle Interface',
+                    content: `
+                        <div class="modal-section">
+                            <h3>🎯 Settings → Connections Interface</h3>
+                            <p>This is the actual interface from AutoLlama v2.3.4 that gives you complete control over your deployment mode. Toggle between air-gapped local and cloud configurations with visual indicators and real-time validation.</p>
+                            <div style="text-align: center; margin: 2rem 0;">
+                                <img src="assets/air-gapped-local-cloud-option.png" alt="Mode toggle interface showing air-gapped and cloud options" style="max-width: 100%; border-radius: 0.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                            </div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🔄 Dynamic Configuration</h3>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🏠</span>
+                                    <div>
+                                        <strong>Local Mode UI</strong><br>
+                                        Shows read-only localhost URLs with "auto-configured" badges for security
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">☁️</span>
+                                    <div>
+                                        <strong>Cloud Mode UI</strong><br>
+                                        Displays editable URL and API key fields with validation
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🛡️</span>
+                                    <div>
+                                        <strong>Security Indicators</strong><br>
+                                        Visual security level indicators and context-sensitive help
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">⚡</span>
+                                    <div>
+                                        <strong>Real-Time Status</strong><br>
+                                        Live connection status with sub-second health monitoring
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🔐 Enterprise Security Features</h3>
+                            <p>The interface includes advanced security controls for enterprise deployments:</p>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🔒</span>
+                                    <div>
+                                        <strong>Mode Locking</strong><br>
+                                        Prevent accidental mode changes in production environments
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🧪</span>
+                                    <div>
+                                        <strong>Connection Testing</strong><br>
+                                        Mode-aware validation ensures configurations work correctly
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">📊</span>
+                                    <div>
+                                        <strong>Status Monitoring</strong><br>
+                                        Real-time health checks with error recovery guidance
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-cta">
+                            <a href="#demo" class="btn">Watch Live Demo</a>
+                            <a href="#screenshots" class="btn btn-secondary">More Screenshots</a>
+                        </div>
+                    `
+                },
+                'mode-demo-video': {
+                    icon: '🎬',
+                    title: 'Live Deployment Mode Demo',
+                    content: `
+                        <div class="modal-section">
+                            <h3>🎥 Watch Mode Switching in Action</h3>
+                            <p>See the complete mode switching workflow from AutoLlama v2.3.4, showing the transition between air-gapped local deployment and cloud configuration in real-time.</p>
+                            <div style="text-align: center; margin: 2rem 0;">
+                                <video controls style="max-width: 100%; border-radius: 0.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.3);" preload="metadata">
+                                    <source src="assets/air-gapped-and-cloud-vector-db.mov" type="video/mp4">
+                                    <p style="color: #cbd5e1;">Your browser doesn't support video playback. Please update your browser or try a different one.</p>
+                                </video>
+                            </div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🔍 What You'll See</h3>
+                            <div class="modal-benefits">
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">⚙️</span>
+                                    <div>
+                                        <strong>Settings Interface</strong><br>
+                                        Navigate to Settings → Connections to access mode controls
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🔄</span>
+                                    <div>
+                                        <strong>Toggle Animation</strong><br>
+                                        Smooth transition between Local (🏠) and Cloud (☁️) modes
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">📝</span>
+                                    <div>
+                                        <strong>Dynamic Fields</strong><br>
+                                        Watch configuration fields change based on selected mode
+                                    </div>
+                                </div>
+                                <div class="modal-benefit">
+                                    <span class="modal-benefit-icon">🛡️</span>
+                                    <div>
+                                        <strong>Security Indicators</strong><br>
+                                        See air-gapped vs cloud security level indicators update
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🎯 Key Features Demonstrated</h3>
+                            <div class="modal-code">✅ One-click mode switching
+✅ Real-time UI adaptation  
+✅ Security level indicators
+✅ Context-aware help text
+✅ Dynamic field validation
+✅ Production safety controls</div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3>🚀 Ready to Try It?</h3>
+                            <p>Deploy AutoLlama v2.3.4 and experience this interface yourself. The mode toggle is available immediately after deployment in Settings → Connections.</p>
+                        </div>
+
+                        <div class="modal-cta">
+                            <a href="https://github.com/snedea/autollama" class="btn">Deploy AutoLlama</a>
+                            <a href="#features" class="btn btn-secondary">Explore More Features</a>
+                        </div>
+                    `
                 }
             };
             
@@ -1911,6 +2193,22 @@ AutoLlama Benefits:
                 });
             });
         });
+
+        // Video control functions for mode toggle demo
+        function playModeVideo() {
+            const video = document.getElementById('modeToggleVideo');
+            if (video) {
+                video.currentTime = 0; // Start from beginning
+                video.play().catch(e => console.log('Video autoplay blocked:', e));
+            }
+        }
+
+        function pauseModeVideo() {
+            const video = document.getElementById('modeToggleVideo');
+            if (video) {
+                video.pause();
+            }
+        }
     </script>
 </body>
 </html>
