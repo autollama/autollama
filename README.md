@@ -4,7 +4,7 @@
   <h1>The Context-Aware RAG Framework</h1>
   <h2><em>Your Documents Have Context. Now Your RAG Does Too.</em></h2>
   
-  [![Version](https://img.shields.io/badge/version-2.3.4-blue.svg)](https://github.com/autollama/autollama/releases/latest)
+  [![Version](https://img.shields.io/badge/version-2.3.5-blue.svg)](https://github.com/autollama/autollama/releases/latest)
   [![Docker](https://img.shields.io/badge/docker-supported-blue.svg)](https://docker.com)
   [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 </div>
@@ -22,11 +22,25 @@ For too long, RAG has been about finding chunks, not understanding documents. Au
 
 See the difference? That's context at work.
 
-## 🏠 Pure Local Mode - NEW in v2.3.4
+## 🔀 Persistent Mode Switching - NEW in v2.3.5
+
+**The Great Convergence: Where Air-Gapped Dreams Meet Cloud Aspirations**
+
+AutoLlama v2.3.5 introduces **Persistent Mode Switching** - seamlessly toggle between Local and Cloud deployments with true data isolation. No more choosing between security and convenience - now you can dance between both worlds.
+
+### ✨ The Magic of Mode Switching
+
+- 🏠 **Local Mode**: Complete air-gapped security with zero external dependencies
+- ☁️ **Cloud Mode**: Full cloud integration with external services
+- 🔄 **Instant Switching**: Toggle modes with a single click - changes persist forever
+- 📊 **True Isolation**: Dashboard counts and documents respect their chosen realm
+- 💾 **Persistent Memory**: Your mode choice survives restarts, rebuilds, and reboots
+
+## 🏠 Pure Local Mode - Enhanced in v2.3.5
 
 **Complete Air-Gapped Deployment for Enterprise Environments**
 
-AutoLlama now offers **Pure Local Mode** - a completely isolated, air-gapped deployment perfect for:
+AutoLlama's **Pure Local Mode** offers completely isolated, air-gapped deployment perfect for:
 
 - 🏢 **Enterprise & Government**: Security-sensitive environments
 - 🔒 **Air-Gapped Networks**: Zero external dependencies (except optional OpenAI API)
@@ -52,17 +66,21 @@ open http://localhost:8080
 📚 **[Complete Local Deployment Guide →](docs/LOCAL_DEPLOYMENT.md)**
 🏢 **[Enterprise Configuration →](docs/ENTERPRISE.md)**
 
-### ⚙️ One-Click Mode Switching Interface
+### ⚙️ The Magic of Persistent Mode Switching (v2.3.5)
 
-**Toggle between air-gapped and cloud deployments with visual mode switching:**
+**Where Dashboard Dreams Align with Reality**
 
 <div align="center">
-  <img src="marketing-homepage/assets/air-gapped-local-cloud-option.png" alt="AutoLlama v2.3.4 Mode Toggle Interface" width="800"/>
-  <p><em>Settings → Connections: Toggle between 🏠 Local Mode (air-gapped) and ☁️ Cloud Mode with real-time UI adaptation</em></p>
+  <img src="marketing-homepage/assets/air-gapped-local-cloud-option.png" alt="AutoLlama v2.3.5 Persistent Mode Switching" width="800"/>
+  <p><em>Settings → Connections: The toggle that remembers - switch modes with confidence knowing your choice persists</em></p>
 </div>
 
-**Key Features:**
-- **🔄 Real-Time Switching**: Instantly toggle between deployment modes
+**The Great Convergence Features:**
+- **🔄 Persistent Memory**: Mode switches survive restarts, rebuilds, and reboots
+- **📊 Dashboard Harmony**: Counts and documents now sing in perfect unison
+- **⚡ Instant Switching**: Toggle between deployment modes with immediate feedback
+- **🔒 True Isolation**: Local shows only local data, Cloud shows only cloud data
+- **💾 Container-Safe**: Environment changes persist through Docker operations
 - **🛡️ Security Indicators**: Visual air-gapped vs cloud security level display  
 - **📝 Dynamic Configuration**: UI adapts field visibility based on selected mode
 - **🔒 Production Safety**: Mode locking prevents accidental changes in production

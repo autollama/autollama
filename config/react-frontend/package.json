@@ -1,7 +1,7 @@
 {
   "name": "autollama-frontend", 
   "private": true,
-  "version": "2.3.4",
+  "version": "2.3.5",
   "description": "AutoLlama React Frontend - Production-ready web interface for intelligent document processing and RAG interactions",
   "type": "module",
   "keywords": [

@@ -1,8 +1,10 @@
-# CLAUDE.md - AutoLlama v2.3.5
+# CLAUDE.md - AutoLlama v2.3.5 "The Great Convergence"
 
-**Mode-Aware Data Isolation & Vector Database Abstraction**
+**🌟 Persistent Mode Switching with True Data Isolation**
 
-Enhanced RAG platform with complete data isolation between deployment modes, multi-vendor vector database support, and enterprise-grade security.
+*Where air-gapped dreams meet cloud aspirations, and every dashboard tells the truth*
+
+Enhanced RAG platform featuring persistent deployment mode switching, mode-aware data isolation, multi-vendor vector database support, and enterprise-grade security. The #1 requested feature - seamless mode switching with dashboard consistency - is finally here.
 
 ## Quick Start
 
@@ -16,11 +18,25 @@ cd autollama && cp .env.local.example .env.local && docker-compose -f docker-com
 cd autollama && cp example.env .env && docker compose up -d
 ```
 
+## 🔀 Persistent Mode Switching - The Heart of v2.3.5 
+
+### The Magic That Changes Everything
+**Before v2.3.5**: Choose once, stuck forever. Dashboard numbers lie. Restart wipes your choice.
+**After v2.3.5**: Switch at will. Numbers align with reality. Persistence across all operations.
+
+#### ✨ Key Breakthrough Features
+- **🔄 True Persistence**: Mode choices survive Docker restarts, rebuilds, and container recreation
+- **📊 Dashboard Harmony**: Stats and document counts finally sing in perfect unison
+- **🔒 Data Isolation**: Local mode shows ONLY local data, Cloud mode shows ONLY cloud data  
+- **⚡ Instant Switching**: Toggle modes with immediate UI feedback and persistent storage
+- **🛡️ Enterprise Ready**: Production-safe mode locking and comprehensive validation
+
 ## Architecture v2.3.5 - Mode-Aware Data Isolation ✨
 
-### Deployment Modes (Mutually Exclusive)
+### Deployment Modes (True Mutual Exclusion)
 - **🏠 Local Mode**: Complete air-gapped deployment with zero external dependencies (except optional OpenAI API)
 - **☁️ Cloud Mode**: Traditional cloud-first deployment for development and small teams
+- **🔄 Mode Switching**: Seamless transitions between modes with persistent configuration
 
 ### Local Mode Stack
 - **Frontend**: React (8080) - Air-gapped UI with mode-aware components
@@ -53,7 +69,30 @@ cd autollama && cp example.env .env && docker compose up -d
 - **LDAP/AD Integration**: Enterprise authentication and RBAC
 - **Audit Logging**: Comprehensive security and compliance tracking
 
-## Critical Commands
+## Critical Commands v2.3.5
+
+### 🔀 Mode Switching Commands (NEW!)
+```bash
+# Check current deployment mode
+curl -s "http://localhost:3001/api/config/mode"
+
+# Switch to Local Mode (air-gapped)
+curl -s -X POST "http://localhost:3001/api/config/mode" \
+  -H "Content-Type: application/json" \
+  -d '{"mode":"local"}'
+
+# Switch to Cloud Mode (connected)
+curl -s -X POST "http://localhost:3001/api/config/mode" \
+  -H "Content-Type: application/json" \
+  -d '{"mode":"cloud"}'
+
+# Verify mode switch persistence
+curl -s "http://localhost:3001/api/config/mode/status"
+
+# Test mode-aware data isolation
+curl -s "http://localhost:3001/api/documents" | head -5
+curl -s "http://localhost:3001/api/database/stats" | grep total_urls
+```
 
 ### Local Mode Commands  
 ```bash

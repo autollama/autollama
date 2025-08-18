@@ -1,6 +1,6 @@
 {
   "name": "autollama-api",
-  "version": "2.3.4",
+  "version": "2.3.5",
   "description": "AutoLlama API Server - Production-ready RAG platform with contextual embeddings and intelligent document processing",
   "main": "server.js",
   "keywords": [
