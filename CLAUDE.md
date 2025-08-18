@@ -1,8 +1,8 @@
-# CLAUDE.md - AutoLlama v2.3.4
+# CLAUDE.md - AutoLlama v2.3.5
 
-**Pure Local Mode for Enterprise/Air-Gapped Deployments**
+**Mode-Aware Data Isolation & Vector Database Abstraction**
 
-Enhanced RAG platform with complete air-gapped capabilities, mutually exclusive deployment modes, and enterprise-grade security.
+Enhanced RAG platform with complete data isolation between deployment modes, multi-vendor vector database support, and enterprise-grade security.
 
 ## Quick Start
 
@@ -16,7 +16,7 @@ cd autollama && cp .env.local.example .env.local && docker-compose -f docker-com
 cd autollama && cp example.env .env && docker compose up -d
 ```
 
-## Architecture v2.3.4 - Pure Local Mode ✨
+## Architecture v2.3.5 - Mode-Aware Data Isolation ✨
 
 ### Deployment Modes (Mutually Exclusive)
 - **🏠 Local Mode**: Complete air-gapped deployment with zero external dependencies (except optional OpenAI API)
@@ -37,7 +37,15 @@ cd autollama && cp example.env .env && docker compose up -d
 - **Enhanced Metadata**: 11 new contextual fields for performance analysis
 - **Mode-Aware Error Handling**: Smart fallbacks and guidance for each deployment mode
 
-### Enterprise Features v2.3.4
+### NEW in v2.3.5: Mode-Aware Data Isolation ✨
+- **Complete Data Isolation**: Local and cloud deployments maintain separate data universes
+- **Multi-Vendor Vector Database Support**: Future-ready abstraction layer for Qdrant, Pinecone, Weaviate, Chroma, Milvus
+- **Mode Detection Middleware**: Automatic deployment mode detection for all API endpoints
+- **Vendor-Aware APIs**: All search, document, and chunk endpoints filter by current vector database
+- **Database Migration**: Existing data properly tagged and isolated by deployment mode
+- **Enterprise Compliance**: Air-gapped local mode shows zero cloud data, ensuring complete isolation
+
+### Enterprise Features v2.3.5
 - **Air-Gapped Security**: Complete network isolation with optional OpenAI API access
 - **Compliance Ready**: SOC 2, GDPR, HIPAA, ISO 27001 configurations
 - **Enterprise Hardware Optimization**: Tuned for 2x Xeon, 64GB RAM, 2x RTX 3060

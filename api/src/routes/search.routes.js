@@ -5,6 +5,7 @@
 
 const express = require('express');
 const db = require('../../database'); // Add direct database access for fallback
+const { detectMode, wrapModeVendorAwareResponse } = require('../middleware/mode-detection.middleware');
 
 /**
  * Route definitions for search and retrieval:
@@ -30,6 +31,10 @@ const db = require('../../database'); // Add direct database access for fallback
 function createRoutes(services = {}) {
   const router = express.Router();
   
+  // Apply mode detection middleware to all routes for data isolation
+  router.use(detectMode);
+  router.use(wrapModeVendorAwareResponse);
+  
   // Service injection validation
   if (!services.searchService) {
     console.warn('⚠️ No searchService provided, using fallback implementation');
@@ -38,20 +43,20 @@ function createRoutes(services = {}) {
   // Extract services with defaults (using direct database access as fallback)
   const {
     searchService = {
-      search: async ({ query, limit = 20 }) => {
-        const results = await db.searchContent(query.trim(), limit);
+      search: async ({ query, limit = 20, vectorDbMode = 'cloud', vectorDbVendor = 'qdrant' }) => {
+        const results = await db.searchContent(query.trim(), limit, vectorDbMode, vectorDbVendor);
         return { results };
       },
-      vectorSearch: async ({ query, limit = 20 }) => {
-        const results = await db.searchContent(query.trim(), limit);
+      vectorSearch: async ({ query, limit = 20, vectorDbMode = 'cloud', vectorDbVendor = 'qdrant' }) => {
+        const results = await db.searchContent(query.trim(), limit, vectorDbMode, vectorDbVendor);
         return { results };
       },
-      hybridSearch: async ({ query, limit = 20 }) => {
-        const results = await db.searchContent(query.trim(), limit);
+      hybridSearch: async ({ query, limit = 20, vectorDbMode = 'cloud', vectorDbVendor = 'qdrant' }) => {
+        const results = await db.searchContent(query.trim(), limit, vectorDbMode, vectorDbVendor);
         return { results };
       },
-      groupedSearch: async ({ query, limit = 20 }) => {
-        const results = await db.searchContentGrouped(query.trim(), limit);
+      groupedSearch: async ({ query, limit = 20, vectorDbMode = 'cloud', vectorDbVendor = 'qdrant' }) => {
+        const results = await db.searchContentGrouped(query.trim(), limit, vectorDbMode, vectorDbVendor);
         return { groups: results };
       }
     },
@@ -112,8 +117,10 @@ function createRoutes(services = {}) {
         });
       }
       
-      // Use direct database access for tag search
-      const results = await db.searchContentByTag(tag, field, parseInt(limit));
+      // Use direct database access for tag search with mode/vendor filtering
+      const vectorDbMode = req.vectorDbMode || 'cloud';
+      const vectorDbVendor = req.vectorDbVendor || 'qdrant';
+      const results = await db.searchContentByTag(tag, field, parseInt(limit), vectorDbMode, vectorDbVendor);
       
       res.json({
         success: true,
@@ -168,19 +175,25 @@ function createRoutes(services = {}) {
           limit: parseInt(limit),
           offset: parseInt(offset),
           includeChunks: includeChunks === 'true',
-          threshold: parseFloat(threshold)
+          threshold: parseFloat(threshold),
+          vectorDbMode: req.vectorDbMode,
+          vectorDbVendor: req.vectorDbVendor
         });
       } else if (type === 'vector') {
         results = await searchService.vectorSearch({
           query,
           limit: parseInt(limit),
-          threshold: parseFloat(threshold)
+          threshold: parseFloat(threshold),
+          vectorDbMode: req.vectorDbMode,
+          vectorDbVendor: req.vectorDbVendor
         });
       } else {
         results = await searchService.search({
           query,
           limit: parseInt(limit),
-          offset: parseInt(offset)
+          offset: parseInt(offset),
+          vectorDbMode: req.vectorDbMode,
+          vectorDbVendor: req.vectorDbVendor
         });
       }
       
@@ -224,7 +237,9 @@ function createRoutes(services = {}) {
       const results = await searchService.vectorSearch({
         query,
         limit: parseInt(limit),
-        threshold: parseFloat(threshold)
+        threshold: parseFloat(threshold),
+        vectorDbMode: req.vectorDbMode,
+        vectorDbVendor: req.vectorDbVendor
       });
       
       res.json({
@@ -262,7 +277,9 @@ function createRoutes(services = {}) {
       
       const results = await searchService.groupedSearch({
         query,
-        limit: parseInt(limit)
+        limit: parseInt(limit),
+        vectorDbMode: req.vectorDbMode,
+        vectorDbVendor: req.vectorDbVendor
       });
       
       res.json({
@@ -421,21 +438,27 @@ function createRoutes(services = {}) {
     }
   });
 
-  // List all documents - FIXED VERSION
+  // List all documents - MODE & VENDOR AWARE VERSION
   router.get('/documents', async (req, res) => {
     try {
       const { limit = 50, offset = 0 } = req.query;
-      console.log(`📋 Documents endpoint: limit=${limit}, offset=${offset}`);
       
-      // FIXED: Get latest document per URL with chunk count, ordered by newest first
+      // Get current vector database mode and vendor for filtering
+      const vectorDbMode = req.vectorDbMode || 'cloud';
+      const vectorDbVendor = req.vectorDbVendor || 'qdrant';
+      
+      console.log(`📋 Documents endpoint: limit=${limit}, offset=${offset}, mode=${vectorDbMode}, vendor=${vectorDbVendor}`);
+      
+      // MODE & VENDOR AWARE: Get latest document per URL with chunk count, filtered by mode and vendor
       const query = `
         WITH latest_per_url AS (
           SELECT 
             url, title, summary, created_time, updated_at,
-            embedding_status, content_type, sentiment,
+            embedding_status, content_type, sentiment, vector_db_mode, vector_db_vendor,
             ROW_NUMBER() OVER (PARTITION BY url ORDER BY created_time DESC) as rn
           FROM processed_content 
-          WHERE url IS NOT NULL AND title IS NOT NULL
+          WHERE url IS NOT NULL AND title IS NOT NULL 
+            AND vector_db_mode = $3 AND vector_db_vendor = $4
         ),
         chunk_counts AS (
           SELECT 
@@ -443,11 +466,13 @@ function createRoutes(services = {}) {
             COUNT(*) FILTER (WHERE record_type = 'chunk') as chunk_count
           FROM processed_content 
           WHERE url IS NOT NULL 
+            AND vector_db_mode = $3 AND vector_db_vendor = $4
           GROUP BY url
         )
         SELECT 
           l.url, l.title, l.summary, l.created_time, l.updated_at,
           l.embedding_status, l.content_type, l.sentiment,
+          l.vector_db_mode, l.vector_db_vendor,
           COALESCE(c.chunk_count, 0) as chunk_count
         FROM latest_per_url l
         LEFT JOIN chunk_counts c ON l.url = c.url
@@ -460,17 +485,18 @@ function createRoutes(services = {}) {
         SELECT COUNT(DISTINCT url) as total 
         FROM processed_content 
         WHERE url IS NOT NULL AND title IS NOT NULL
+          AND vector_db_mode = $1 AND vector_db_vendor = $2
       `;
       
       const [documentsResult, countResult] = await Promise.all([
-        db.pool.query(query, [parseInt(limit), parseInt(offset)]),
-        db.pool.query(countQuery)
+        db.pool.query(query, [parseInt(limit), parseInt(offset), vectorDbMode, vectorDbVendor]),
+        db.pool.query(countQuery, [vectorDbMode, vectorDbVendor])
       ]);
       
       const documents = documentsResult.rows || [];
       const total = countResult.rows[0]?.total || 0;
       
-      console.log(`📋 Documents: Returning ${documents.length} of ${total} total documents`);
+      console.log(`📋 Documents: Returning ${documents.length} of ${total} total documents for ${vectorDbMode}/${vectorDbVendor}`);
       
       res.json({
         success: true,
@@ -479,6 +505,15 @@ function createRoutes(services = {}) {
           limit: parseInt(limit),
           offset: parseInt(offset),
           total: parseInt(total)
+        },
+        // Include mode and vendor information for data isolation awareness
+        vectorDbMode: vectorDbMode,
+        vectorDbVendor: vectorDbVendor,
+        dataIsolation: {
+          mode: vectorDbMode,
+          vendor: vectorDbVendor,
+          description: `Data filtered for ${vectorDbMode} ${vectorDbVendor} vector database`,
+          isolated: vectorDbMode === 'local'
         }
       });
       
@@ -493,13 +528,17 @@ function createRoutes(services = {}) {
   });
 
 
-  // Get document chunks - ENABLED as fallback since server.js route registration fails
+  // Get document chunks - MODE & VENDOR AWARE VERSION
   router.get('/document-chunks', async (req, res) => {
-    console.log('🟡 MODULAR route handling /api/document-chunks (fallback)');
+    console.log('🟡 MODULAR route handling /api/document-chunks (mode & vendor aware)');
     try {
       const url = req.query.url;
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 100;
+      
+      // Get current vector database mode and vendor for filtering
+      const vectorDbMode = req.vectorDbMode || 'cloud';
+      const vectorDbVendor = req.vectorDbVendor || 'qdrant';
       
       if (!url) {
         return res.status(400).json({
@@ -508,18 +547,29 @@ function createRoutes(services = {}) {
         });
       }
       
-      // Use direct database import since storageService adapter is unreliable
+      console.log(`🟡 Getting chunks for mode=${vectorDbMode}, vendor=${vectorDbVendor}, url=${url}`);
+      
+      // Use direct database import with mode/vendor filtering
       const database = require('../../database');
-      console.log('🟡 Using direct database import for getDocumentChunks');
       
-      const result = await database.getDocumentChunks(url, page, limit);
+      // Get chunks filtered by mode and vendor
+      const result = await database.getDocumentChunksWithModeFilter(url, page, limit, vectorDbMode, vectorDbVendor);
       
-      console.log('🟡 Modular route successfully got chunks:', result.chunks.length);
+      console.log(`🟡 Modular route successfully got ${result.chunks.length} chunks for ${vectorDbMode}/${vectorDbVendor}`);
       
       res.json({
         success: true,
         chunks: result.chunks,
-        pagination: result.pagination
+        pagination: result.pagination,
+        // Include mode and vendor information for data isolation awareness
+        vectorDbMode: vectorDbMode,
+        vectorDbVendor: vectorDbVendor,
+        dataIsolation: {
+          mode: vectorDbMode,
+          vendor: vectorDbVendor,
+          description: `Chunks filtered for ${vectorDbMode} ${vectorDbVendor} vector database`,
+          isolated: vectorDbMode === 'local'
+        }
       });
       
     } catch (error) {
