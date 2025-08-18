@@ -56,6 +56,12 @@ services:
       # CORS Configuration
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:8080}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
+      # v2.3.5 Mode Switching Support
+      - VECTOR_DB_MODE=${VECTOR_DB_MODE:-local}
+      - VECTOR_DB_MODE_LOCKED=${VECTOR_DB_MODE_LOCKED:-false}
+    volumes:
+      # Mount .env file for persistent mode switching
+      - ./.env:/app/.env
     restart: unless-stopped
     depends_on:
       autollama-on-hstgr:

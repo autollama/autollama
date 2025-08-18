@@ -894,32 +894,38 @@ async function searchContentByTag(tag, tagField = 'tags', limit = 50, vectorDbMo
 }
 
 /**
- * Get database statistics
+ * Get database statistics (mode-aware for v2.3.5)
  */
 async function getDatabaseStats() {
     try {
-        // Get comprehensive database statistics including database size
+        // Get current deployment mode from configuration
+        const { getCurrentMode } = require('./src/config/database.config');
+        const currentMode = getCurrentMode();
+        
+        console.log(`📊 Getting database stats for mode: ${currentMode}`);
+        
+        // Get comprehensive database statistics including database size, filtered by current mode
         const [docStats, chunkStats, contextualStats, embeddedStats, sessionStats, recentStats, dbSizeStats] = await Promise.all([
-            // Count unique documents (URLs) regardless of record_type
-            pool.query(`SELECT COUNT(DISTINCT url) as document_count FROM processed_content`),
-            // Count total chunks
-            pool.query(`SELECT COUNT(*) as chunk_count FROM processed_content`),
-            // Count contextual embeddings (chunks with contextual_summary)
-            pool.query(`SELECT COUNT(*) as contextual_count FROM processed_content WHERE contextual_summary IS NOT NULL AND contextual_summary != ''`),
-            // Count embedded chunks (with embedding_status = 'complete')
-            pool.query(`SELECT COUNT(*) as embedded_count FROM processed_content WHERE embedding_status = 'complete'`),
-            // Count active sessions
+            // Count unique documents (URLs) for current mode only
+            pool.query(`SELECT COUNT(DISTINCT url) as document_count FROM processed_content WHERE vector_db_mode = $1`, [currentMode]),
+            // Count total chunks for current mode only
+            pool.query(`SELECT COUNT(*) as chunk_count FROM processed_content WHERE vector_db_mode = $1`, [currentMode]),
+            // Count contextual embeddings (chunks with contextual_summary) for current mode only
+            pool.query(`SELECT COUNT(*) as contextual_count FROM processed_content WHERE vector_db_mode = $1 AND contextual_summary IS NOT NULL AND contextual_summary != ''`, [currentMode]),
+            // Count embedded chunks (with embedding_status = 'complete') for current mode only
+            pool.query(`SELECT COUNT(*) as embedded_count FROM processed_content WHERE vector_db_mode = $1 AND embedding_status = 'complete'`, [currentMode]),
+            // Count active sessions (not mode-specific)
             pool.query(`SELECT COUNT(*) as active_sessions FROM upload_sessions WHERE status = 'processing'`),
-            // Count recent documents (last 7 days)
-            pool.query(`SELECT COUNT(DISTINCT url) as recent_count FROM processed_content WHERE created_time >= NOW() - INTERVAL '7 days'`),
-            // Get PostgreSQL database size
+            // Count recent documents (last 7 days) for current mode only
+            pool.query(`SELECT COUNT(DISTINCT url) as recent_count FROM processed_content WHERE vector_db_mode = $1 AND created_time >= NOW() - INTERVAL '7 days'`, [currentMode]),
+            // Get PostgreSQL database size (not mode-specific)
             pool.query(`SELECT 
                 pg_database_size(current_database()) as size_bytes,
                 pg_size_pretty(pg_database_size(current_database())) as size_pretty
             `)
         ]);
         
-        return {
+        const stats = {
             total_urls: parseInt(docStats.rows[0].document_count) || 0,
             total_chunks: parseInt(chunkStats.rows[0].chunk_count) || 0,
             embedded_count: parseInt(embeddedStats.rows[0].embedded_count) || 0,
@@ -929,10 +935,20 @@ async function getDatabaseStats() {
             active_sessions: parseInt(sessionStats.rows[0].active_sessions) || 0,
             // PostgreSQL database size metrics
             postgres_size_bytes: parseInt(dbSizeStats.rows[0].size_bytes) || 0,
-            postgres_size_pretty: dbSizeStats.rows[0].size_pretty || 'Unknown'
+            postgres_size_pretty: dbSizeStats.rows[0].size_pretty || 'Unknown',
+            // v2.3.5 Mode information for transparency
+            vector_db_mode: currentMode,
+            mode_filtered: true,
+            mode_description: currentMode === 'local' ? 'Local air-gapped deployment' : 'Cloud-connected deployment'
         };
+        
+        console.log(`📊 Database stats for ${currentMode} mode: ${stats.total_urls} docs, ${stats.total_chunks} chunks`);
+        return stats;
     } catch (error) {
         console.error('❌ Error getting database stats:', error.message);
+        const { getCurrentMode } = require('./src/config/database.config');
+        const currentMode = getCurrentMode();
+        
         return {
             total_urls: 0,
             total_chunks: 0,
@@ -942,7 +958,12 @@ async function getDatabaseStats() {
             latest_content: null,
             active_sessions: 0,
             postgres_size_bytes: 0,
-            postgres_size_pretty: 'Unknown'
+            postgres_size_pretty: 'Unknown',
+            // v2.3.5 Mode information even in error state
+            vector_db_mode: currentMode,
+            mode_filtered: true,
+            mode_description: currentMode === 'local' ? 'Local air-gapped deployment' : 'Cloud-connected deployment',
+            error: error.message
         };
     }
 }

@@ -391,6 +391,7 @@ router.post('/config/mode', async (req, res) => {
     }
     
     const { isModeChangeable, getModeInfo } = require('../config/database.config');
+    const envManager = require('../utils/env-manager');
     
     if (!isModeChangeable()) {
       return res.status(403).json({
@@ -399,21 +400,58 @@ router.post('/config/mode', async (req, res) => {
         timestamp: new Date().toISOString()
       });
     }
+
+    const currentMode = getModeInfo().mode;
+    if (currentMode === mode) {
+      return res.json({
+        success: true,
+        message: `Already in ${mode} mode`,
+        currentMode: getModeInfo(),
+        changed: false,
+        timestamp: new Date().toISOString()
+      });
+    }
     
-    // For now, mode switching requires restart - return guidance
-    res.json({
-      success: true,
-      message: 'Mode switch initiated. Restart required to apply changes.',
-      currentMode: getModeInfo(),
-      requestedMode: mode,
-      restartRequired: true,
-      instructions: [
-        `Set VECTOR_DB_MODE=${mode} in your environment`,
-        'Restart the application to apply the new mode',
-        'Verify the mode change in Settings → Connections'
-      ],
-      timestamp: new Date().toISOString()
-    });
+    // Actually update the environment file
+    try {
+      await envManager.updateVectorDbMode(mode);
+      
+      // Verify the change was applied
+      const updatedModeInfo = getModeInfo();
+      
+      res.json({
+        success: true,
+        message: `Mode successfully switched to ${mode}`,
+        previousMode: currentMode,
+        currentMode: updatedModeInfo,
+        changed: true,
+        persistent: true,
+        instructions: [
+          `Mode switched from ${currentMode} to ${mode}`,
+          'Change has been saved to environment file',
+          'New mode is active immediately',
+          'Refresh the page to see updated data isolation'
+        ],
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (envError) {
+      console.error('❌ Failed to update environment file:', envError.message);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to persist mode change',
+        message: envError.message,
+        fallback: {
+          instructions: [
+            `Manually set VECTOR_DB_MODE=${mode} in your .env file`,
+            'Restart the application to apply the new mode',
+            'Verify the mode change in Settings → Connections'
+          ]
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+    
   } catch (error) {
     console.error('❌ Failed to switch mode:', error.message);
     res.status(500).json({

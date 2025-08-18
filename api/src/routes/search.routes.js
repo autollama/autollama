@@ -763,9 +763,39 @@ function createRoutes(services = {}) {
   // Database statistics (PostgreSQL + Qdrant)
   router.get('/database/stats', async (req, res) => {
     try {
-      const db = require('../../database');
-      const [pgStats, qdrantStats] = await Promise.all([
-        db.getDatabaseStats(),
+      const { getCurrentMode } = require('../config/database.config');
+      const { Pool } = require('pg');
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      
+      // Get current deployment mode for filtering
+      const currentMode = getCurrentMode();
+      console.log(`📊 Getting database stats for mode: ${currentMode}`);
+      
+      // Get mode-aware PostgreSQL stats directly instead of using db.getDatabaseStats()
+      const [docStats, chunkStats, contextualStats, embeddedStats, recentStats, dbSizeStats] = await Promise.all([
+        pool.query(`SELECT COUNT(DISTINCT url) as document_count FROM processed_content WHERE vector_db_mode = $1`, [currentMode]),
+        pool.query(`SELECT COUNT(*) as chunk_count FROM processed_content WHERE vector_db_mode = $1`, [currentMode]),
+        pool.query(`SELECT COUNT(*) as contextual_count FROM processed_content WHERE vector_db_mode = $1 AND contextual_summary IS NOT NULL AND contextual_summary != ''`, [currentMode]),
+        pool.query(`SELECT COUNT(*) as embedded_count FROM processed_content WHERE vector_db_mode = $1 AND embedding_status = 'complete'`, [currentMode]),
+        pool.query(`SELECT COUNT(DISTINCT url) as recent_count FROM processed_content WHERE vector_db_mode = $1 AND created_time >= NOW() - INTERVAL '7 days'`, [currentMode]),
+        pool.query(`SELECT pg_database_size(current_database()) as size_bytes, pg_size_pretty(pg_database_size(current_database())) as size_pretty`)
+      ]);
+      
+      const pgStats = {
+        total_urls: parseInt(docStats.rows[0].document_count) || 0,
+        total_chunks: parseInt(chunkStats.rows[0].chunk_count) || 0,
+        embedded_count: parseInt(embeddedStats.rows[0].embedded_count) || 0,
+        contextual_count: parseInt(contextualStats.rows[0].contextual_count) || 0,
+        recent_count: parseInt(recentStats.rows[0].recent_count) || 0,
+        latest_content: new Date().toISOString(),
+        active_sessions: 0,
+        postgres_size_bytes: parseInt(dbSizeStats.rows[0].size_bytes) || 0,
+        postgres_size_pretty: dbSizeStats.rows[0].size_pretty || 'Unknown',
+        vector_db_mode: currentMode,
+        mode_filtered: true
+      };
+      
+      const [qdrantStats] = await Promise.all([
         // Get Qdrant statistics with fallback for errors
         vectorService.getCollectionStats ? 
           vectorService.getCollectionStats().catch(error => ({
@@ -786,6 +816,8 @@ function createRoutes(services = {}) {
         ...pgStats,
         qdrant: qdrantStats
       };
+      
+      console.log(`📊 Database stats delivered for ${currentMode} mode: ${pgStats.total_urls} documents, ${pgStats.total_chunks} chunks`);
       
       res.json({
         success: true,

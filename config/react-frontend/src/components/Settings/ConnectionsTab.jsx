@@ -80,7 +80,7 @@ const ConnectionsTab = ({ onSettingsChange }) => {
     setShowKeys(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
-  // Mode switching handler
+  // Mode switching handler with persistent state management
   const handleModeSwitch = async (newMode) => {
     if (newMode === currentMode) return;
     
@@ -89,16 +89,34 @@ const ConnectionsTab = ({ onSettingsChange }) => {
       const result = await settingsManager.switchMode(newMode);
       
       if (result.success) {
-        // Show instructions for restart
-        alert(`Mode switch initiated!\n\n${result.instructions.join('\n')}`);
-        // Update UI to reflect new mode
-        setCurrentMode(newMode);
+        if (result.changed) {
+          // Mode was actually changed and persisted
+          setCurrentMode(newMode);
+          setModeInfo(prev => ({
+            ...prev,
+            mode: newMode
+          }));
+          
+          // Show success message with clear next steps
+          alert(`✅ Mode Switch Successful!\n\n${result.instructions.join('\n')}\n\nThe page will refresh to show the new data isolation.`);
+          
+          // Reload the page to refresh data with new mode
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+          
+        } else {
+          // Already in the requested mode
+          alert(`ℹ️ ${result.message}`);
+        }
       } else {
-        alert(`Failed to switch mode: ${result.error}`);
+        // Mode switch failed
+        console.error('Mode switch failed:', result);
+        alert(`❌ Failed to switch mode: ${result.error}\n\n${result.fallback ? result.fallback.instructions.join('\n') : ''}`);
       }
     } catch (error) {
       console.error('Failed to switch mode:', error);
-      alert('Failed to switch deployment mode');
+      alert(`❌ Error switching mode: ${error.message}\n\nPlease try again or check the console for details.`);
     } finally {
       setModeSwitching(false);
     }
