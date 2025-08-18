@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Database, Monitor, Palette, Zap, Bug, Clock, Eye, Trash2, RefreshCw, Upload, X, CheckCircle } from 'lucide-react';
+import { Database, Monitor, Palette, Zap, Bug, Clock, Eye, Trash2, RefreshCw, Upload, X, CheckCircle, Home, Cloud } from 'lucide-react';
 import { useAppContext } from '../../App';
 
 const SystemTab = ({ onSettingsChange }) => {
@@ -8,6 +8,10 @@ const SystemTab = ({ onSettingsChange }) => {
   const [uiData, setUiData] = useState(settings.ui);
   const [systemInfo, setSystemInfo] = useState(null);
   const [clearingCache, setClearingCache] = useState(false);
+  
+  // Deployment mode state
+  const [deploymentMode, setDeploymentMode] = useState(null);
+  const [modeSwitching, setModeSwitching] = useState(false);
   
   // Favicon upload state
   const [faviconUploading, setFaviconUploading] = useState(false);
@@ -19,6 +23,7 @@ const SystemTab = ({ onSettingsChange }) => {
     setFormData(settings.system);
     setUiData(settings.ui);
     loadSystemInfo();
+    loadDeploymentMode();
   }, [settings.system, settings.ui]);
 
   // Load system information
@@ -41,6 +46,58 @@ const SystemTab = ({ onSettingsChange }) => {
       });
     } catch (error) {
       console.error('Failed to load system info:', error);
+    }
+  };
+
+  // Load deployment mode information
+  const loadDeploymentMode = async () => {
+    try {
+      const response = await fetch('/api/config/mode');
+      const data = await response.json();
+      if (data.success) {
+        setDeploymentMode(data.mode);
+      }
+    } catch (error) {
+      console.error('Failed to load deployment mode:', error);
+      // Fallback
+      setDeploymentMode({
+        mode: 'local',
+        description: 'Air-gapped local deployment',
+        locked: false,
+        changeable: true
+      });
+    }
+  };
+
+  // Switch deployment mode
+  const switchDeploymentMode = async (newMode) => {
+    if (modeSwitching || !deploymentMode?.changeable) return;
+    
+    setModeSwitching(true);
+    try {
+      const response = await fetch('/api/config/mode', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ mode: newMode }),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setDeploymentMode(data.currentMode);
+        // Reload page to reflect new mode
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        alert('Failed to switch mode: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Failed to switch mode:', error);
+      alert('Failed to switch mode. Please try again.');
+    } finally {
+      setModeSwitching(false);
     }
   };
 
@@ -251,13 +308,105 @@ const SystemTab = ({ onSettingsChange }) => {
           description={systemInfo ? `of ${systemInfo.memory.total}MB` : 'Memory usage'}
         />
         <SystemCard
-          title="Debug Mode"
-          value={formData.debugLogging ? 'ON' : 'OFF'}
-          icon={Bug}
-          description="Development logging"
-          status={formData.debugLogging}
+          title="Deployment Mode"
+          value={deploymentMode?.mode === 'local' ? '🏠 LOCAL' : '☁️ CLOUD'}
+          icon={deploymentMode?.mode === 'local' ? Home : Cloud}
+          description={deploymentMode?.description || 'Air-gapped local deployment'}
+          status={deploymentMode?.mode === 'local'}
         />
       </div>
+
+      {/* Deployment Mode Configuration */}
+      {deploymentMode && (
+        <div className="card">
+          <h4 className="text-lg font-bold mb-6 flex items-center gap-2">
+            {deploymentMode.mode === 'local' ? (
+              <Home className="w-5 h-5 text-green-400" />
+            ) : (
+              <Cloud className="w-5 h-5 text-blue-400" />
+            )}
+            Deployment Configuration
+          </h4>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-gray-800 bg-opacity-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className={`w-3 h-3 rounded-full ${
+                  deploymentMode.mode === 'local' ? 'bg-green-400' : 'bg-blue-400'
+                }`}></div>
+                <div>
+                  <span className="font-medium">
+                    {deploymentMode.mode === 'local' ? '🏠 Local Mode' : '☁️ Cloud Mode'}
+                  </span>
+                  {deploymentMode.locked && (
+                    <span className="ml-2 px-2 py-1 bg-orange-600 text-orange-100 text-xs rounded">
+                      🔒 LOCKED
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <div className="text-sm text-gray-400">
+                    {deploymentMode.description}
+                  </div>
+                  {deploymentMode.mode === 'local' && (
+                    <div className="text-xs text-green-400 mt-1">
+                      ✓ Air-gapped security enabled
+                    </div>
+                  )}
+                </div>
+                {deploymentMode.changeable && !deploymentMode.locked && (
+                  <button
+                    onClick={() => switchDeploymentMode(deploymentMode.mode === 'local' ? 'cloud' : 'local')}
+                    disabled={modeSwitching}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      modeSwitching 
+                        ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                        : deploymentMode.mode === 'local'
+                          ? 'bg-blue-600 hover:bg-blue-700 text-blue-100'
+                          : 'bg-green-600 hover:bg-green-700 text-green-100'
+                    }`}
+                  >
+                    {modeSwitching ? (
+                      <div className="flex items-center gap-2">
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Switching...
+                      </div>
+                    ) : (
+                      <>Switch to {deploymentMode.mode === 'local' ? '☁️ Cloud' : '🏠 Local'}</>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            {deploymentMode.mode === 'local' && (
+              <div className="text-sm text-gray-400 bg-gray-800 bg-opacity-30 p-3 rounded-lg">
+                <div className="font-medium text-gray-300 mb-2">Local Mode Benefits:</div>
+                <ul className="space-y-1 text-xs">
+                  <li>• Complete data isolation and privacy</li>
+                  <li>• No external dependencies (except OpenAI API)</li>
+                  <li>• Compliance-ready for enterprise environments</li>
+                  <li>• Full control over data processing and storage</li>
+                </ul>
+              </div>
+            )}
+            
+            {deploymentMode.mode === 'cloud' && (
+              <div className="text-sm text-gray-400 bg-gray-800 bg-opacity-30 p-3 rounded-lg">
+                <div className="font-medium text-gray-300 mb-2">Cloud Mode Benefits:</div>
+                <ul className="space-y-1 text-xs">
+                  <li>• Access to cloud-based vector databases</li>
+                  <li>• Scalable processing infrastructure</li>
+                  <li>• Enhanced collaboration features</li>
+                  <li>• Multi-user document sharing</li>
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* UI Preferences */}
       <div className="card">
