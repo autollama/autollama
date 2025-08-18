@@ -280,7 +280,7 @@ const DocumentGrid = () => {
 
           return (
             <div
-              key={doc.id || index}
+              key={`${doc.url}-${doc.created_time}`}
               onClick={() => handleDocumentSelect(doc)}
               className={`
                 document-block relative overflow-hidden rounded-lg border-2 cursor-pointer p-3
