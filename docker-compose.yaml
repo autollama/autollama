@@ -42,6 +42,8 @@ services:
   autollama-api:
     build: ./api
     network_mode: service:autollama-on-hstgr
+    volumes:
+      - ./.env:/app/.env
     environment:
       - NODE_ENV=production
       - PORT=3001
