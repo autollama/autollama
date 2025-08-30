@@ -1,151 +1,91 @@
-# AutoLlama v2.3.1 - Production Deployment
-# For production environments with external database and advanced configuration
+version: '3.8'
 
 services:
-  # React Frontend
-  autollama:
-    build: 
-      context: ./config/react-frontend
-      dockerfile: Dockerfile
-    network_mode: service:autollama-on-hstgr
+  postgres:
+    image: postgres:15-alpine
+    container_name: autollama-postgres
     environment:
-      - NODE_ENV=production
-    depends_on:
-      autollama-api:
-        condition: service_healthy
-      autollama-bm25:
-        condition: service_healthy
-      autollama-on-hstgr:
-        condition: service_started
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:80/"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: '0.5'
-        reservations:
-          memory: 256M
-          cpus: '0.25'
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "3"
-
-  # API Server
-  autollama-api:
-    build: ./api
-    network_mode: service:autollama-on-hstgr
+      POSTGRES_USER: autollama
+      POSTGRES_PASSWORD: autollama
+      POSTGRES_DB: autollama
     volumes:
-      - ./.env:/app/.env
-    environment:
-      - NODE_ENV=production
-      - PORT=3001
-      - WS_PORT=3003
-      - NODE_TLS_REJECT_UNAUTHORIZED=0
-      - DATABASE_URL=postgresql://autollama:password@172.23.0.3:5432/autollama
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - QDRANT_URL=${QDRANT_URL}
-      - QDRANT_API_KEY=${QDRANT_API_KEY}
-      - ENABLE_CONTEXTUAL_EMBEDDINGS=${ENABLE_CONTEXTUAL_EMBEDDINGS:-true}
-      - CONTEXTUAL_EMBEDDING_MODEL=${CONTEXTUAL_EMBEDDING_MODEL:-gpt-4o-mini}
-      # CORS Configuration
-      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:8080}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
-    restart: unless-stopped
-    depends_on:
-      autollama-on-hstgr:
-        condition: service_started
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: '1.0'
-        reservations:
-          memory: 1G
-          cpus: '0.5'
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "3"
-
-  # BM25 Search Service
-  autollama-bm25:
-    build: ./bm25-service
-    network_mode: service:autollama-on-hstgr
-    environment:
-      - PORT=3002
-      - PYTHONPATH=/app
-    volumes:
-      - autollama-bm25-data:/app/data/bm25_indices
-    restart: unless-stopped
-    depends_on:
-      autollama-on-hstgr:
-        condition: service_started
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-          cpus: '0.5'
-        reservations:
-          memory: 512M
-          cpus: '0.25'
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3002/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "3"
-
-  # Tailscale VPN Sidecar
-  autollama-on-hstgr:
-    image: tailscale/tailscale:latest
-    hostname: autollama-on-hstgr-4
-    environment:
-      - TS_EXTRA_ARGS=--auth-key file:/home/chuck/.config/tsauthkey --hostname autollama-on-hstgr-4 --accept-routes
-      - TS_STATE_DIR=/var/lib/tailscale
-      - TS_USERSPACE=false
-      - TS_ACCEPT_DNS=true
-    volumes:
-      - ./tailscale-state:/var/lib/tailscale
-      - /home/chuck/.config/tsauthkey:/home/chuck/.config/tsauthkey:ro
+      - postgres_data:/var/lib/postgresql/data
     ports:
-      - "8080:80"
-      - "3001:3001"
-      - "3003:3003"
-    devices:
-      - /dev/net/tun:/dev/net/tun
-    cap_add:
-      - net_admin
-    restart: unless-stopped
+      - "5432:5432"
     networks:
       - autollama-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autollama"]
+      interval: 10s
+      retries: 5
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: autollama-qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - autollama-network
+    restart: unless-stopped
+
+  autollama-bm25:
+    build: ./bm25-service
+    container_name: autollama-bm25
+    environment:
+      PORT: 3002
+      PYTHONPATH: /app
+    volumes:
+      - autollama-bm25-data:/app/data/bm25_indices
+    networks:
+      - autollama-network
+    ports:
+      - "3002:3002"
+    restart: unless-stopped
+
+  autollama-api:
+    build: ./api
+    container_name: autollama-api
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://autollama:autollama@postgres:5432/autollama
+      QDRANT_URL: http://qdrant:6333
+    networks:
+      - autollama-network
+    ports:
+      - "3001:3001"
+      - "3003:3003"
+    depends_on:
+      - postgres
+      - qdrant
+      - autollama-bm25
+    restart: unless-stopped
+
+  autollama-frontend:
+    build:
+      context: ./config/react-frontend
+      dockerfile: Dockerfile
+    container_name: autollama-frontend
+    environment:
+      NODE_ENV: production
+    networks:
+      - autollama-network
+    ports:
+      - "8080:80"
+    depends_on:
+      - autollama-api
+    restart: unless-stopped
 
 volumes:
+  postgres_data:
+  qdrant_data:
   autollama-bm25-data:
-    driver: local
 
 networks:
   autollama-network:
-    external: true
-    name: autollama_default
-  caddy_default:
-    external: true
+    driver: bridge
