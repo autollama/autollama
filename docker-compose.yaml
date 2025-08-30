@@ -42,7 +42,7 @@ services:
     networks:
       - autollama-network
     ports:
-      - "3002:3002"
+      - "3012:3002"
     restart: unless-stopped
 
   autollama-api:
