@@ -54,7 +54,7 @@ services:
       NODE_ENV: production
       PORT: 3001
       DATABASE_URL: postgresql://autollama:autollama@postgres:5432/autollama
-      QDRANT_URL: http://qdrant:6333
+      QDRANT_URL: http://autollama-qdrant:6333
     networks:
       - autollama-network
     ports:

@@ -93,43 +93,43 @@ class VectorService {
         });
       }
 
-      // Prepare point data for Qdrant
+      // Prepare point data for Qdrant with safe defaults
       const pointData = {
         id: this._generatePointId(chunkData.chunk_id),
         vector: embedding,
         payload: {
           // Core identifiers
-          chunk_id: chunkData.chunk_id,
-          url: chunkData.original_url,
-          chunk_index: chunkData.chunk_index,
+          chunk_id: chunkData.chunk_id || '',
+          url: chunkData.original_url || chunkData.url || '',
+          chunk_index: chunkData.chunk_index || 0,
           
           // Content
-          chunk_text: chunkData.chunk_text,
-          title: analysis.title,
-          summary: analysis.summary,
+          chunk_text: chunkData.chunk_text || '',
+          title: analysis?.title || '',
+          summary: analysis?.summary || '',
           
-          // Analysis metadata
-          category: analysis.category,
-          content_type: analysis.content_type,
-          technical_level: analysis.technical_level,
-          sentiment: analysis.sentiment,
-          emotions: analysis.emotions,
+          // Analysis metadata with safe defaults
+          category: analysis?.category || 'general',
+          content_type: analysis?.content_type || 'text',
+          technical_level: analysis?.technical_level || 'general',
+          sentiment: analysis?.sentiment || 'neutral',
+          emotions: analysis?.emotions || [],
           
-          // Structured data
-          tags: analysis.tags,
-          key_concepts: analysis.key_concepts,
-          main_topics: analysis.main_topics,
-          key_entities: analysis.key_entities,
+          // Structured data with safe defaults
+          tags: analysis?.tags || [],
+          key_concepts: analysis?.key_concepts || [],
+          main_topics: analysis?.main_topics || [],
+          key_entities: analysis?.key_entities || [],
           
           // Contextual embedding metadata
-          contextual_summary: contextualSummary,
+          contextual_summary: contextualSummary || '',
           uses_contextual_embedding: contextualSummary !== null,
           
           // Processing metadata
           created_at: new Date().toISOString(),
-          chunk_size_used: chunkData.chunk_size_used || null,
-          overlap_used: chunkData.overlap_used || null,
-          total_chunks: chunkData.total_chunks || null
+          chunk_size_used: chunkData.chunk_size_used || 1200,
+          overlap_used: chunkData.overlap_used || 200,
+          total_chunks: chunkData.total_chunks || 1
         }
       };
 
@@ -342,7 +342,11 @@ class VectorService {
       await this.getCollectionInfo();
       return true;
     } catch (error) {
-      if (error.message.includes('Not found') || error.response?.status === 404) {
+      // Check for 404 in various ways since error structure may vary
+      if (error.message.includes('404') || 
+          error.message.includes('Not found') || 
+          error.response?.status === 404 ||
+          error.statusCode === 404) {
         return false;
       }
       throw error;
@@ -542,9 +546,16 @@ class VectorService {
    * @private
    */
   _generatePointId(chunkId) {
-    // Use chunk ID directly or hash it if needed
-    // Qdrant supports string IDs
-    return chunkId;
+    // Generate a numeric ID from chunk ID string
+    // Use a simple hash function to convert string to number
+    let hash = 0;
+    for (let i = 0; i < chunkId.length; i++) {
+      const char = chunkId.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    // Ensure positive number
+    return Math.abs(hash);
   }
 
   /**

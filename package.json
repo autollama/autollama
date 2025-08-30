@@ -1,6 +1,6 @@
 {
   "name": "autollama",
-  "version": "2.3.1",
+  "version": "2.3.3",
   "description": "Production-ready RAG platform with embedded databases, contextual embeddings, and one-command deployment",
   "keywords": [
     "rag",

@@ -1,6 +1,6 @@
-# CLAUDE.md - AutoLlama v2.3.2
+# CLAUDE.md - AutoLlama v2.3.3
 
-Enhanced RAG platform with document refresh fix and improved animation performance.
+Enhanced RAG platform with database schema fixes and automated migration system.
 
 ## Quick Start
 ```bash

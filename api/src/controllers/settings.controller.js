@@ -67,6 +67,7 @@ class SettingsController {
       const results = {};
       
       // Update each setting
+      let needsOpenAIReinit = false;
       for (const [key, value] of Object.entries(settings)) {
         if (value && value.trim && value.trim() !== '') {
           try {
@@ -75,12 +76,39 @@ class SettingsController {
             await db.setApiSetting(key, value, shouldEncrypt);
             results[key] = 'updated';
             this.logger.info(`Setting updated: ${key}`, { encrypted: shouldEncrypt });
+            
+            // Check if we need to reinitialize OpenAI client
+            if (key === 'openai_api_key') {
+              needsOpenAIReinit = true;
+            }
           } catch (error) {
             this.logger.warn(`Failed to update setting: ${key}`, { error: error.message });
             results[key] = 'failed';
           }
         } else {
           results[key] = 'skipped (empty value)';
+        }
+      }
+      
+      // Reinitialize OpenAI client if API key was updated
+      if (needsOpenAIReinit) {
+        try {
+          // Get the updated OpenAI key from database
+          const updatedKey = await db.getApiSetting('openai_api_key');
+          if (updatedKey && updatedKey.trim() !== '') {
+            // Import OpenAI and reinitialize client
+            const { OpenAI } = require('openai');
+            const openaiClient = new OpenAI({ apiKey: updatedKey });
+            
+            // Update global OpenAI client reference (if accessible)
+            if (global.openaiClient) {
+              global.openaiClient = openaiClient;
+            }
+            
+            this.logger.info('✅ OpenAI client reinitialized with updated API key');
+          }
+        } catch (error) {
+          this.logger.warn('Failed to reinitialize OpenAI client:', error.message);
         }
       }
       
@@ -366,22 +394,36 @@ class SettingsController {
         }
       }
 
-      // Test Qdrant connection - Direct API call
-      if (settings.qdrant_url && settings.qdrant_api_key) {
+      // Test Qdrant connection - Support both local and cloud
+      if (settings.qdrant_url) {
         try {
           const axios = require('axios');
           const cleanUrl = settings.qdrant_url.replace(/\/+$/, ''); // Remove trailing slashes
+          
+          // Determine if this is local Qdrant (no API key needed)
+          const isLocalQdrant = cleanUrl.includes('qdrant:6333') || cleanUrl.includes('localhost:6333');
+          
+          const headers = {
+            'Content-Type': 'application/json'
+          };
+          
+          // Only add API key header for cloud Qdrant
+          if (!isLocalQdrant && settings.qdrant_api_key) {
+            headers['api-key'] = settings.qdrant_api_key;
+          }
+          
           const response = await axios.get(`${cleanUrl}/collections`, {
-            headers: {
-              'api-key': settings.qdrant_api_key,
-              'Content-Type': 'application/json'
-            },
+            headers,
             timeout: 10000
           });
+          
           results.qdrant = response.status === 200;
-          this.logger.debug('Qdrant connection test passed');
+          this.logger.debug(`Qdrant connection test passed (${isLocalQdrant ? 'local' : 'cloud'})`);
         } catch (error) {
-          this.logger.warn('Qdrant connection test failed', { error: error.message });
+          this.logger.warn('Qdrant connection test failed', { 
+            error: error.message,
+            url: settings.qdrant_url 
+          });
           results.qdrant = false;
         }
       }

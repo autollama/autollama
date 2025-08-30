@@ -297,6 +297,23 @@ async function initializeDatabase() {
             await pool.query(index);
         }
 
+        // Run database migrations to ensure v2.3 compatibility
+        console.log('🔄 Running database migrations...');
+        try {
+            const MigrationRunner = require('./run-migrations');
+            const migrationRunner = new MigrationRunner();
+            
+            const needsMigrations = await migrationRunner.checkMigrationsNeeded();
+            if (needsMigrations) {
+                await migrationRunner.runMigrations();
+            }
+            await migrationRunner.close();
+            
+            console.log('✅ Database migrations completed');
+        } catch (error) {
+            console.error('⚠️ Migration error (continuing anyway):', error.message);
+        }
+
         console.log('✅ Database tables initialized successfully');
         return true;
     } catch (error) {
@@ -1539,7 +1556,7 @@ async function updateRagSettings(settings) {
 }
 
 /**
- * Set/update an API setting
+ * Set/update an API setting and sync to environment variable
  */
 async function setApiSetting(key, value, encrypted = false) {
     try {
@@ -1555,11 +1572,54 @@ async function setApiSetting(key, value, encrypted = false) {
         `;
         
         const result = await pool.query(query, [key, value, encrypted]);
-        console.log(`✅ Updated API setting: ${key}`);
+        
+        // Sync critical settings to environment variables for runtime access
+        syncSettingToEnvironment(key, value);
+        
+        console.log(`✅ Updated API setting: ${key} (synced to environment)`);
         return result.rows[0];
     } catch (error) {
         console.error(`❌ Error setting API setting ${key}:`, error.message);
         throw error;
+    }
+}
+
+/**
+ * Sync database settings to environment variables for runtime access
+ */
+function syncSettingToEnvironment(key, value) {
+    const envMapping = {
+        'openai_api_key': 'OPENAI_API_KEY',
+        'claude_api_key': 'CLAUDE_API_KEY', 
+        'qdrant_url': 'QDRANT_URL',
+        'qdrant_api_key': 'QDRANT_API_KEY',
+        'database_url': 'DATABASE_URL'
+    };
+    
+    const envVarName = envMapping[key];
+    if (envVarName && value && value.trim() !== '') {
+        process.env[envVarName] = value;
+        console.log(`🔄 Synced ${key} to environment variable ${envVarName}`);
+    }
+}
+
+/**
+ * Sync all database settings to environment variables
+ */
+async function syncAllSettingsToEnvironment() {
+    try {
+        const settings = await getApiSettings();
+        console.log('🔄 Syncing all database settings to environment variables...');
+        
+        Object.entries(settings).forEach(([key, value]) => {
+            syncSettingToEnvironment(key, value);
+        });
+        
+        console.log('✅ All database settings synced to environment');
+        return true;
+    } catch (error) {
+        console.error('❌ Failed to sync settings to environment:', error);
+        return false;
     }
 }
 
@@ -1634,6 +1694,7 @@ module.exports = {
     getApiSettings,
     getApiSetting,
     setApiSetting,
+    syncAllSettingsToEnvironment,
     updateApiSettings,
     getRagSettings,
     updateRagSettings,

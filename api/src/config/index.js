@@ -79,11 +79,12 @@ const config = {
   // Vector database configuration
   vector: {
     qdrant: {
-      url: process.env.QDRANT_URL,
+      url: process.env.QDRANT_URL || 'http://autollama-qdrant:6333',
       apiKey: process.env.QDRANT_API_KEY,
       collection: process.env.QDRANT_COLLECTION || 'autollama-content',
       timeoutMs: parseInt(process.env.QDRANT_TIMEOUT || '30000'),
       retries: parseInt(process.env.QDRANT_RETRIES || '3'),
+      dimensions: 1536, // Add dimensions to config
     },
   },
   

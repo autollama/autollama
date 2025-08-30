@@ -73,11 +73,13 @@ function createRoutes(services = {}, upload = null) {
     });
   });
   
-  // Extract services with defaults
+  // Extract services with defaults - ensure real services are used
+  console.log('🔧 Content routes initialization, services available:', Object.keys(services || {}));
+  
   const {
     contentProcessor = {
-      processURL: async () => ({ success: false, error: 'Service not available' }),
-      processFile: async () => ({ success: false, error: 'Service not available' })
+      processURL: async () => ({ success: false, error: 'ContentProcessor not available' }),
+      processFile: async () => ({ success: false, error: 'ContentProcessor not available' })
     },
     sessionMonitoringService = {
       startProcessingSession: async () => 'mock-session',
@@ -86,22 +88,37 @@ function createRoutes(services = {}, upload = null) {
       getSessionStatus: async () => ({ status: 'unknown' })
     },
     sseService = {
-      setupSSE: () => {},
-      broadcast: () => {},
-      sendToClient: () => {}
+      setupSSE: () => console.log('Mock SSE setup'),
+      broadcast: () => console.log('Mock SSE broadcast'),
+      sendToClient: () => console.log('Mock SSE sendToClient')
     },
     storageService = {
       query: async () => ({ rows: [] }),
       getProcessingQueue: async () => ({ items: [] })
     },
     backgroundQueue = {
-      addURLJob: async () => ({ jobId: 'mock-job', sessionId: 'mock-session' }),
-      addFileJob: async () => ({ jobId: 'mock-job', sessionId: 'mock-session' }),
+      addURLJob: async (url, options) => {
+        console.log('🚨 MOCK backgroundQueue.addURLJob called - real service not available');
+        return { jobId: 'mock-job', sessionId: 'mock-session' };
+      },
+      addFileJob: async (file, options) => {
+        console.log('🚨 MOCK backgroundQueue.addFileJob called - real service not available');
+        return { jobId: 'mock-job', sessionId: 'mock-session' };
+      },
       getJobStatus: async () => ({ status: 'unknown' }),
       cancelJob: async () => false,
       getStats: () => ({ totalJobs: 0, activeJobs: 0 })
     }
   } = services;
+
+  // Log service availability for debugging
+  console.log('🔧 Content routes services check:', {
+    contentProcessor: typeof contentProcessor === 'object' && !contentProcessor.processURL,
+    sessionMonitoringService: typeof sessionMonitoringService === 'object' && !sessionMonitoringService.startProcessingSession,  
+    sseService: typeof sseService === 'object' && !sseService.setupSSE,
+    storageService: typeof storageService === 'object' && !storageService.query,
+    backgroundQueue: typeof backgroundQueue === 'object' && !backgroundQueue.addFileJob
+  });
 
   // URL Processing Routes - Now using Background Queue for Connection Independence
   router.post('/process-url-stream', async (req, res) => {

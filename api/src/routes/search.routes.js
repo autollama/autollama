@@ -381,14 +381,14 @@ function createRoutes(services = {}) {
       const query = `
         WITH latest_per_url AS (
           SELECT 
-            url, title, summary, created_time, updated_at,
+            url, title, summary, created_time, created_time as updated_at,
             embedding_status, content_type, sentiment,
             ROW_NUMBER() OVER (PARTITION BY url ORDER BY created_time DESC) as rn
           FROM processed_content 
           WHERE url IS NOT NULL AND title IS NOT NULL
         )
         SELECT 
-          url, title, summary, created_time, updated_at,
+          url, title, summary, created_time, created_time as updated_at,
           embedding_status, content_type, sentiment
         FROM latest_per_url 
         WHERE rn = 1
@@ -431,7 +431,7 @@ function createRoutes(services = {}) {
       const query = `
         WITH latest_per_url AS (
           SELECT 
-            url, title, summary, created_time, updated_at,
+            url, title, summary, created_time, created_time as updated_at,
             embedding_status, content_type, sentiment,
             ROW_NUMBER() OVER (PARTITION BY url ORDER BY created_time DESC) as rn
           FROM processed_content 
@@ -440,13 +440,13 @@ function createRoutes(services = {}) {
         chunk_counts AS (
           SELECT 
             url,
-            COUNT(*) FILTER (WHERE record_type = 'chunk') as chunk_count
+            COUNT(*) as chunk_count
           FROM processed_content 
           WHERE url IS NOT NULL 
           GROUP BY url
         )
         SELECT 
-          l.url, l.title, l.summary, l.created_time, l.updated_at,
+          l.url, l.title, l.summary, l.created_time, l.created_time as updated_at,
           l.embedding_status, l.content_type, l.sentiment,
           COALESCE(c.chunk_count, 0) as chunk_count
         FROM latest_per_url l
@@ -570,7 +570,7 @@ function createRoutes(services = {}) {
       const url = decodeURIComponent(encodedUrl);
       
       const result = await storageService.query(
-        'SELECT title, summary, created_time, updated_at FROM processed_content WHERE url = $1',
+        'SELECT title, summary, created_time, created_time as updated_at FROM processed_content WHERE url = $1',
         [url]
       );
       

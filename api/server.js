@@ -323,6 +323,10 @@ const CONTEXT_GENERATION_BATCH_SIZE = parseInt(process.env.CONTEXT_GENERATION_BA
 async function initializeApiConfiguration() {
     try {
         console.log('🔧 Initializing API configuration from database...');
+        
+        // Sync all database settings to environment variables first
+        await db.syncAllSettingsToEnvironment();
+        
         const dbSettings = await db.getApiSettings();
         
         // Check if we have a valid OpenAI API key in database
@@ -330,10 +334,13 @@ async function initializeApiConfiguration() {
         if (dbOpenAIKey && dbOpenAIKey.trim() !== '' && dbOpenAIKey !== 'your_openai_api_key_here') {
             console.log('✅ Found OpenAI API key in database, reinitializing client...');
             
-            // Reinitialize OpenAI client with environment key
+            // Sync database key to environment variable for consistency
+            process.env.OPENAI_API_KEY = dbOpenAIKey;
+            
+            // Reinitialize OpenAI client with database key
             const { OpenAI } = require('openai');
             openaiClient = new OpenAI({
-                apiKey: process.env.OPENAI_API_KEY
+                apiKey: dbOpenAIKey
             });
             
             console.log('✅ OpenAI client successfully initialized with database settings');
