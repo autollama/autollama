@@ -621,7 +621,7 @@ const DocumentViewer = () => {
             chunk={selectedChunk}
             document={selectedDocument}
             chunkIndex={chunkIndex}
-            totalChunks={chunks.length > 0 ? Math.max(...chunks.map(c => c.index !== undefined ? c.index : -1)) + 1 : 0}
+            totalChunks={chunks.length}
             onClose={() => setSelectedChunk(null)}
             onNavigate={handleChunkNavigate}
           />
