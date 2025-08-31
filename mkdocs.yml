@@ -1,0 +1,7 @@
+site_name: AutoLlama Documentation
+site_url: https://docs.autollama.io
+repo_url: https://github.com/snedea/autollama
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+docs_dir: docs
