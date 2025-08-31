@@ -89,3 +89,5 @@ volumes:
 networks:
   autollama-network:
     driver: bridge
+    # All services communicate via service names (e.g., autollama-api:3001)
+    # DO NOT use localhost in nginx proxy configs - use service names instead

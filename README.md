@@ -171,6 +171,8 @@ cd autollama
 ```bash
 cp example.env .env
 # Add your OpenAI API key and database credentials
+# IMPORTANT: If containers are already running, restart them after editing .env:
+# docker compose restart autollama-api
 ```
 
 3. **Launch AutoLlama**
@@ -598,9 +600,43 @@ pool.query('SELECT NOW()').then(r => console.log('✓ Database connected:', r.ro
 
 ### Common Error Messages
 
+**"HTTP 502: Bad Gateway" on file upload**: Nginx proxy misconfiguration - see Docker Networking Issues below
 **"bind source path does not exist"**: Missing tsauthkey file - create it as shown above
 **"unable to get image"**: Docker permission issue - run `newgrp docker` or use sudo
 **"Package not found"**: Update package lists with `sudo apt update`
+
+### Docker Networking Issues
+
+**Problem**: File uploads fail with "HTTP 502: Bad Gateway" after container restart
+**Cause**: Nginx configuration using `localhost` instead of Docker service names
+
+**Solution**:
+1. **Update nginx proxy configuration** in `config/react-frontend/nginx.conf`:
+   ```bash
+   # Change all instances of:
+   proxy_pass http://localhost:3001/...
+   # To:
+   proxy_pass http://autollama-api:3001/...
+   
+   # Change BM25 service:
+   proxy_pass http://localhost:3002/...
+   # To:
+   proxy_pass http://autollama-bm25:3002/...
+   ```
+
+2. **Rebuild frontend container**:
+   ```bash
+   docker compose build autollama-frontend --no-cache
+   docker compose up -d autollama-frontend
+   ```
+
+3. **Verify fix**:
+   ```bash
+   curl http://localhost:8080/api/health
+   # Should return: healthy
+   ```
+
+**Why this happens**: Docker containers communicate via service names (`autollama-api`) within the Docker network, not `localhost`. The nginx container can't reach the API container using `localhost:3001`.
 
 ## Contributing
 

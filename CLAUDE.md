@@ -4,7 +4,11 @@ Enhanced RAG platform with database schema fixes and automated migration system.
 
 ## Quick Start
 ```bash
-cd autollama && cp example.env .env && docker compose up -d
+cd autollama && cp example.env .env
+# Edit .env with your OpenAI API key, then:
+docker compose up -d
+# If containers are already running, restart after editing .env:
+# docker compose restart autollama-api
 ```
 
 ## Architecture v2.3
@@ -212,6 +216,25 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 pool.query('SELECT title, document_type, chunking_method, context_generation_method, uses_contextual_embedding FROM processed_content ORDER BY created_time DESC LIMIT 5')
 .then(r => { console.table(r.rows); pool.end(); })"
 ```
+
+### HTTP 502 Bad Gateway on File Upload ✅ FIXED
+**Problem**: File uploads (including EPUB) fail with "HTTP 502: Bad Gateway" error after container restart.
+**Root Cause**: Nginx proxy configuration using `localhost:3001` instead of Docker service name `autollama-api:3001`.
+
+**Fix Applied (2025-08-31)**:
+1. **Updated nginx.conf proxy targets**: Changed all `localhost:3001` → `autollama-api:3001` in `/config/react-frontend/nginx.conf`
+2. **Fixed all API endpoints**: `/api/health`, `/api/stream`, `/api/process-file`, general `/api/` proxy
+3. **Updated BM25 service**: Changed `localhost:3002` → `autollama-bm25:3002`
+4. **Container rebuild**: `docker compose build autollama-frontend --no-cache && docker compose up -d`
+
+**Technical Details**:
+- **Container Networking**: Each service runs in separate containers within `autollama-network`
+- **Service Names**: Use Docker Compose service names for inter-container communication
+- **Port Mapping**: External ports (8080:80) vs internal service ports (3001:3001)
+
+**Verification**: `curl http://localhost:8080/api/health` returns "healthy"
+
+**Prevention**: Always use Docker service names (`autollama-api`, `autollama-bm25`) in nginx proxy configs, never `localhost` for cross-container communication.
 
 ### Tailscale IP Issues
 ```bash
