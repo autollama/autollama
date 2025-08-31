@@ -595,8 +595,37 @@ pool.query('SELECT NOW()').then(r => console.log('✓ Database connected:', r.ro
 ### Performance Issues
 
 - **Slow processing**: Adjust `CONTEXT_GENERATION_BATCH_SIZE` in settings
-- **High memory usage**: Monitor chunk size and concurrent processing limits
+- **High memory usage**: See Memory Optimization section below
 - **API timeouts**: Increase timeout values in nginx configuration
+
+### Memory Optimization
+
+**Monitor memory usage**:
+```bash
+# Check current memory status
+./scripts/memory-monitor.sh
+
+# Container memory breakdown
+docker stats --no-stream
+```
+
+**Regular maintenance** (run weekly):
+```bash
+# Clean Docker build cache and unused images
+docker system prune -f
+
+# For severe memory pressure:
+docker system prune -a -f
+```
+
+**Memory limits configured**:
+- PostgreSQL: 256MB (optimized for small datasets)
+- API Service: 1GB (Node.js with heap optimization)
+- Qdrant: 512MB (vector database with compression)
+- BM25: 256MB (Python text indexing)
+- Frontend: 128MB (nginx static files)
+
+**Total container limits**: 2.2GB maximum vs unlimited before
 
 ### Common Error Messages
 

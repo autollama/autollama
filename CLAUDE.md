@@ -217,6 +217,84 @@ pool.query('SELECT title, document_type, chunking_method, context_generation_met
 .then(r => { console.table(r.rows); pool.end(); })"
 ```
 
+### High Memory Usage (96%+ VM Memory) ✅ FIXED
+**Problem**: VM shows 96.15% memory usage (15.14GB/15.75GB) causing performance issues.
+**Root Causes**: Docker build cache accumulation (5.86GB) + unused images (13.86GB) + Linux filesystem cache.
+
+**Fix Applied (2025-08-31)**:
+1. **Immediate cleanup** - Freed 21.17GB:
+   ```bash
+   docker system prune -a -f
+   ```
+
+2. **Added memory limits** to docker-compose.yaml:
+   ```yaml
+   # PostgreSQL: 256M limit, optimized settings
+   # Qdrant: 512M limit, reduced search threads
+   # API: 1GB limit, Node.js heap optimization
+   # BM25: 256M limit 
+   # Frontend: 128M limit
+   ```
+
+3. **Memory monitoring script**:
+   ```bash
+   ./scripts/memory-monitor.sh
+   ```
+
+**Results**: 
+- **Before**: 96.15% memory usage, 207MB available
+- **After**: ~46% memory usage, 13GB available  
+- **Container limits**: Total 2.2GB maximum (down from unlimited)
+
+**Prevention**: Run `docker system prune -f` weekly to prevent cache buildup.
+
+### Search Returns No Results Despite Processed Content ✅ FIXED
+**Problem**: Search for content (e.g., "whale") returns empty results despite having processed chunks containing the search terms.
+**Root Causes**: Multiple database schema issues preventing search functionality.
+
+**Fix Applied (2025-08-31)**:
+1. **Add missing source column**:
+   ```bash
+   docker exec autollama-api node -e "
+   const { Pool } = require('pg');
+   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+   pool.query('ALTER TABLE processed_content ADD COLUMN IF NOT EXISTS source VARCHAR(100) DEFAULT \\'unknown\\'')
+   .then(r => { console.log('✅ Added source column'); pool.end(); })"
+   ```
+
+2. **Install pg_trgm extension for trigram search**:
+   ```bash
+   docker exec autollama-api node -e "
+   const { Pool } = require('pg');
+   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+   pool.query('CREATE EXTENSION IF NOT EXISTS pg_trgm')
+   .then(r => { console.log('✅ Added pg_trgm extension'); pool.end(); })"
+   ```
+
+3. **Manually rebuild BM25 index** (temporary fix):
+   ```bash
+   docker exec autollama-api node -e "
+   const { Pool } = require('pg');
+   const axios = require('axios');
+   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+   
+   async function rebuildBM25Index() {
+     const result = await pool.query('SELECT chunk_id, chunk_text FROM processed_content WHERE record_type != \\'document\\' AND chunk_text IS NOT NULL');
+     const chunks = result.rows.map(row => ({ id: row.chunk_id, text: row.chunk_text, metadata: {} }));
+     
+     const response = await axios.post('http://autollama-bm25:3002/index/all-content', {
+       chunks: chunks, filename: 'all-content', replace_existing: true
+     });
+     console.log('✅ BM25 index rebuilt:', response.data.chunks, 'chunks');
+     pool.end();
+   }
+   rebuildBM25Index();"
+   ```
+
+**Verification**: `curl "http://localhost:8080/api/search?q=whale&limit=5"` now returns relevant results.
+
+**Note**: The root cause is that BM25 indexing should happen automatically during processing but currently doesn't. This is a temporary fix - automatic indexing integration needed.
+
 ### Documents Not Appearing on Homepage After Processing ✅ FIXED
 **Problem**: URL processing completes successfully but documents don't appear on homepage. Background jobs show "completed" but `processed_content` table remains empty.
 **Root Cause**: Missing `upload_source` column in `processed_content` table causing `createDocumentRecord` function to fail silently.

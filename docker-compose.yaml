@@ -8,12 +8,23 @@ services:
       POSTGRES_USER: autollama
       POSTGRES_PASSWORD: autollama
       POSTGRES_DB: autollama
+      # Memory optimizations for small instances
+      POSTGRES_SHARED_BUFFERS: 64MB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 512MB
+      POSTGRES_WORK_MEM: 2MB
+      POSTGRES_MAINTENANCE_WORK_MEM: 32MB
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     networks:
       - autollama-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U autollama"]
       interval: 10s
@@ -23,12 +34,23 @@ services:
   qdrant:
     image: qdrant/qdrant:latest
     container_name: autollama-qdrant
+    environment:
+      # Memory optimizations for Qdrant
+      QDRANT__SERVICE__MAX_REQUEST_SIZE_MB: 32
+      QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS: 2
+      QDRANT__STORAGE__OPTIMIZERS__MEMMAP_THRESHOLD: 100000
     ports:
       - "6333:6333"
     volumes:
       - qdrant_data:/qdrant/storage
     networks:
       - autollama-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
     restart: unless-stopped
 
   autollama-bm25:
@@ -43,6 +65,12 @@ services:
       - autollama-network
     ports:
       - "3012:3002"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
     restart: unless-stopped
 
   autollama-api:
@@ -55,6 +83,8 @@ services:
       PORT: 3001
       DATABASE_URL: postgresql://autollama:autollama@postgres:5432/autollama
       QDRANT_URL: http://autollama-qdrant:6333
+      # Node.js memory optimizations
+      NODE_OPTIONS: "--max-old-space-size=512 --max-semi-space-size=64"
     networks:
       - autollama-network
     ports:
@@ -64,6 +94,12 @@ services:
       - postgres
       - qdrant
       - autollama-bm25
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
     restart: unless-stopped
 
   autollama-frontend:
@@ -79,6 +115,12 @@ services:
       - "8080:80"
     depends_on:
       - autollama-api
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
     restart: unless-stopped
 
 volumes:
