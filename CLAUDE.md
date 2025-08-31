@@ -217,6 +217,27 @@ pool.query('SELECT title, document_type, chunking_method, context_generation_met
 .then(r => { console.table(r.rows); pool.end(); })"
 ```
 
+### Documents Not Appearing on Homepage After Processing ✅ FIXED
+**Problem**: URL processing completes successfully but documents don't appear on homepage. Background jobs show "completed" but `processed_content` table remains empty.
+**Root Cause**: Missing `upload_source` column in `processed_content` table causing `createDocumentRecord` function to fail silently.
+
+**Fix Applied (2025-08-31)**:
+```bash
+# Add missing column to processed_content table
+docker exec autollama-api node -e "
+const { Pool } = require('pg');
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+pool.query('ALTER TABLE processed_content ADD COLUMN IF NOT EXISTS upload_source VARCHAR(50) DEFAULT \\'user\\'')
+.then(r => { console.log('✅ Added upload_source column'); pool.end(); })"
+```
+
+**Verification**: 
+- `curl http://localhost:8080/api/documents` now returns document data
+- Documents appear on homepage after processing
+- Background jobs table shows "completed" status with actual document records created
+
+**Impact**: This fixes the core issue where processing succeeds but documents don't display, affecting all URL processing functionality.
+
 ### HTTP 502 Bad Gateway on File Upload ✅ FIXED
 **Problem**: File uploads (including EPUB) fail with "HTTP 502: Bad Gateway" error after container restart.
 **Root Cause**: Nginx proxy configuration using `localhost:3001` instead of Docker service name `autollama-api:3001`.

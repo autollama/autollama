@@ -600,6 +600,7 @@ pool.query('SELECT NOW()').then(r => console.log('✓ Database connected:', r.ro
 
 ### Common Error Messages
 
+**Documents not appearing after processing**: Missing database column - see Database Schema Issues below
 **"HTTP 502: Bad Gateway" on file upload**: Nginx proxy misconfiguration - see Docker Networking Issues below
 **"bind source path does not exist"**: Missing tsauthkey file - create it as shown above
 **"unable to get image"**: Docker permission issue - run `newgrp docker` or use sudo
@@ -637,6 +638,31 @@ pool.query('SELECT NOW()').then(r => console.log('✓ Database connected:', r.ro
    ```
 
 **Why this happens**: Docker containers communicate via service names (`autollama-api`) within the Docker network, not `localhost`. The nginx container can't reach the API container using `localhost:3001`.
+
+### Database Schema Issues
+
+**Problem**: Processing completes successfully but documents don't appear on homepage
+**Cause**: Missing `upload_source` column in `processed_content` table
+
+**Solution**:
+```bash
+# Add missing column to database
+docker exec autollama-api node -e "
+const { Pool } = require('pg');
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+pool.query('ALTER TABLE processed_content ADD COLUMN IF NOT EXISTS upload_source VARCHAR(50) DEFAULT \\'user\\'')
+.then(r => { console.log('✅ Added upload_source column'); pool.end(); })"
+```
+
+**Verify fix**:
+```bash
+# Check documents API returns data
+curl http://localhost:8080/api/documents
+
+# Should return document list instead of empty array
+```
+
+**Why this happens**: The `createDocumentRecord` function expects an `upload_source` column that may be missing from older database schemas. This causes silent failures where processing succeeds but documents aren't stored.
 
 ## Contributing
 
