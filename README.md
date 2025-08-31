@@ -304,15 +304,45 @@ API Key: 0p3n-w3bu!
 
 Real screenshots from the AutoLlama platform—experience the interface that makes contextual RAG effortless.
 
+### 📊 Document Processing Overview
+![Document Processing Overview](marketing-homepage/assets/screenshots/Document-processing-overview.png)
+
+Complete document processing analytics including AI analysis results (content type, technical level, sentiment), content statistics (character counts, processing time, storage size), and comprehensive topic/entity extraction with clickable tags.
+
 ### 📊 Main Dashboard
 ![Main Dashboard](https://autollama.io/assets/screenshots/dashboard-main.webp?v=20250830)
 
 Comprehensive document management with interactive processed documents, real-time processing queue, and intuitive search interface.
 
-### 🧠 Document Intelligence Dashboard  
-![Document Intelligence Dashboard](https://autollama.io/assets/screenshots/document-analysis.webp?v=20250830)
+### 📋 Document Overview
+![Document Overview](marketing-homepage/assets/screenshots/Document-Overview.png)
 
-Get comprehensive AI-powered insights into your documents with topic extraction, entity mapping, and RAG readiness scoring.
+Dedicated document overview showing processing statistics, chunk completion status, and progress tracking with total chunks, completed items, and processing status at a glance.
+
+### 🧠 Document Analysis Dashboard
+![Document Analysis Tab](marketing-homepage/assets/screenshots/Document-Analysis-Tab.png)
+
+Advanced document intelligence with topic distribution analysis, processing quality metrics including contextual enhancement percentages, entity recognition scores, and sentiment analysis results.
+
+### 🔬 Chunk Inspector - Embedding Analysis
+![Chunk Inspector Embedding](marketing-homepage/assets/screenshots/Chunk-Inspector-Embedding.png)
+
+Deep dive into individual chunk embeddings with detailed vector analysis, embedding model information, vector statistics, and similarity analysis tools for finding related chunks.
+
+### 🔍 Vector Analysis - Heatmap Visualization
+![Vector Heatmap](marketing-homepage/assets/screenshots/Detailed-vector-analysis-and-visualization-heatmap.png)
+
+Interactive heatmap visualization of embedding vectors showing positive/negative value distribution across the 1536-dimensional space with color-coded intensity mapping.
+
+### 📊 Vector Analysis - Statistical Breakdown
+![Vector Statistics](marketing-homepage/assets/screenshots/Detailed-vector-analysis-and-visualization-statistics.png)
+
+Comprehensive statistical analysis of embedding vectors including dimensions, magnitude, value distribution (positive/negative/zero counts), range analysis, and sparsity metrics.
+
+### 🔢 Vector Analysis - Raw Data Access
+![Vector Raw Data](marketing-homepage/assets/screenshots/Detailed-vector-analysis-and-visualization-raw-data.png)
+
+Direct access to raw vector values with copy-to-clipboard functionality, allowing developers to inspect and analyze the actual numerical embeddings for debugging and research.
 
 ### 🧩 Chunks Grid View
 ![Chunks Grid View](https://autollama.io/assets/screenshots/chunks-grid.webp?v=20250830)
@@ -325,9 +355,9 @@ Visual representation of processed chunks with completion status and easy naviga
 Processing queue showing Llama actively processing items with real-time status updates.
 
 ### 🔍 AI Analysis Panel
-![AI Analysis Panel](https://autollama.io/assets/screenshots/ai-analysis-panel.webp?v=20250830)
+![AI Analysis Panel](marketing-homepage/assets/screenshots/ai-analysis-panel.png)
 
-Deep AI insights with topic extraction, entity recognition, sentiment analysis, and processing quality metrics.
+Comprehensive AI-powered document analysis showing processing progress, content type detection, sentiment analysis, technical level assessment, and detailed topic/entity extraction with contextual embeddings support.
 
 ### 🚀 Ultra-Fast Contextual Search
 ![Ultra-Fast Contextual Search](https://autollama.io/assets/screenshots/search-results-enhanced.webp?v=20250830)
