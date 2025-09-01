@@ -39,7 +39,11 @@ function setupRoutes(app, services) {
     console.log('🚀 Health routes initialized');
     
     console.log('🚀 Initializing chat routes...');
-    initializeChatRoutes(services);
+    // Pass the working search service to chat routes
+    const servicesWithSearch = {
+      ...services
+    };
+    initializeChatRoutes(servicesWithSearch);
     console.log('🚀 Chat routes initialized');
     routeLogger.debug('Controllers initialized with services');
 

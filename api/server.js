@@ -1084,8 +1084,29 @@ async function processContentChunks(content, url, sseCallback = null, uploadSess
                     // Analyze chunk with timeout and error handling
                     let analysis;
                     try {
+                        // Use new AI services if available, fallback to default
+                        let analyzeFunction;
+                        if (services && services.analysisService) {
+                            analyzeFunction = () => services.analysisService.analyzeChunk(chunk.chunk_text);
+                        } else {
+                            // Fallback to default analysis structure
+                            analyzeFunction = () => Promise.resolve({
+                                title: 'Content chunk',
+                                summary: chunk.chunk_text.substring(0, 100) + '...',
+                                sentiment: 'neutral',
+                                emotions: [],
+                                category: 'other',
+                                content_type: 'article',
+                                technical_level: 'general',
+                                main_topics: [],
+                                key_concepts: [],
+                                tags: '',
+                                key_entities: {}
+                            });
+                        }
+                        
                         analysis = await Promise.race([
-                            analyzeChunk(chunk.chunk_text),
+                            analyzeFunction(),
                             new Promise((_, reject) => setTimeout(() => reject(new Error('Analysis timeout')), 30000))
                         ]);
                     } catch (analysisError) {

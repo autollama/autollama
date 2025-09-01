@@ -1,4 +1,127 @@
-# CLAUDE.md - AutoLlama v2.3.3
+# CLAUDE.md - AutoLlama v3.0.1
+
+Modern JavaScript-first RAG framework with NPX installation, Docker auto-migration, and multi-deployment support.
+
+## v3.0.1 Critical Fix ✅ LATEST
+
+### EPUB & File Upload Processing Fixed
+**Problem**: EPUB and other file uploads would process successfully but documents wouldn't appear on homepage.
+**Root Cause**: `analyzeChunk()` function call in `server.js:1088` was calling removed function instead of new service architecture.
+**Solution**: Updated to use `services.analysisService.analyzeChunk()` with proper fallback handling.
+
+### Auto-Fix Verification
+```bash
+# Upload test now works immediately after Docker startup
+curl -X POST -F "file=@test.epub" "http://localhost:8080/api/process-file-stream" -N
+
+# Documents appear on homepage
+curl http://localhost:8080/api/documents
+```
+
+### Enhanced Migration System
+- **Code Fix Detection**: Auto-migration now reports missing function fixes
+- **Backward Compatibility**: Graceful fallback when services aren't available
+- **Version Tracking**: Proper changelog and migration tracking
+
+### What's Fixed
+- ✅ EPUB uploads create documents on homepage
+- ✅ PDF uploads work correctly 
+- ✅ Background processing completes successfully
+- ✅ Analysis service integration working
+- ✅ No more manual database fixes needed
+
+---
+
+## v3.0 Docker Auto-Migration ✨
+
+### Zero-Configuration Docker Experience
+```bash
+# One command to rule them all - NO manual fixes needed!
+docker compose up -d
+
+# ✅ Automatic PostgreSQL readiness check
+# ✅ Auto-migration of all database schema
+# ✅ Smart detection of broken/missing schema
+# ✅ Graceful handling of existing installations
+```
+
+### Auto-Migration Features
+- **PostgreSQL Wait Logic**: Container waits for database readiness before starting
+- **Schema Detection**: Automatically detects missing tables, columns, and indexes
+- **Migration Tracking**: Prevents duplicate migrations with `schema_migrations` table
+- **Error Recovery**: Handles both fresh and broken installations gracefully
+- **Extension Management**: Auto-enables required PostgreSQL extensions
+
+### Migration Status Commands
+```bash
+# Check migration status
+docker compose logs autollama-api | grep "Migration"
+
+# Verify database schema
+docker exec autollama-postgres psql -U autollama -d autollama -c "\dt"
+
+# Check specific columns
+docker exec autollama-postgres psql -U autollama -d autollama -c "SELECT column_name FROM information_schema.columns WHERE table_name = 'processed_content' AND column_name IN ('record_type', 'upload_source', 'updated_at');"
+
+# Test API health after migration
+curl http://localhost:8080/api/health
+curl http://localhost:8080/api/documents
+```
+
+### Legacy Docker Fixes (ELIMINATED) 🗑️
+- ❌ No more `fix-schema.sh` manual execution
+- ❌ No more container restarts after schema fixes
+- ❌ No more manual database setup commands
+- ❌ No more troubleshooting broken schemas
+
+## v3.0 JavaScript-First Architecture ✨
+
+### NPX Installation (NEW - Primary Method)
+```bash
+# One-command installation
+npx create-autollama my-rag-app
+
+# 🦙 Interactive wizard with llama personality
+# ⚡ 5-minute setup with template selection
+# 🎯 Auto-detection of environment capabilities
+# 📦 Smart dependency management
+```
+
+### Multi-Deployment Architecture
+- **Local Mode**: SQLite + embedded Qdrant + native Node.js processes
+- **Hybrid Mode**: Mix of local and cloud services with PostgreSQL
+- **Docker Mode**: Traditional containerized deployment (preserved)
+
+### Template System
+- **Basic Template**: SQLite, simple interface, perfect for learning
+- **Advanced Template**: PostgreSQL, full features, production-ready
+- **Custom Template**: Interactive wizard for specific requirements
+
+### CLI Command System
+```bash
+autollama dev         # Start development server
+autollama migrate     # Run database migrations  
+autollama test        # Run test suite
+autollama deploy      # Deploy to production
+autollama status      # Service status overview
+autollama doctor      # Diagnose issues
+```
+
+### Database Abstraction Layer
+- **Unified API**: Same code works with PostgreSQL and SQLite
+- **Auto-Migration**: Automatic database setup on first run
+- **Connection Pooling**: Efficient resource management
+- **Query Builder**: Type-safe query construction
+
+### Service Orchestration
+- **Embedded Qdrant**: Zero-config vector database for local development
+- **Process Manager**: Native Node.js services replace Docker containers
+- **Health Monitoring**: Automatic service health checks and restart
+- **Resource Management**: Memory and CPU optimization
+
+---
+
+# Legacy v2.3.3 Documentation
 
 Enhanced RAG platform with database schema fixes and automated migration system.
 

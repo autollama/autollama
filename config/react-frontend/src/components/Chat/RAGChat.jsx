@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Brain, Search, TrendingUp, Clock, FileText, Zap } from 'lucide-react';
 import { useAppContext } from '../../App';
 import ChatInterface from './ChatInterface';
 
 const RAGChat = () => {
   const { api, documents, systemStats } = useAppContext();
+  const [chatInterface, setChatInterface] = useState(null);
   const [chatStats, setChatStats] = useState({
     totalQueries: 0,
     averageResponseTime: 0,
@@ -45,8 +46,10 @@ const RAGChat = () => {
 
   const handleSampleQuestion = (question) => {
     setShowWelcome(false);
-    // This would trigger the chat interface to process the question
-    // For now, we'll just hide the welcome screen
+    // Send the question to the chat interface
+    if (chatInterface && chatInterface.sendSpecificMessage) {
+      chatInterface.sendSpecificMessage(question);
+    }
   };
 
   return (
@@ -95,7 +98,7 @@ const RAGChat = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Main Chat Interface */}
           <div className="lg:col-span-3">
-            <ChatInterface />
+            <ChatInterface onMessageSend={setChatInterface} />
           </div>
 
           {/* Chat Sidebar */}
