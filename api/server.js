@@ -1317,12 +1317,44 @@ async function processContentChunks(content, url, sseCallback = null, uploadSess
             console.log(`Session ${sessionId} completed and removed from active tracking`);
         }
         
+        // Store BM25 index for search functionality
+        let bm25Stored = 0;
+        try {
+            if (sseCallback) {
+                sseCallback('bm25_indexing', { 
+                    message: `🔍 Building search index for ${chunks.length} chunks...`,
+                    sessionId: sessionId
+                });
+            }
+            
+            const bm25Result = await storeBM25Index(chunks, filename || url || 'document');
+            bm25Stored = bm25Result.chunksIndexed || chunks.length;
+            
+            console.log(`✅ BM25 index created: ${bm25Stored} chunks indexed for search`);
+            
+            if (sseCallback) {
+                sseCallback('bm25_complete', { 
+                    message: `✅ Search index built: ${bm25Stored} chunks indexed`,
+                    sessionId: sessionId
+                });
+            }
+        } catch (bm25Error) {
+            console.error('❌ BM25 indexing failed:', bm25Error.message);
+            if (sseCallback) {
+                sseCallback('bm25_error', { 
+                    message: `⚠️ Search indexing failed: ${bm25Error.message}`,
+                    sessionId: sessionId
+                });
+            }
+        }
+
         // Complete session tracking
         if (services && services.sessionTracker && sessionId) {
             await services.sessionTracker.completeSession(sessionId, {
                 processed_chunks: processedChunks,
                 qdrant_stored: qdrantStored,
                 airtable_stored: airtableStored,
+                bm25_stored: bm25Stored,
                 url: url
             });
         }
@@ -1333,6 +1365,7 @@ async function processContentChunks(content, url, sseCallback = null, uploadSess
             processedChunks,
             qdrantStored,
             airtableStored,
+            bm25Stored,
             sessionId: sessionId
         };
         
@@ -2169,6 +2202,45 @@ async function startServer() {
         
         // Start automatic session cleanup
         startAutomaticSessionCleanup();
+        
+        // Verify BM25 search index on startup
+        setTimeout(async () => {
+            try {
+                console.log('🔍 Verifying BM25 search index on startup...');
+                const response = await axios.get('http://autollama-bm25:3002/stats');
+                const totalIndices = response.data.total_indices || 0;
+                
+                if (totalIndices === 0) {
+                    console.log('⚠️ BM25 index empty, rebuilding from processed content...');
+                    
+                    // Get all chunks from database
+                    const result = await db.pool.query('SELECT chunk_id, chunk_text FROM processed_content WHERE record_type != \'document\' AND chunk_text IS NOT NULL');
+                    
+                    if (result.rows.length > 0) {
+                        const chunks = result.rows.map(row => ({ 
+                            id: row.chunk_id, 
+                            text: row.chunk_text, 
+                            metadata: {} 
+                        }));
+                        
+                        const indexResponse = await axios.post('http://autollama-bm25:3002/index/all-content', {
+                            chunks: chunks, 
+                            filename: 'all-content', 
+                            replace_existing: true
+                        });
+                        
+                        console.log(`✅ BM25 index rebuilt on startup: ${indexResponse.data.chunks} chunks indexed`);
+                    } else {
+                        console.log('ℹ️ No processed chunks found, BM25 index will be built as documents are uploaded');
+                    }
+                } else {
+                    console.log(`✅ BM25 index verified: ${totalIndices} indices found`);
+                }
+            } catch (error) {
+                console.error('⚠️ BM25 startup verification failed:', error.message);
+                console.log('ℹ️ BM25 indexing will proceed normally as documents are processed');
+            }
+        }, 15000); // Wait 15s for all services to be ready
     });
 }
 
