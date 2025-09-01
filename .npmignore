@@ -1,0 +1,62 @@
+# Development files
+.git/
+.github/
+.vscode/
+.idea/
+.DS_Store
+
+# Environment and secrets
+.env
+*.key
+*.pem
+*.cert
+
+# Docker and deployment files
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+*.md
+!README.md
+
+# Development directories
+node_modules/
+tailscale-state/
+postgres-data/
+logs/
+uploads/
+backup/
+backups/
+test-output/
+
+# Temporary and log files
+*.log
+*.tmp
+*.temp
+debug.log
+
+# Marketing and database-specific directories (not needed for project templates)
+marketing-homepage/
+database/migrations/
+database/seeds/
+
+# Test files
+tests/
+__tests__/
+*.test.js
+*.spec.js
+
+# Documentation and planning files
+*_SUMMARY*.md
+*_PLAN*.md
+*_NOTES*.md
+SESSION_SUMMARY*.md
+PHASE_*.md
+OPTIMIZATION_*.md
+TECHNICAL_IMPLEMENTATION*.md
+
+# Development dependencies and scripts that shouldn't be in package
+scripts/dev.js
+scripts/build.js
+run-migrations.js
+
+# Only include essential files for CLI functionality

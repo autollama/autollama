@@ -1,27 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * AutoLlama CLI v3.0
- * 🦙 Command-line interface for AutoLlama development and deployment
+ * AutoLlama CLI v3.0.2
+ * 🦙 Professional command-line interface for AutoLlama setup and management
  */
 
 const chalk = require('chalk');
 const { program } = require('commander');
 const path = require('path');
 const fs = require('fs-extra');
-
-// Import command handlers
-const DevCommand = require('../lib/commands/dev');
-const MigrateCommand = require('../lib/commands/migrate');
-const TestCommand = require('../lib/commands/test');
-const DeployCommand = require('../lib/commands/deploy');
-const StatusCommand = require('../lib/commands/status');
-
-const LLAMA_CLI_ART = `
-    🦙 AutoLlama CLI v3.0
-    ═══════════════════════
-    Your RAG framework companion
-`;
 
 class AutoLlamaCLI {
   constructor() {
@@ -34,10 +21,10 @@ class AutoLlamaCLI {
     this.program
       .name('autollama')
       .description('🦙 AutoLlama - Modern JavaScript-first RAG framework')
-      .version('3.0.0')
+      .version('3.0.2')
       .option('-v, --verbose', 'Enable verbose logging')
       .option('-q, --quiet', 'Suppress non-essential output')
-      .option('--no-llama', 'Disable llama personality (serious mode)')
+      .option('--no-color', 'Disable colored output')
       .hook('preAction', (thisCommand) => {
         // Set global options
         global.AUTOLLAMA_CLI_OPTIONS = thisCommand.opts();
@@ -46,132 +33,114 @@ class AutoLlamaCLI {
           process.env.DEBUG = 'true';
         }
         
-        if (!global.AUTOLLAMA_CLI_OPTIONS.quiet && global.AUTOLLAMA_CLI_OPTIONS.llama !== false) {
+        if (!global.AUTOLLAMA_CLI_OPTIONS.quiet && !global.AUTOLLAMA_CLI_OPTIONS.noColor) {
           this.showHeader();
         }
       });
   }
 
   setupCommands() {
-    // Development server
+    // Initialize new project - Primary command
     this.program
-      .command('dev')
-      .description('🚀 Start development server')
-      .option('-p, --port <port>', 'Frontend port', '8080')
-      .option('--api-port <port>', 'API port', '3001')
-      .option('--no-open', 'Don\'t open browser automatically')
-      .option('--mode <mode>', 'Deployment mode (local|hybrid|docker)', 'local')
-      .action(async (options) => {
-        const dev = new DevCommand(options);
-        await dev.run();
+      .command('init [project-name]')
+      .description('🎯 Initialize new AutoLlama project with guided setup')
+      .option('--verbose', 'Show detailed output')
+      .option('--no-color', 'Disable colored output')
+      .option('--resume', 'Resume interrupted setup')
+      .option('--config <file>', 'Use configuration file')
+      .action(async (projectName, options) => {
+        try {
+          const { runInit } = require('../src/commands/init');
+          await runInit(projectName, options);
+        } catch (error) {
+          console.error(chalk.red('Error loading init command:'), error.message);
+          if (options.verbose) console.error(error.stack);
+          process.exit(1);
+        }
       });
 
-    // Database migrations
+    // Start services - Primary command
     this.program
-      .command('migrate')
-      .description('🗄️ Manage database migrations')
-      .option('--status', 'Show migration status')
-      .option('--up', 'Run pending migrations')
-      .option('--down [steps]', 'Rollback migrations')
-      .option('--reset', 'Reset database (DANGEROUS)')
-      .option('--create <name>', 'Create new migration')
+      .command('start')
+      .description('🚀 Start AutoLlama services')
+      .option('-p, --port <port>', 'Port to run on', '8080')
+      .option('-d, --detached', 'Run in background')
+      .option('--mode <mode>', 'Deployment mode (local|hybrid|docker)')
+      .option('--verbose', 'Show detailed output')
       .action(async (options) => {
-        const migrate = new MigrateCommand(options);
-        await migrate.run();
+        try {
+          const { runStart } = require('../src/commands/start');
+          await runStart(options);
+        } catch (error) {
+          console.error(chalk.red('Error loading start command:'), error.message);
+          if (options.verbose) console.error(error.stack);
+          process.exit(1);
+        }
       });
 
-    // Testing
+    // Stop services - Primary command  
     this.program
-      .command('test')
-      .description('🧪 Run test suite')
-      .option('--unit', 'Run unit tests only')
-      .option('--integration', 'Run integration tests only')
-      .option('--e2e', 'Run end-to-end tests only')
-      .option('--watch', 'Watch mode')
-      .option('--coverage', 'Generate coverage report')
+      .command('stop')
+      .description('🛑 Stop AutoLlama services gracefully')
+      .option('--force', 'Force stop all services')
+      .option('--timeout <ms>', 'Timeout in milliseconds', '30000')
+      .option('--verbose', 'Show detailed output')
       .action(async (options) => {
-        const test = new TestCommand(options);
-        await test.run();
+        try {
+          const { runStop } = require('../src/commands/stop');
+          await runStop(options);
+        } catch (error) {
+          console.error(chalk.red('Error loading stop command:'), error.message);
+          if (options.verbose) console.error(error.stack);
+          process.exit(1);
+        }
       });
 
-    // Deployment
-    this.program
-      .command('deploy')
-      .description('🚀 Deploy to production')
-      .option('--target <target>', 'Deployment target (docker|node|cloud)', 'docker')
-      .option('--build', 'Build before deploying')
-      .option('--no-migrate', 'Skip migrations')
-      .action(async (options) => {
-        const deploy = new DeployCommand(options);
-        await deploy.run();
-      });
-
-    // Status and health
+    // Status and health - Enhanced command
     this.program
       .command('status')
-      .description('📊 Show service status')
+      .description('📊 Show service status with beautiful tables')
       .option('--json', 'Output as JSON')
       .option('--watch', 'Watch mode (refresh every 5s)')
+      .option('--verbose', 'Show detailed system information')
       .action(async (options) => {
-        const status = new StatusCommand(options);
-        await status.run();
+        try {
+          const { runStatus } = require('../src/commands/status');
+          await runStatus(options);
+        } catch (error) {
+          console.error(chalk.red('Error loading status command:'), error.message);
+          if (options.verbose) console.error(error.stack);
+          process.exit(1);
+        }
       });
 
-    // Database operations
+    // Docker shortcuts for compatibility
     this.program
-      .command('db')
-      .description('🗄️ Database operations')
-      .option('--reset', 'Reset database')
-      .option('--seed', 'Seed with sample data')
-      .option('--backup', 'Create database backup')
-      .option('--restore <file>', 'Restore from backup')
-      .action(async (options) => {
-        const migrate = new MigrateCommand(options);
-        await migrate.runDatabaseOperations();
+      .command('docker:up')
+      .description('🐳 Start Docker containers')
+      .action(async () => {
+        try {
+          const { execSync } = require('child_process');
+          console.log(chalk.cyan('🐳 Starting Docker containers...'));
+          execSync('docker compose up -d', { stdio: 'inherit' });
+        } catch (error) {
+          console.error(chalk.red('Docker command failed:'), error.message);
+          process.exit(1);
+        }
       });
 
-    // Configuration management
     this.program
-      .command('config')
-      .description('⚙️ Manage configuration')
-      .option('--show', 'Show current configuration')
-      .option('--set <key=value>', 'Set configuration value')
-      .option('--validate', 'Validate configuration')
-      .action(async (options) => {
-        await this.handleConfig(options);
-      });
-
-    // Service management
-    this.program
-      .command('service')
-      .description('🔧 Manage individual services')
-      .argument('<action>', 'Action: start|stop|restart|logs')
-      .argument('[service]', 'Service name (api|frontend|bm25|vector)')
-      .action(async (action, service, options) => {
-        await this.handleService(action, service, options);
-      });
-
-    // Logs
-    this.program
-      .command('logs')
-      .description('📋 Show service logs')
-      .option('-f, --follow', 'Follow log output')
-      .option('--lines <n>', 'Number of lines to show', '100')
-      .argument('[service]', 'Service name (or all)')
-      .action(async (service, options) => {
-        await this.handleLogs(service, options);
-      });
-
-    // Clean up
-    this.program
-      .command('clean')
-      .description('🧹 Clean up data and caches')
-      .option('--all', 'Clean everything')
-      .option('--cache', 'Clean caches only')
-      .option('--logs', 'Clean logs only')
-      .option('--data', 'Clean data (DANGEROUS)')
-      .action(async (options) => {
-        await this.handleClean(options);
+      .command('docker:down')
+      .description('🐳 Stop Docker containers')
+      .action(async () => {
+        try {
+          const { execSync } = require('child_process');
+          console.log(chalk.cyan('🐳 Stopping Docker containers...'));
+          execSync('docker compose down', { stdio: 'inherit' });
+        } catch (error) {
+          console.error(chalk.red('Docker command failed:'), error.message);
+          process.exit(1);
+        }
       });
 
     // Doctor (health check and fixes)
@@ -179,6 +148,7 @@ class AutoLlamaCLI {
       .command('doctor')
       .description('🏥 Diagnose and fix common issues')
       .option('--fix', 'Attempt to fix issues automatically')
+      .option('--verbose', 'Show detailed diagnostics')
       .action(async (options) => {
         await this.handleDoctor(options);
       });
@@ -186,61 +156,13 @@ class AutoLlamaCLI {
 
   showHeader() {
     if (!global.AUTOLLAMA_CLI_OPTIONS?.quiet) {
-      console.log(chalk.cyan(LLAMA_CLI_ART));
+      const headerArt = `
+🦙 AutoLlama CLI v3.0.2
+═══════════════════════
+Professional RAG Framework
+      `;
+      console.log(chalk.cyan(headerArt));
     }
-  }
-
-  async handleConfig(options) {
-    const configPath = path.join(process.cwd(), 'autollama.config.js');
-    
-    if (options.show) {
-      if (await fs.pathExists(configPath)) {
-        const config = require(configPath);
-        console.log(chalk.cyan('🦙 Current configuration:'));
-        console.log(JSON.stringify(config, null, 2));
-      } else {
-        console.log(chalk.yellow('🦙 No configuration file found'));
-      }
-    }
-    
-    if (options.validate) {
-      console.log(chalk.cyan('🦙 Validating configuration...'));
-      // TODO: Implement validation
-      console.log(chalk.green('✅ Configuration valid'));
-    }
-  }
-
-  async handleService(action, service, options) {
-    console.log(chalk.cyan(`🦙 Service ${action}: ${service || 'all'}`));
-    // TODO: Implement service management
-  }
-
-  async handleLogs(service, options) {
-    console.log(chalk.cyan(`🦙 Showing logs for: ${service || 'all'}`));
-    // TODO: Implement log viewing
-  }
-
-  async handleClean(options) {
-    console.log(chalk.cyan('🦙 Cleaning up...'));
-    
-    if (options.cache || options.all) {
-      console.log(chalk.gray('  • Clearing caches...'));
-      // TODO: Clear caches
-    }
-    
-    if (options.logs || options.all) {
-      console.log(chalk.gray('  • Clearing logs...'));
-      const logsDir = path.join(process.cwd(), 'logs');
-      if (await fs.pathExists(logsDir)) {
-        await fs.emptyDir(logsDir);
-      }
-    }
-    
-    if (options.data) {
-      console.log(chalk.red('⚠️  Data cleanup is dangerous and not implemented for safety'));
-    }
-    
-    console.log(chalk.green('✅ Cleanup complete'));
   }
 
   async handleDoctor(options) {
@@ -269,7 +191,23 @@ class AutoLlamaCLI {
       issues.push('Dependencies not installed');
     }
     
+    // Check Docker
+    console.log(chalk.gray('  • Checking Docker...'));
+    try {
+      const { execSync } = require('child_process');
+      execSync('docker --version', { stdio: 'ignore' });
+      try {
+        execSync('docker info', { stdio: 'ignore' });
+        console.log(chalk.green('  ✓ Docker is available and running'));
+      } catch {
+        issues.push('Docker daemon not running');
+      }
+    } catch {
+      issues.push('Docker not installed');
+    }
+    
     // Report findings
+    console.log();
     if (issues.length === 0) {
       console.log(chalk.green('✅ No issues found! Your llama is healthy!'));
     } else {
@@ -281,6 +219,13 @@ class AutoLlamaCLI {
         // TODO: Implement automatic fixes
       }
     }
+    
+    console.log();
+    console.log(chalk.cyan('💡 Available commands:'));
+    console.log(chalk.gray('  autollama init    - Create new project with guided setup'));
+    console.log(chalk.gray('  autollama start   - Start AutoLlama services'));
+    console.log(chalk.gray('  autollama status  - Show service status'));
+    console.log(chalk.gray('  autollama stop    - Stop services gracefully'));
   }
 
   run() {

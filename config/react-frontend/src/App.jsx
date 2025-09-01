@@ -586,9 +586,9 @@ function App() {
       // Force clear only document cache before fetching documents
       api.utils.invalidateCache.documents();
       
-      // Limited document fetch to prevent memory issues that cause browser reloads
-      const fetchLimit = Math.min(30, settings.settings?.ui?.documentsPerPage || 30); // Max 30 documents to match grid display
-      console.log(`🔄 Fetching ${fetchLimit} documents (memory-optimized limit)`);
+      // Flexible document fetch limit
+      const fetchLimit = settings.settings?.ui?.documentsPerPage || 100; // Default to 100 documents
+      console.log(`🔄 Fetching ${fetchLimit} documents (configurable limit)`);
       
       const docs = await api.documents.getAll({ 
         limit: fetchLimit,

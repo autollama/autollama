@@ -1,7 +1,7 @@
 {
   "name": "autollama",
-  "version": "3.0.2",
-  "description": "Modern JavaScript-first RAG framework with contextual embeddings and one-command deployment",
+  "version": "3.0.5",
+  "description": "Modern JavaScript-first RAG framework with contextual embeddings, professional CLI, and one-command deployment",
   "keywords": [
     "rag",
     "llm",
@@ -18,25 +18,38 @@
     "production-ready",
     "javascript-first",
     "npx",
-    "create-autollama"
+    "setup-wizard"
   ],
-  "homepage": "https://github.com/snedea/autollama#readme",
+  "homepage": "https://github.com/autollama/autollama#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/snedea/autollama.git"
+    "url": "https://github.com/autollama/autollama.git"
   },
   "bugs": {
-    "url": "https://github.com/snedea/autollama/issues"
+    "url": "https://github.com/autollama/autollama/issues"
   },
   "license": "MIT",
   "author": {
     "name": "AutoLlama Contributors",
-    "url": "https://github.com/snedea/autollama/contributors"
+    "url": "https://github.com/autollama/autollama/contributors"
   },
+  "main": "index.js",
   "bin": {
-    "create-autollama": "./bin/create-autollama.js",
     "autollama": "./bin/autollama.js"
   },
+  "files": [
+    "bin/",
+    "src/",
+    "scripts/",
+    "api/",
+    "config/",
+    "lib/",
+    "package.json",
+    "package-lock.json",
+    "index.js",
+    "README.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=16.0.0",
     "docker": ">=20.0.0"
@@ -55,13 +68,8 @@
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "jest --testMatch='**/tests/unit/**/*.test.js'",
     "test:integration": "jest --testMatch='**/tests/integration/**/*.test.js'",
-    "test:e2e": "jest --testMatch='**/tests/e2e/**/*.test.js'",
-    "test:modernization": "jest tests/modernization.test.js",
-    "test:installation": "jest tests/installation/ --testTimeout=60000",
-    "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e && npm run test:modernization",
     "docker:build": "docker compose build",
     "docker:up": "docker compose up -d",
-    "docker:dev": "docker compose -f docker-compose.dev.yml up",
     "docker:start": "docker compose -f docker-compose.public.yaml up -d",
     "docker:stop": "docker compose -f docker-compose.public.yaml down",
     "docker:logs": "docker compose -f docker-compose.public.yaml logs -f",
@@ -73,6 +81,7 @@
     "@anthropic-ai/sdk": "^0.57.0",
     "axios": "^1.6.0",
     "chalk": "^4.1.2",
+    "cli-table3": "^0.6.5",
     "commander": "^12.1.0",
     "dotenv": "^17.2.1",
     "fs-extra": "^11.2.0",
