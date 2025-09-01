@@ -1,8 +1,38 @@
-# CLAUDE.md - AutoLlama v3.0.0
+# CLAUDE.md - AutoLlama v3.0.1
 
 Modern JavaScript-first RAG framework with NPX installation, Docker auto-migration, and multi-deployment support.
 
-## v3.0 Docker Auto-Migration ✨ NEW
+## v3.0.1 Critical Fix ✅ LATEST
+
+### EPUB & File Upload Processing Fixed
+**Problem**: EPUB and other file uploads would process successfully but documents wouldn't appear on homepage.
+**Root Cause**: `analyzeChunk()` function call in `server.js:1088` was calling removed function instead of new service architecture.
+**Solution**: Updated to use `services.analysisService.analyzeChunk()` with proper fallback handling.
+
+### Auto-Fix Verification
+```bash
+# Upload test now works immediately after Docker startup
+curl -X POST -F "file=@test.epub" "http://localhost:8080/api/process-file-stream" -N
+
+# Documents appear on homepage
+curl http://localhost:8080/api/documents
+```
+
+### Enhanced Migration System
+- **Code Fix Detection**: Auto-migration now reports missing function fixes
+- **Backward Compatibility**: Graceful fallback when services aren't available
+- **Version Tracking**: Proper changelog and migration tracking
+
+### What's Fixed
+- ✅ EPUB uploads create documents on homepage
+- ✅ PDF uploads work correctly 
+- ✅ Background processing completes successfully
+- ✅ Analysis service integration working
+- ✅ No more manual database fixes needed
+
+---
+
+## v3.0 Docker Auto-Migration ✨
 
 ### Zero-Configuration Docker Experience
 ```bash
