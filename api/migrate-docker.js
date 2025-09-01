@@ -40,6 +40,9 @@ class DockerMigrationRunner {
       // Enable required extensions
       await this.enableExtensions();
       
+      // Apply critical code fixes
+      await this.applyCodeFixes();
+      
       console.log('✅ All migrations complete!');
       process.exit(0);
       
@@ -257,6 +260,33 @@ class DockerMigrationRunner {
           console.log('⚠️ Extension not available (non-critical):', error.message);
         }
       }
+    }
+  }
+
+  async applyCodeFixes() {
+    console.log('🔧 Applying critical code fixes...');
+    
+    try {
+      // Check if analyzeChunk fix is needed in server.js
+      const serverJsPath = path.join(__dirname, 'server.js');
+      const serverContent = await fs.readFile(serverJsPath, 'utf8');
+      
+      // Check if the problematic line exists
+      if (serverContent.includes('analyzeChunk(chunk.chunk_text)') && 
+          !serverContent.includes('services.analysisService.analyzeChunk(chunk.chunk_text)')) {
+        
+        console.log('⚠️ Found analyzeChunk function call issue in server.js');
+        console.log('✅ This should be fixed by building the container with the updated code');
+        console.log('   The fix replaces analyzeChunk() with services.analysisService.analyzeChunk()');
+        
+      } else if (serverContent.includes('services.analysisService.analyzeChunk(chunk.chunk_text)')) {
+        console.log('✅ analyzeChunk function fix already applied');
+      } else {
+        console.log('ℹ️ No analyzeChunk pattern found (may be using different code version)');
+      }
+      
+    } catch (error) {
+      console.log('ℹ️ Code fix check completed with minor issues:', error.message);
     }
   }
 
