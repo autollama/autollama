@@ -1,6 +1,6 @@
 {
   "name": "autollama",
-  "version": "3.0.0",
+  "version": "3.0.2",
   "description": "Modern JavaScript-first RAG framework with contextual embeddings and one-command deployment",
   "keywords": [
     "rag",
