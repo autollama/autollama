@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * AutoLlama CLI v3.0.1
+ * AutoLlama CLI v3.0.2
  * 🦙 Professional command-line interface for AutoLlama setup and management
  */
 
@@ -21,7 +21,7 @@ class AutoLlamaCLI {
     this.program
       .name('autollama')
       .description('🦙 AutoLlama - Modern JavaScript-first RAG framework')
-      .version('3.0.1')
+      .version('3.0.2')
       .option('-v, --verbose', 'Enable verbose logging')
       .option('-q, --quiet', 'Suppress non-essential output')
       .option('--no-color', 'Disable colored output')
@@ -157,7 +157,7 @@ class AutoLlamaCLI {
   showHeader() {
     if (!global.AUTOLLAMA_CLI_OPTIONS?.quiet) {
       const headerArt = `
-🦙 AutoLlama CLI v3.0.1
+🦙 AutoLlama CLI v3.0.2
 ═══════════════════════
 Professional RAG Framework
       `;

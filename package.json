@@ -1,6 +1,6 @@
 {
   "name": "autollama",
-  "version": "3.0.1",
+  "version": "3.0.5",
   "description": "Modern JavaScript-first RAG framework with contextual embeddings, professional CLI, and one-command deployment",
   "keywords": [
     "rag",
@@ -33,9 +33,23 @@
     "name": "AutoLlama Contributors",
     "url": "https://github.com/autollama/autollama/contributors"
   },
+  "main": "index.js",
   "bin": {
     "autollama": "./bin/autollama.js"
   },
+  "files": [
+    "bin/",
+    "src/",
+    "scripts/",
+    "api/",
+    "config/",
+    "lib/",
+    "package.json",
+    "package-lock.json",
+    "index.js",
+    "README.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=16.0.0",
     "docker": ">=20.0.0"

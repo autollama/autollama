@@ -40,6 +40,9 @@ async function configureStage(state, options = {}) {
 async function collectConfiguration(state, options) {
   const config = { ...state.config };
   
+  // Add project name from state
+  config.projectName = state.projectName;
+  
   // OpenAI API Key
   config.openaiApiKey = await getOpenAIApiKey(state, options);
   
@@ -339,7 +342,7 @@ async function generateAppConfig(projectPath, config) {
 // Generated on ${new Date().toISOString()}
 
 module.exports = {
-  projectName: '${state.projectName}',
+  projectName: '${config.projectName}',
   deployment: '${config.deployment}',
   database: '${config.database}',
   port: ${config.port},

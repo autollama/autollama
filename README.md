@@ -4,8 +4,8 @@
   <h1>The Context-Aware RAG Framework</h1>
   <h2><em>Your Documents Have Context. Now Your RAG Does Too.</em></h2>
   
-  [![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/autollama/autollama/releases/latest)
-  [![NPX](https://img.shields.io/badge/npx-create--autollama-green.svg)](https://www.npmjs.com/package/create-autollama)
+  [![Version](https://img.shields.io/badge/version-3.0.5-blue.svg)](https://github.com/autollama/autollama/releases/latest)
+  [![NPM](https://img.shields.io/badge/npm-autollama-red.svg)](https://www.npmjs.com/package/autollama)
   [![Docker](https://img.shields.io/badge/docker-supported-blue.svg)](https://docker.com)
   [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 </div>
@@ -28,11 +28,12 @@ See the difference? That's context at work.
 ### 🧠 **Anthropic's Contextual Retrieval**
 Stop getting random, disconnected chunks. AutoLlama implements Anthropic's breakthrough methodology that delivers **60% better accuracy** by understanding where each piece of information fits in the larger narrative.
 
-### 🚀 **One-Command Deploy**
-No more wrestling with complex configurations. Choose your deployment style:
-- **NPX**: `npx create-autollama my-app` (5-minute setup)
+### 🚀 **One-Command Setup**
+No more wrestling with complex configurations. Get started instantly:
+- **Global CLI**: `npm install -g autollama && autollama init` (2-minute setup)
+- **NPX**: `npx autollama init my-app` (instant, no installation)
 - **Docker**: `docker compose up -d` (60-second deploy)
-- **Native**: `npm run dev` (instant development)
+- **Native**: Clone and `npm run dev` (development mode)
 
 ### ⚡ **JavaScript-First Architecture** 
 Built for developers who want power without pain. Full-stack JavaScript with multiple deployment modes:
@@ -49,18 +50,72 @@ Watch your documents transform from static files into living, searchable knowled
 ### 🔌 **Native OpenWebUI Integration**
 Chat with your documents instantly. Built-in RAG pipeline that OpenWebUI automatically discovers—no complex setup required.
 
+---
+
+## 🚀 Quick Start (2 Minutes)
+
+The fastest way to get AutoLlama running:
+
+```bash
+# Install globally 
+npm install -g autollama
+
+# Initialize new project with guided setup
+autollama init my-rag-project
+
+# Start your RAG framework
+autollama start
+```
+
+**That's it!** Open http://localhost:8080 and start uploading documents.
+
+### Alternative Installation Methods
+
+```bash
+# NPX (no global installation)
+npx autollama@latest init my-project
+
+# Docker (traditional method)
+git clone https://github.com/autollama/autollama.git
+cd autollama && docker compose up -d
+```
+
+---
+
+## 🛠️ CLI Commands
+
+AutoLlama includes a full-featured CLI for project management:
+
+```bash
+# Project initialization
+autollama init [project-name]    # Create new project with guided setup
+autollama doctor                 # Diagnose system and configuration issues
+
+# Service management  
+autollama start                  # Start all services
+autollama stop                   # Stop services gracefully
+autollama status                 # Show service status and health
+
+# Docker shortcuts
+autollama docker:up              # Start Docker containers
+autollama docker:down            # Stop Docker containers
+```
+
+---
+
 ## Prerequisites
 
-Before installing AutoLlama, ensure you have the following:
+### For NPM/CLI Installation
+- **Node.js**: 16+ (check with `node --version`)
+- **NPM**: 7+ (check with `npm --version`)
+- **Memory**: 4GB+ RAM recommended
+- **OpenAI API Key**: Get from https://platform.openai.com/api-keys
 
-### System Requirements
+### For Docker Installation (Optional)
+- **Docker**: 20+ with Docker Compose
+- **Memory**: 8GB+ RAM recommended for full containerized setup
 
-- **Operating System**: Linux (Ubuntu/Debian/CentOS/RHEL), macOS, or Windows with WSL
-- **Memory**: Minimum 4GB RAM (8GB+ recommended)
-- **Storage**: At least 10GB free space
-- **Network**: Internet connection for downloading dependencies and AI API access
-
-### Required Software
+### Required Software (Docker Method Only)
 
 #### 1. Docker & Docker Compose Installation
 

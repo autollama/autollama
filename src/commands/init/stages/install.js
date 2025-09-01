@@ -69,13 +69,13 @@ async function copyProjectFiles(state) {
     'api/',
     'config/',
     'scripts/',
-    'lib/',
     'package.json',
     'package-lock.json'
   ];
   
   // Optional files (copy if they exist)
   const optionalFiles = [
+    'lib/',
     'README.md',
     'LICENSE',
     'docs/'
