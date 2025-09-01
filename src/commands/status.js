@@ -24,7 +24,8 @@ class StatusCommand {
 
   async run() {
     if (!this.options.json && !this.options.watch) {
-      header('0.0.6');
+      const packageJson = require('../../package.json');
+      header(packageJson.version);
       sectionHeader('System Status');
     }
     

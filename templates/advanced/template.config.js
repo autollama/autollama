@@ -91,6 +91,75 @@ module.exports = {
   },
   
   files: {
+    'docker-compose.yaml': `version: '3.8'
+
+services:
+  autollama-postgres:
+    image: postgres:15
+    container_name: autollama-postgres
+    environment:
+      POSTGRES_USER: autollama
+      POSTGRES_PASSWORD: autollama
+      POSTGRES_DB: autollama
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - autollama-network
+    restart: unless-stopped
+
+  autollama-qdrant:
+    image: qdrant/qdrant:latest
+    container_name: autollama-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - autollama-network
+    restart: unless-stopped
+
+  autollama-api:
+    image: autollama/autollama:latest
+    container_name: autollama-api
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - .env
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    depends_on:
+      - autollama-postgres
+      - autollama-qdrant
+    networks:
+      - autollama-network
+    restart: unless-stopped
+
+  autollama-frontend:
+    image: autollama/autollama-frontend:latest
+    container_name: autollama-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - autollama-api
+    networks:
+      - autollama-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  qdrant_data:
+
+networks:
+  autollama-network:
+    driver: bridge
+`,
+
     '.env.template': `# Advanced AutoLlama Configuration
 # Production-ready setup with all features enabled
 

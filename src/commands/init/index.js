@@ -184,7 +184,8 @@ class SetupWizard {
 // Main entry point
 async function runInit(projectName, options = {}) {
   // Display professional header
-  header('0.0.6');
+  const packageJson = require('../../../package.json');
+  header(packageJson.version);
   
   try {
     // Load or create setup state

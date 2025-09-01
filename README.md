@@ -242,7 +242,7 @@ Before starting, obtain the following:
 
 **Ready to experience contextual RAG? Choose your adventure:**
 
-### 🦙 NPX Installation (Early Access - v0.0.6)
+### 🦙 NPX Installation (Latest - v3.0.7)
 
 **New professional setup wizard experience:**
 

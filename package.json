@@ -1,6 +1,6 @@
 {
   "name": "autollama",
-  "version": "3.0.3",
+  "version": "3.0.9",
   "description": "Modern JavaScript-first RAG framework with contextual embeddings, professional CLI, and one-command deployment",
   "keywords": [
     "rag",
@@ -79,7 +79,8 @@
     "docker:logs": "docker compose -f docker-compose.public.yaml logs -f",
     "health": "curl -f http://localhost:8080/api/health",
     "lint": "npm run lint --workspaces",
-    "format": "npm run format --workspaces"
+    "format": "npm run format --workspaces",
+    "postinstall": "chmod +x bin/autollama.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.57.0",
