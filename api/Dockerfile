@@ -17,10 +17,6 @@ RUN npm install --omit=dev
 # Copy application code
 COPY . .
 
-# Fix pdf-parse 'latest' version issue by creating symlink
-RUN cd /app/node_modules/pdf-parse/lib/pdf.js && \
-    ln -s v1.10.100 latest || true
-
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nodejs -u 1001
@@ -28,9 +24,16 @@ RUN adduser -S nodejs -u 1001
 # Create uploads directory for favicon uploads
 RUN mkdir -p /app/uploads
 
+# Fix pdf-parse 'latest' version issue by creating symlink (after user creation, before ownership change)
+RUN cd /app/node_modules/pdf-parse/lib/pdf.js && \
+    ls -la && \
+    ln -sf v1.10.100 latest && \
+    ls -la latest && \
+    echo "✅ PDF symlink created successfully"
+
 # Migration script will be included in npm start
 
-# Change ownership of the app directory including uploads
+# Change ownership of the app directory including uploads (after symlink creation)
 RUN chown -R nodejs:nodejs /app
 USER nodejs
 

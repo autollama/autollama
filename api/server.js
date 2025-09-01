@@ -2241,6 +2241,33 @@ async function startServer() {
                 console.log('ℹ️ BM25 indexing will proceed normally as documents are processed');
             }
         }, 15000); // Wait 15s for all services to be ready
+        
+        // Verify PDF processing fix on startup
+        setTimeout(async () => {
+            try {
+                const fs = require('fs');
+                const path = require('path');
+                const pdfPath = '/app/node_modules/pdf-parse/lib/pdf.js';
+                const latestPath = path.join(pdfPath, 'latest');
+                const v1100Path = path.join(pdfPath, 'v1.10.100');
+                
+                console.log('🔍 Verifying PDF processing fix on startup...');
+                
+                if (fs.existsSync(v1100Path)) {
+                    if (!fs.existsSync(latestPath)) {
+                        console.log('⚠️ PDF symlink missing, creating fallback...');
+                        fs.symlinkSync('v1.10.100', latestPath);
+                        console.log('✅ PDF fallback symlink created');
+                    } else {
+                        console.log('✅ PDF symlink verified');
+                    }
+                } else {
+                    console.log('⚠️ PDF v1.10.100 directory not found');
+                }
+            } catch (error) {
+                console.error('⚠️ PDF verification failed:', error.message);
+            }
+        }, 20000); // Wait 20s for filesystem to be ready
     });
 }
 
