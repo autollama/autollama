@@ -260,7 +260,19 @@ class ChunkingService {
       } else {
         // Current chunk is ready
         if (currentChunk) {
-          chunks.push(this._createChunkObject(currentChunk, url, chunkIndex++, chunks.length));
+          const smartStrategy = { 
+            method: 'smart', 
+            overlap: 0, 
+            respectBoundaries: true 
+          };
+          chunks.push(this._createChunkObject(
+            currentChunk, 
+            url, 
+            chunkIndex++, 
+            0, 
+            currentChunk.length, 
+            smartStrategy
+          ));
         }
         
         // Start new chunk with current sentence
@@ -268,7 +280,19 @@ class ChunkingService {
         
         // Handle very long sentences that exceed chunk size
         if (sentence.length > chunkSize) {
-          chunks.push(this._createChunkObject(sentence, url, chunkIndex++, chunks.length));
+          const smartStrategy = { 
+            method: 'smart', 
+            overlap: 0, 
+            respectBoundaries: true 
+          };
+          chunks.push(this._createChunkObject(
+            sentence, 
+            url, 
+            chunkIndex++, 
+            0, 
+            sentence.length, 
+            smartStrategy
+          ));
           currentChunk = '';
         }
       }
@@ -276,7 +300,19 @@ class ChunkingService {
 
     // Add final chunk if any content remains
     if (currentChunk) {
-      chunks.push(this._createChunkObject(currentChunk, url, chunkIndex, chunks.length + 1));
+      const smartStrategy = { 
+        method: 'smart', 
+        overlap: 0, 
+        respectBoundaries: true 
+      };
+      chunks.push(this._createChunkObject(
+        currentChunk, 
+        url, 
+        chunkIndex, 
+        chunks.length + 1, 
+        currentChunk.length, 
+        smartStrategy
+      ));
     }
 
     // Update total chunks count
