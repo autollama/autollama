@@ -17,6 +17,10 @@ RUN npm install --omit=dev
 # Copy application code
 COPY . .
 
+# Fix pdf-parse 'latest' version issue by creating symlink
+RUN cd /app/node_modules/pdf-parse/lib/pdf.js && \
+    ln -s v1.10.100 latest || true
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nodejs -u 1001

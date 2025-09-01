@@ -11,7 +11,7 @@ class PDFParser {
     this.config = {
       enableMetadataExtraction: config.enableMetadataExtraction !== false,
       maxPages: config.maxPages || null, // No limit by default
-      version: config.version || 'latest'
+      version: config.version || 'v1.10.100' // Fixed: Use actual version instead of non-existent 'latest'
     };
 
     this.logger = require('../../../utils/logger').createChildLogger({ 
@@ -36,7 +36,7 @@ class PDFParser {
         enableMetadata: this.config.enableMetadataExtraction
       });
 
-      // Configure pdf-parse options
+      // Configure pdf-parse options with version fallback
       const parseOptions = {
         // Basic options
         max: this.config.maxPages || 0, // 0 = no limit
@@ -47,8 +47,24 @@ class PDFParser {
         disableCombineTextItems: false
       };
 
-      // Parse PDF
-      const pdfData = await pdfParse(buffer, parseOptions);
+      // Parse PDF with fallback for version issues
+      let pdfData;
+      try {
+        pdfData = await pdfParse(buffer, parseOptions);
+      } catch (versionError) {
+        if (versionError.message && versionError.message.includes('Cannot find module')) {
+          this.logger.warn('PDF version not found, falling back to v1.10.100', {
+            requestedVersion: this.config.version,
+            error: versionError.message
+          });
+          
+          // Retry with known working version
+          parseOptions.version = 'v1.10.100';
+          pdfData = await pdfParse(buffer, parseOptions);
+        } else {
+          throw versionError;
+        }
+      }
 
       const duration = Date.now() - startTime;
 
