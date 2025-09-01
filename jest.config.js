@@ -14,7 +14,7 @@ module.exports = {
   ],
   
   // Setup files
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/api/src/tests/setup.js'],
   
   // Environment variables for testing
   setupFiles: ['<rootDir>/tests/jest.env.js'],
@@ -23,6 +23,17 @@ module.exports = {
   collectCoverage: true,
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
+  
+  // Test result reporters
+  reporters: [
+    'default',
+    ['jest-html-reporter', {
+      pageTitle: 'AutoLlama Test Results',
+      outputPath: 'test-results/index.html',
+      includeFailureMsg: true,
+      includeConsoleLog: true
+    }]
+  ],
   collectCoverageFrom: [
     'api/src/**/*.js',
     'lib/**/*.js',
