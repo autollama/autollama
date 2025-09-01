@@ -173,13 +173,15 @@ const config = {
   },
 };
 
-// Validate configuration on module load
-try {
-  validateConfig();
-  console.log('✅ Configuration validated successfully');
-} catch (error) {
-  console.error('❌ Configuration validation failed:', error.message);
-  process.exit(1);
+// Validate configuration on module load (skip in test environment)
+if (process.env.NODE_ENV !== 'test') {
+  try {
+    validateConfig();
+    console.log('✅ Configuration validated successfully');
+  } catch (error) {
+    console.error('❌ Configuration validation failed:', error.message);
+    process.exit(1);
+  }
 }
 
 module.exports = config;

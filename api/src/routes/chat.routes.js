@@ -12,31 +12,49 @@ const router = express.Router();
 let searchService = null;
 let vectorService = null;
 let database = null;
+let openaiService = null;
+let dbModule = null;
 
 /**
  * Initialize chat routes with required services
  * @param {Object} services - Services container
  */
 function initializeChatRoutes(services) {
-  // Use the search service adapter from search routes
-  searchService = {
-    hybridSearch: async ({ query, limit = 20, threshold = 0.7 }) => {
-      const results = await services.database.searchContent(query.trim(), limit);
-      return { results };
-    },
-    vectorSearch: async ({ query, limit = 20, threshold = 0.7 }) => {
-      const results = await services.database.searchContent(query.trim(), limit);
-      return { results };
+  console.log('🚀 INITIALIZING CHAT ROUTES');
+  
+  // Use the working search service passed from index.js
+  if (services.searchService) {
+    console.log('✅ Using working search service from index.js');
+    searchService = services.searchService;
+  } else {
+    console.log('❌ No search service provided, creating fallback');
+    // Fallback to creating our own (shouldn't happen now)
+    try {
+      dbModule = require('../../database');
+      console.log('✅ Database module loaded for chat routes');
+      
+      searchService = {
+        hybridSearch: async ({ query, limit = 20, threshold = 0.7 }) => {
+          console.log('🔍 FALLBACK HYBRID SEARCH called with:', { query, limit, threshold });
+          const results = await dbModule.searchContent(query.trim(), limit);
+          console.log('🔍 FALLBACK HYBRID SEARCH results:', { count: results?.length || 0 });
+          return { results };
+        }
+      };
+    } catch (error) {
+      console.error('❌ Failed to create fallback search service:', error.message);
     }
-  };
+  }
   
   vectorService = services.vectorService;
-  database = services.storageService || services.database || services.databasePool;
+  database = services.database || dbModule; // Use the database from services
+  openaiService = services.openaiService;
   
   logger.info('Chat routes initialized with services', {
     hasDatabase: !!database,
     hasSearchService: !!searchService,
     hasVectorService: !!vectorService,
+    hasOpenAI: !!openaiService,
     serviceKeys: Object.keys(services),
     databaseServiceType: services.database ? services.database.constructor.name : 'none'
   });
@@ -49,6 +67,30 @@ function initializeChatRoutes(services) {
 router.post('/message', async (req, res) => {
   try {
     const { message, model = 'gpt-4o-mini', ragEnabled = true, conversationId, systemContext } = req.body;
+    
+    console.log('🗨️ CHAT MESSAGE RECEIVED:', { message, model, ragEnabled });
+    console.log('🗨️ CHAT MESSAGE Services available:', { 
+      hasSearchService: !!searchService,
+      hasOpenAI: !!openaiService,
+      hasDatabase: !!database 
+    });
+    
+    // Test if we can run search manually
+    if (searchService) {
+      console.log('🔍 Testing search service...');
+      try {
+        const testSearch = await searchService.hybridSearch({
+          query: 'whale',
+          limit: 2
+        });
+        console.log('🔍 Test search results:', {
+          hasResults: !!testSearch,
+          count: testSearch?.results?.length || 0
+        });
+      } catch (testError) {
+        console.log('❌ Test search failed:', testError.message);
+      }
+    }
     
     if (!message || !message.trim()) {
       return res.status(400).json({
@@ -70,17 +112,25 @@ router.post('/message', async (req, res) => {
     // Perform RAG search if enabled
     if (ragEnabled && searchService) {
       try {
+        console.log('🔍 RAG SEARCH: Starting search for:', message);
+        
+        // Use the search service directly (no HTTP calls needed)
         const searchResults = await searchService.hybridSearch({
           query: message,
           limit: 5,
           threshold: 0.3
         });
-
+        
+        console.log('🔍 RAG SEARCH: Results received:', {
+          hasResults: !!searchResults,
+          resultsCount: searchResults?.results?.length || 0
+        });
+        
         if (searchResults && searchResults.results && searchResults.results.length > 0) {
           // Extract relevant context from search results
           ragContext = searchResults.results
             .slice(0, 3)
-            .map((result, index) => `[Context ${index + 1}]: ${result.content || result.text}`)
+            .map((result, index) => `[Context ${index + 1}]: ${result.chunk_text || result.content || result.text}`)
             .join('\n\n');
 
           // Prepare sources for response
@@ -88,12 +138,22 @@ router.post('/message', async (req, res) => {
             title: result.title || result.url || 'Unknown Source',
             url: result.url || '#',
             score: result.score || result.similarity || 0,
-            snippet: (result.content || result.text || '').substring(0, 150) + '...'
+            snippet: (result.chunk_text || result.content || result.text || '').substring(0, 150) + '...'
           }));
+          
+          console.log('🔍 RAG SEARCH: Context prepared:', {
+            contextLength: ragContext.length,
+            sourcesCount: sources.length
+          });
         }
       } catch (ragError) {
-        logger.warn('RAG search failed, continuing without context', { error: ragError.message });
+        console.log('⚠️ RAG search failed:', ragError.message);
       }
+    } else {
+      console.log('⚠️ RAG search skipped:', {
+        ragEnabled,
+        hasSearchService: !!searchService
+      });
     }
 
     // Create enhanced system prompt
@@ -104,11 +164,18 @@ router.post('/message', async (req, res) => {
       !ragContext ? '\n\nNo relevant context found in the knowledge base. Answer based on your general knowledge.' : ''
     ].filter(Boolean).join('');
 
-    // Simulate AI response (replace with actual OpenAI call)
+    console.log('🤖 SYSTEM CONTEXT for OpenAI:', { 
+      hasRagContext: !!ragContext,
+      ragContextLength: ragContext?.length || 0,
+      sourcesCount: sources.length,
+      systemContextLength: enhancedSystemContext.length
+    });
+
+    // Generate AI response with context
     const aiResponse = await generateAIResponse(message, enhancedSystemContext, model);
 
     const response = {
-      content: aiResponse,
+      content: ragContext ? `🔍 RAG ACTIVE (${ragContext.length} chars): ${aiResponse}` : aiResponse,
       model,
       ragEnabled,
       sources: ragEnabled ? sources : [],
@@ -117,6 +184,7 @@ router.post('/message', async (req, res) => {
       metadata: {
         contextUsed: !!ragContext,
         sourceCount: sources.length,
+        ragContextLength: ragContext?.length || 0,
         model
       }
     };
@@ -260,10 +328,19 @@ router.post('/rag-search', async (req, res) => {
       });
     }
 
-    const results = await searchService.hybridSearch({
-      query: query.trim(),
+    console.log('🔍 RAG SEARCH ENDPOINT HIT:', { query, limit, threshold });
+
+    // Use the search service directly instead of HTTP calls
+    const searchResults = await searchService.hybridSearch({
+      query: query,
       limit: parseInt(limit),
       threshold: parseFloat(threshold)
+    });
+    const results = searchResults;
+
+    console.log('🔍 RAG SEARCH ENDPOINT RESULTS:', { 
+      hasResults: !!results,
+      count: results?.results?.length || 0 
     });
 
     res.json({
@@ -336,33 +413,65 @@ router.get('/pipeline/status', async (req, res) => {
 });
 
 /**
- * Generate AI response (mock implementation)
- * Replace this with actual OpenAI API calls
+ * Generate AI response using OpenAI API
  */
 async function generateAIResponse(message, systemContext, model) {
-  // Check if this is asking about recent uploads
-  const isRecentUploadsQuery = /recent\s+upload|latest\s+document|newest\s+file|recently\s+added/i.test(message);
-  
-  if (isRecentUploadsQuery) {
-    try {
-      logger.info('Attempting to fetch recent uploads', {
-        hasDatabase: !!database,
-        databaseType: database ? database.constructor.name : 'none',
-        hasMethods: database ? Object.getOwnPropertyNames(database) : []
-      });
-      
-      if (database && database.pool) {
-        // Query recent documents directly using the database pool
+  if (!openaiService || !openaiService.isReady()) {
+    logger.warn('OpenAI service not available for chat', {
+      hasService: !!openaiService,
+      isReady: openaiService ? openaiService.isReady() : false
+    });
+    return "I'm having trouble connecting to the AI service right now. Please check that your OpenAI API key is configured correctly in your environment variables.";
+  }
+
+  try {
+    const startTime = Date.now();
+    
+    const response = await openaiService.openaiClient.chat.completions.create({
+      model: model || 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemContext },
+        { role: 'user', content: message }
+      ],
+      max_tokens: 1000,
+      temperature: 0.7
+    });
+
+    const duration = Date.now() - startTime;
+    const aiResponse = response.choices[0].message.content.trim();
+
+    logger.info('AI response generated successfully', {
+      model,
+      duration,
+      messageLength: message.length,
+      responseLength: aiResponse.length,
+      tokensUsed: response.usage?.total_tokens || 0
+    });
+
+    return aiResponse;
+
+  } catch (error) {
+    logger.error('Failed to generate AI response', {
+      error: error.message,
+      model,
+      messageLength: message.length
+    });
+
+    // Fallback for specific query types
+    const isRecentUploadsQuery = /recent\s+upload|latest\s+document|newest\s+file|recently\s+added/i.test(message);
+    
+    if (isRecentUploadsQuery) {
+      try {
+        const db = dbModule || require('../../database');
         const query = `
           SELECT title, summary, created_time, url 
           FROM processed_content 
+          WHERE record_type != 'document'
           ORDER BY created_time DESC 
           LIMIT 5
         `;
-        const result = await database.pool.query(query);
+        const result = await db.pool.query(query);
         const recentDocs = result.rows || [];
-        
-        logger.info('Retrieved recent uploads', { count: recentDocs.length });
         
         if (recentDocs.length === 0) {
           return "I don't see any recent uploads in your knowledge base yet. Try uploading some documents first using the Upload tab or by providing URLs to process.";
@@ -376,36 +485,14 @@ async function generateAIResponse(message, systemContext, model) {
           })
           .join('\n\n');
 
-        return `Here are your recent uploads:\n\n${recentSummary}\n\nWould you like me to elaborate on any specific document or help you search for something within these uploads?`;
-      } else {
-        logger.warn('Database not available or missing getSmartContentMix method', {
-          hasDatabase: !!database,
-          hasMethod: database ? !!database.getSmartContentMix : false
-        });
+        return `Here are your recent uploads:\n\n${recentSummary}\n\nWould you like me to elaborate on any specific document?`;
+      } catch (dbError) {
+        logger.error('Failed to fetch recent uploads as fallback', { error: dbError.message });
       }
-    } catch (error) {
-      logger.warn('Failed to fetch recent uploads for chat', { error: error.message, stack: error.stack });
     }
-    
-    return "I'd be happy to help you with your recent uploads, but I'm having trouble accessing your knowledge base right now. Please try again, or check if you have any documents processed in your dashboard.";
+
+    return `I encountered an error while processing your request: ${error.message}. Please try again or check that your OpenAI API key is configured correctly.`;
   }
-
-  // Default responses based on context
-  if (systemContext && systemContext.includes('Knowledge Base Context:')) {
-    return `Based on your knowledge base, I can see relevant information about "${message}". The context provided helps me understand your specific documents and content. 
-
-I can help you explore this topic further or search for related information in your processed documents. What specific aspect would you like me to focus on?`;
-  }
-
-  // Generic helpful responses
-  const helpfulResponses = [
-    "I'm here to help you explore and understand your processed documents. What specific information are you looking for?",
-    "I can help you search through your knowledge base and find relevant information. What would you like to know more about?",
-    "Let me help you find information from your processed documents. Can you be more specific about what you're looking for?",
-    "I'm your AutoLlama AI assistant, ready to help you navigate your knowledge base. What can I help you discover today?"
-  ];
-
-  return helpfulResponses[Math.floor(Math.random() * helpfulResponses.length)];
 }
 
 module.exports = {

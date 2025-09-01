@@ -1,6 +1,6 @@
 {
   "name": "autollama-migration",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "description": "Data migration tools for AutoLlama",
   "main": "migrate_airtable.js",
   "scripts": {

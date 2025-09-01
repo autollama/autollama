@@ -1,12 +1,12 @@
 {
   "name": "autollama",
-  "version": "2.3.3",
-  "description": "Production-ready RAG platform with embedded databases, contextual embeddings, and one-command deployment",
+  "version": "3.0.0",
+  "description": "Modern JavaScript-first RAG framework with contextual embeddings and one-command deployment",
   "keywords": [
     "rag",
     "llm",
     "embeddings",
-    "vector-search", 
+    "vector-search",
     "openai",
     "document-processing",
     "semantic-search",
@@ -15,7 +15,10 @@
     "qdrant",
     "postgresql",
     "docker",
-    "production-ready"
+    "production-ready",
+    "javascript-first",
+    "npx",
+    "create-autollama"
   ],
   "homepage": "https://github.com/snedea/autollama#readme",
   "repository": {
@@ -30,19 +33,58 @@
     "name": "AutoLlama Contributors",
     "url": "https://github.com/snedea/autollama/contributors"
   },
+  "bin": {
+    "create-autollama": "./bin/create-autollama.js",
+    "autollama": "./bin/autollama.js"
+  },
   "engines": {
     "node": ">=16.0.0",
     "docker": ">=20.0.0"
   },
+  "workspaces": [
+    "api",
+    "config/react-frontend",
+    "config/pipeline",
+    "database"
+  ],
   "scripts": {
-    "start": "docker compose -f docker-compose.public.yaml up -d",
-    "stop": "docker compose -f docker-compose.public.yaml down",
-    "logs": "docker compose -f docker-compose.public.yaml logs -f",
-    "health": "curl -f http://localhost:7734/health"
+    "setup": "node scripts/setup.js",
+    "dev": "node scripts/dev.js",
+    "build": "node scripts/build.js",
+    "migrate": "node api/run-migrations.js",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "jest --testMatch='**/tests/unit/**/*.test.js'",
+    "test:integration": "jest --testMatch='**/tests/integration/**/*.test.js'",
+    "test:e2e": "jest --testMatch='**/tests/e2e/**/*.test.js'",
+    "test:modernization": "jest tests/modernization.test.js",
+    "test:installation": "jest tests/installation/ --testTimeout=60000",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e && npm run test:modernization",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:dev": "docker compose -f docker-compose.dev.yml up",
+    "docker:start": "docker compose -f docker-compose.public.yaml up -d",
+    "docker:stop": "docker compose -f docker-compose.public.yaml down",
+    "docker:logs": "docker compose -f docker-compose.public.yaml logs -f",
+    "health": "curl -f http://localhost:8080/api/health",
+    "lint": "npm run lint --workspaces",
+    "format": "npm run format --workspaces"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.57.0",
+    "axios": "^1.6.0",
+    "chalk": "^4.1.2",
+    "commander": "^12.1.0",
     "dotenv": "^17.2.1",
-    "pg": "^8.16.3"
+    "fs-extra": "^11.2.0",
+    "inquirer": "^8.2.7",
+    "node-fetch": "^2.6.7",
+    "ora": "^5.4.1",
+    "pg": "^8.16.3",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.1",
+    "tmp": "^0.2.5"
   }
 }

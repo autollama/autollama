@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Send, MessageCircle, Brain, User, Bot, RefreshCw, Settings, Trash2, Copy, ExternalLink } from 'lucide-react';
 import { useAppContext } from '../../App';
 
-const ChatInterface = () => {
+const ChatInterface = ({ onMessageSend }) => {
   const { api, settings } = useAppContext();
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -42,6 +42,13 @@ const ChatInterface = () => {
     initializeChat();
   }, []);
 
+  // Expose sendSpecificMessage to parent component
+  useEffect(() => {
+    if (onMessageSend) {
+      onMessageSend({ sendSpecificMessage });
+    }
+  }, [onMessageSend]);
+
   // Detect when user manually scrolls to disable auto-scroll
   const handleScroll = () => {
     const container = messagesContainerRef.current;
@@ -63,6 +70,55 @@ const ChatInterface = () => {
     };
     setMessages([welcomeMessage]);
     setConversationId(generateId());
+  };
+
+  // Send message programmatically with specific text
+  const sendSpecificMessage = async (messageText) => {
+    if (!messageText.trim() || isLoading) return;
+
+    const userMessage = {
+      id: generateId(),
+      type: 'user',
+      content: messageText.trim(),
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setIsLoading(true);
+
+    try {
+      const response = await api.chat.sendMessage({
+        message: messageText.trim(),
+        model: chatModel,
+        ragEnabled,
+        conversationId,
+        systemContext: "You are AutoLlama's AI assistant. Use the knowledge base to provide helpful, accurate responses with source citations.",
+      });
+
+      const assistantMessage = {
+        id: generateId(),
+        type: 'assistant',
+        content: response.content || response.message || 'I apologize, but I encountered an issue processing your request.',
+        timestamp: new Date(),
+        sources: response.sources || [],
+        metadata: response.metadata || {},
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMessage = {
+        id: generateId(),
+        type: 'assistant',
+        content: `I encountered an error: ${error.message || 'Unable to process your request'}. Please try again or check your connection settings.`,
+        timestamp: new Date(),
+        isError: true,
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Send message
