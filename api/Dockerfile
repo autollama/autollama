@@ -1,9 +1,10 @@
 FROM node:18-alpine
 
-# Install puppeteer dependencies and git
+# Install puppeteer dependencies, git, and PostgreSQL client
 RUN apk add --no-cache \
     chromium \
-    git
+    git \
+    postgresql-client
 
 WORKDIR /app
 
@@ -22,6 +23,8 @@ RUN adduser -S nodejs -u 1001
 
 # Create uploads directory for favicon uploads
 RUN mkdir -p /app/uploads
+
+# Migration script will be included in npm start
 
 # Change ownership of the app directory including uploads
 RUN chown -R nodejs:nodejs /app

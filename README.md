@@ -4,7 +4,8 @@
   <h1>The Context-Aware RAG Framework</h1>
   <h2><em>Your Documents Have Context. Now Your RAG Does Too.</em></h2>
   
-  [![Version](https://img.shields.io/badge/version-2.3.2-blue.svg)](https://github.com/autollama/autollama/releases/latest)
+  [![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/autollama/autollama/releases/latest)
+  [![NPX](https://img.shields.io/badge/npx-create--autollama-green.svg)](https://www.npmjs.com/package/create-autollama)
   [![Docker](https://img.shields.io/badge/docker-supported-blue.svg)](https://docker.com)
   [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 </div>
@@ -28,10 +29,16 @@ See the difference? That's context at work.
 Stop getting random, disconnected chunks. AutoLlama implements Anthropic's breakthrough methodology that delivers **60% better accuracy** by understanding where each piece of information fits in the larger narrative.
 
 ### 🚀 **One-Command Deploy**
-No more wrestling with Python environments or complex configurations. Just `docker compose up -d` and you're running enterprise-grade RAG in under 60 seconds.
+No more wrestling with complex configurations. Choose your deployment style:
+- **NPX**: `npx create-autollama my-app` (5-minute setup)
+- **Docker**: `docker compose up -d` (60-second deploy)
+- **Native**: `npm run dev` (instant development)
 
 ### ⚡ **JavaScript-First Architecture** 
-Built for developers who want power without pain. Full-stack JavaScript means your team can contribute, customize, and extend without learning new languages.
+Built for developers who want power without pain. Full-stack JavaScript with multiple deployment modes:
+- **Local Development**: SQLite + embedded services
+- **Hybrid**: Mix of local and cloud services  
+- **Production**: PostgreSQL + enterprise features
 
 ### 🔓 **Open Source Freedom**
 Your documents, your infrastructure, your control. No vendor lock-in, no usage limits, no monthly subscriptions. Just pure, customizable technology.
@@ -157,35 +164,61 @@ Before starting, obtain the following:
 
 ## Quick Start
 
-**Ready to experience contextual RAG? Here's your 60-second setup:**
+**Ready to experience contextual RAG? Choose your adventure:**
 
-### Installation
+### 🦙 NPX Installation (Recommended - 5 minutes)
 
-1. **Clone and Enter**
+**The fastest way to start building with AutoLlama:**
+
+```bash
+# Create new project
+npx create-autollama my-rag-app
+
+# Follow the llama-themed wizard, then:
+cd my-rag-app
+npm run dev
+
+# 🌐 Your RAG app: http://localhost:8080
+```
+
+**Perfect for**: Learning, prototyping, and JavaScript-first development.
+
+### 🐳 Docker Installation (Zero-Configuration)
+
+**AutoLlama v3.0 features automatic database setup and migrations!**
+
 ```bash
 git clone https://github.com/autollama/autollama.git
 cd autollama
-```
-
-2. **Configure Your Keys**
-```bash
 cp example.env .env
-# Add your OpenAI API key and database credentials
-# IMPORTANT: If containers are already running, restart them after editing .env:
-# docker compose restart autollama-api
-```
-
-3. **Launch AutoLlama**
-```bash
+# Add your OPENAI_API_KEY to .env
 docker compose up -d
+
+# That's it! No manual database fixes required! 🎉
 ```
 
-4. **Start Building**
-- **Web Interface**: http://localhost:8080
-- **API Documentation**: http://localhost:8080/docs
-- **Health Check**: http://localhost:8080/health
+**Auto-Migration Features:**
+- ✅ **Automatic Schema Setup**: Creates all tables and indexes automatically
+- ✅ **PostgreSQL Wait Logic**: Waits for database readiness before starting
+- ✅ **Broken Installation Recovery**: Detects and fixes missing schema elements
+- ✅ **Extension Management**: Enables required PostgreSQL extensions
+- ✅ **Migration Tracking**: Prevents duplicate migrations with smart detection
 
-**That's it.** No virtual environments, no dependency hell, no hours of configuration. Just intelligent, context-aware RAG running in production-ready containers.
+**Perfect for**: Production deployment, team development, enterprise use.
+
+### 🔧 Native Installation (Maximum Control)
+
+**For developers who want full control:**
+
+```bash
+git clone https://github.com/autollama/autollama.git
+cd autollama
+npm install
+npm run setup
+npm run dev
+```
+
+**Perfect for**: Custom deployments, contributing to AutoLlama, advanced configurations.
 
 ## Configuration
 
@@ -519,6 +552,33 @@ curl http://your-domain/api/health/comprehensive
 - **Caching**: Redis integration for frequently accessed embeddings
 
 ## Troubleshooting
+
+### Docker Auto-Migration (v3.0+)
+
+**Check migration status:**
+```bash
+# View migration logs
+docker compose logs autollama-api | grep "Migration"
+
+# Verify database schema
+docker exec autollama-postgres psql -U autollama -d autollama -c "\dt"
+
+# Check critical v2.3 columns
+docker exec autollama-postgres psql -U autollama -d autollama -c "SELECT column_name FROM information_schema.columns WHERE table_name = 'processed_content' AND column_name IN ('record_type', 'upload_source', 'updated_at');"
+```
+
+**Test API after migration:**
+```bash
+curl http://localhost:8080/api/health      # Should return "healthy"
+curl http://localhost:8080/api/documents   # Should return JSON response
+```
+
+**Manual migration (emergency only):**
+```bash
+# If auto-migration fails completely
+docker exec autollama-api node migrate-docker.js --auto --docker
+docker compose restart autollama-api
+```
 
 ### Installation Issues
 
