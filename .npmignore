@@ -11,12 +11,14 @@
 *.pem
 *.cert
 
-# Docker and deployment files
-docker-compose*.yml
-Dockerfile*
+# Docker and deployment files (but keep essential ones)
+docker-compose.tailscale.example.yaml
 .dockerignore
 *.md
 !README.md
+# Keep essential Docker files for CLI templates
+!docker-compose.yaml
+!api/Dockerfile
 
 # Development directories
 node_modules/

@@ -1,6 +1,6 @@
 {
   "name": "autollama",
-  "version": "3.0.5",
+  "version": "3.0.3",
   "description": "Modern JavaScript-first RAG framework with contextual embeddings, professional CLI, and one-command deployment",
   "keywords": [
     "rag",
@@ -44,6 +44,10 @@
     "api/",
     "config/",
     "lib/",
+    "templates/",
+    "migrations/",
+    "docker-compose.yaml",
+    "example.env",
     "package.json",
     "package-lock.json",
     "index.js",
