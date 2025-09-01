@@ -166,29 +166,31 @@ Before starting, obtain the following:
 
 **Ready to experience contextual RAG? Choose your adventure:**
 
-### 🦙 NPX Installation (Recommended - 5 minutes)
+### 🦙 NPX Installation (Early Access - v0.0.6)
 
-**The fastest way to start building with AutoLlama:**
+**New professional setup wizard experience:**
 
 ```bash
-# Create new project
-npx create-autollama my-rag-app
+# Create new project with guided setup
+npx autollama@latest init my-rag-app
 
-# Follow the llama-themed wizard, then:
+# Follow the 4-stage setup wizard, then:
 cd my-rag-app
-npm run dev
+npx autollama start
 
-# 🌐 Your RAG app: http://localhost:8080
+# 🌐 Your AutoLlama: http://localhost:8080
 ```
 
-**Perfect for**: Learning, prototyping, and JavaScript-first development.
+**Features**: Interactive configuration, system validation, automated setup, state management for resume capability.
+
+**Perfect for**: Quick prototyping and testing the new setup experience.
 
 ### 🐳 Docker Installation (Zero-Configuration)
 
 **AutoLlama v3.0 features automatic database setup and migrations!**
 
 ```bash
-git clone https://github.com/autollama/autollama.git
+git clone https://github.com/autollama/autollama.git autollama
 cd autollama
 cp example.env .env
 # Add your OPENAI_API_KEY to .env
@@ -211,7 +213,7 @@ docker compose up -d
 **For developers who want full control:**
 
 ```bash
-git clone https://github.com/autollama/autollama.git
+git clone https://github.com/autollama/autollama.git autollama
 cd autollama
 npm install
 npm run setup

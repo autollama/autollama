@@ -1,12 +1,12 @@
 {
   "name": "autollama",
-  "version": "2.3.3",
-  "description": "Production-ready RAG platform with embedded databases, contextual embeddings, and one-command deployment",
+  "version": "3.0.1",
+  "description": "Modern JavaScript-first RAG framework with contextual embeddings, professional CLI, and one-command deployment",
   "keywords": [
     "rag",
     "llm",
     "embeddings",
-    "vector-search", 
+    "vector-search",
     "openai",
     "document-processing",
     "semantic-search",
@@ -15,34 +15,71 @@
     "qdrant",
     "postgresql",
     "docker",
-    "production-ready"
+    "production-ready",
+    "javascript-first",
+    "npx",
+    "setup-wizard"
   ],
-  "homepage": "https://github.com/snedea/autollama#readme",
+  "homepage": "https://github.com/autollama/autollama#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/snedea/autollama.git"
+    "url": "https://github.com/autollama/autollama.git"
   },
   "bugs": {
-    "url": "https://github.com/snedea/autollama/issues"
+    "url": "https://github.com/autollama/autollama/issues"
   },
   "license": "MIT",
   "author": {
     "name": "AutoLlama Contributors",
-    "url": "https://github.com/snedea/autollama/contributors"
+    "url": "https://github.com/autollama/autollama/contributors"
+  },
+  "bin": {
+    "autollama": "./bin/autollama.js"
   },
   "engines": {
     "node": ">=16.0.0",
     "docker": ">=20.0.0"
   },
+  "workspaces": [
+    "api",
+    "config/react-frontend",
+    "config/pipeline",
+    "database"
+  ],
   "scripts": {
-    "start": "docker compose -f docker-compose.public.yaml up -d",
-    "stop": "docker compose -f docker-compose.public.yaml down",
-    "logs": "docker compose -f docker-compose.public.yaml logs -f",
-    "health": "curl -f http://localhost:7734/health"
+    "setup": "node scripts/setup.js",
+    "dev": "node scripts/dev.js",
+    "build": "node scripts/build.js",
+    "migrate": "node api/run-migrations.js",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "jest --testMatch='**/tests/unit/**/*.test.js'",
+    "test:integration": "jest --testMatch='**/tests/integration/**/*.test.js'",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:start": "docker compose -f docker-compose.public.yaml up -d",
+    "docker:stop": "docker compose -f docker-compose.public.yaml down",
+    "docker:logs": "docker compose -f docker-compose.public.yaml logs -f",
+    "health": "curl -f http://localhost:8080/api/health",
+    "lint": "npm run lint --workspaces",
+    "format": "npm run format --workspaces"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.57.0",
+    "axios": "^1.6.0",
+    "chalk": "^4.1.2",
+    "cli-table3": "^0.6.5",
+    "commander": "^12.1.0",
     "dotenv": "^17.2.1",
-    "pg": "^8.16.3"
+    "fs-extra": "^11.2.0",
+    "inquirer": "^8.2.7",
+    "node-fetch": "^2.6.7",
+    "ora": "^5.4.1",
+    "pg": "^8.16.3",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.1",
+    "tmp": "^0.2.5"
   }
 }

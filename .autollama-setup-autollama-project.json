@@ -1,0 +1,30 @@
+{
+  "setupId": "36392480-eb69-4144-9bd2-71f66a32d6ca",
+  "projectName": "autollama-project",
+  "startTime": 1756738026896,
+  "lastSaved": 1756738026896,
+  "currentStage": "welcome",
+  "stages": {
+    "welcome": {
+      "completed": false,
+      "data": {}
+    },
+    "preflight": {
+      "completed": false,
+      "data": {}
+    },
+    "configure": {
+      "completed": false,
+      "data": {}
+    },
+    "install": {
+      "completed": false,
+      "data": {}
+    }
+  },
+  "config": {},
+  "systemCheck": null,
+  "errors": [],
+  "warnings": [],
+  "options": {}
+}
