@@ -967,8 +967,8 @@ class BackgroundQueueService extends EventEmitter {
         duration: job.duration,
         isActive,
         progress: isActive ? this.activeJobs.get(jobId)?.progress : null,
-        result: job.result ? JSON.parse(job.result) : null,
-        error: job.error ? JSON.parse(job.error) : null
+        result: job.result ? this._safeJSONParse(job.result) : null,
+        error: job.error ? this._safeJSONParse(job.error) : null
       };
       
     } catch (error) {
@@ -1238,10 +1238,17 @@ class BackgroundQueueService extends EventEmitter {
       return shouldStream;
     }
 
-    // For PDFs, use streaming for files over 1MB
-    if (fileData.mimetype === 'application/pdf' && fileSize > 1024 * 1024) {
-      this.logger.info('✅ PDF meets streaming threshold');
-      return true;
+    // For PDFs, use streaming for files over 300KB (same as EPUB)
+    if (fileData.mimetype === 'application/pdf') {
+      const pdfThreshold = 300 * 1024;
+      const shouldStream = fileSize > pdfThreshold;
+      this.logger.info(shouldStream ? '✅ PDF meets streaming threshold' : '❌ PDF below streaming threshold', {
+        fileSize,
+        fileSizeKB: Math.round(fileSize / 1024),
+        pdfThresholdKB: Math.round(pdfThreshold / 1024),
+        shouldStream
+      });
+      return shouldStream;
     }
 
     // For DOCX, use streaming for files over 2MB
@@ -1252,6 +1259,22 @@ class BackgroundQueueService extends EventEmitter {
 
     this.logger.info('❌ File does not meet any streaming criteria');
     return false;
+  }
+
+  /**
+   * Safely parse JSON with fallback for malformed data
+   * @private
+   */
+  _safeJSONParse(jsonString) {
+    try {
+      return JSON.parse(jsonString);
+    } catch (error) {
+      this.logger.warn('Failed to parse JSON field', {
+        error: error.message,
+        data: jsonString?.substring(0, 100)
+      });
+      return jsonString; // Return as string if not valid JSON
+    }
   }
 }
 

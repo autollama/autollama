@@ -1,8 +1,39 @@
-# CLAUDE.md - AutoLlama v3.0.2
+# CLAUDE.md - AutoLlama v3.0.3
 
 Modern JavaScript-first RAG framework with NPX installation, Docker auto-migration, and multi-deployment support.
 
-## v3.0.2 Critical Search & RAG Fixes ✅ LATEST
+## v3.0.3 PDF Processing Fix ✅ LATEST
+
+### PDF Document Processing Restored
+**Problem**: All PDF uploads failed with "Cannot find module './pdf.js/latest/build/pdf.js'" error.
+**Root Cause**: pdf-parse library configured to use non-existent 'latest' version directory.
+**Solution**: Fixed default version to use existing 'v1.10.100' + added Docker symlink + version fallback logic.
+
+**Impact**:
+- ✅ PDF documents now process successfully
+- ✅ Chunks properly generated from PDF content
+- ✅ PDF processing matches EPUB reliability
+- ✅ All document types (PDF, EPUB, DOCX, TXT) working
+
+### Technical Details
+```javascript
+// Before (broken):
+version: config.version || 'latest'  // 'latest' directory doesn't exist
+
+// After (fixed):
+version: config.version || 'v1.10.100'  // Use actual existing version
+```
+
+### Docker Enhancement
+```dockerfile
+# Added symlink for backwards compatibility
+RUN cd /app/node_modules/pdf-parse/lib/pdf.js && \
+    ln -s v1.10.100 latest || true
+```
+
+---
+
+## v3.0.2 Critical Search & RAG Fixes ✅
 
 ### Search Functionality Completely Restored
 **Problem**: Search returned 0 results despite having 268+ chunks containing search terms (e.g., "kings").
