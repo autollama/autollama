@@ -4,7 +4,7 @@
   <h1>The Context-Aware RAG Framework</h1>
   <h2><em>Your Documents Have Context. Now Your RAG Does Too.</em></h2>
   
-  [![Version](https://img.shields.io/badge/version-3.0.5-blue.svg)](https://github.com/autollama/autollama/releases/latest)
+  [![Version](https://img.shields.io/badge/version-3.0.3-blue.svg)](https://github.com/autollama/autollama/releases/latest)
   [![NPM](https://img.shields.io/badge/npm-autollama-red.svg)](https://www.npmjs.com/package/autollama)
   [![Docker](https://img.shields.io/badge/docker-supported-blue.svg)](https://docker.com)
   [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -15,6 +15,25 @@
 For too long, RAG has been about finding chunks, not understanding documents. AutoLlama changes that. Built on Anthropic's breakthrough contextual retrieval methodology, it's the first JavaScript-first RAG framework that actually comprehends your documents the way humans do.
 
 **It's like RAG finally learned how to read.**
+
+## 📋 Table of Contents
+
+- [🚀 Quick Start (2 Minutes)](#-quick-start-2-minutes)
+- [🛠️ Installation Methods](#️-installation-methods)
+  - [NPX Installation](#-npx-installation-early-access---v006)
+  - [Docker Installation](#-docker-installation-zero-configuration)
+  - [Native Installation](#-native-installation-maximum-control)
+- [⚙️ Configuration](#configuration)
+- [🏗️ Architecture](#architecture)
+- [📊 Experience AutoLlama](#experience-the-difference)
+- [🖼️ Screenshots](#screenshots---see-autollama-in-action)
+- [🔗 API Documentation](#api-documentation)
+- [🔧 Development](#development)
+- [🧪 The Science Behind Context](#the-science-behind-context)
+- [🚀 Deployment](#deployment)
+- [🚨 Troubleshooting](#troubleshooting)
+- [🆕 What's New in v3.0.3](#whats-new-in-v303)
+- [📞 Support](#support)
 
 ## Why Context Changes Everything
 
@@ -51,6 +70,8 @@ Watch your documents transform from static files into living, searchable knowled
 Chat with your documents instantly. Built-in RAG pipeline that OpenWebUI automatically discovers—no complex setup required.
 
 ---
+
+## 🛠️ Installation Methods
 
 ## 🚀 Quick Start (2 Minutes)
 
@@ -810,6 +831,34 @@ curl http://localhost:8080/api/documents
 
 **Why this happens**: The `createDocumentRecord` function expects an `upload_source` column that may be missing from older database schemas. This causes silent failures where processing succeeds but documents aren't stored.
 
+## What's New in v3.0.3
+
+### 🔍 **Search & AI Chat RAG Restored**
+✅ **Fixed**: Search functionality completely restored - no more 0 results
+✅ **Fixed**: AI Chat now shows `🔍 RAG ACTIVE` with document sources
+✅ **Fixed**: BM25 indexing now automatic during document processing
+✅ **Fixed**: Startup verification rebuilds search index if empty
+
+### 📄 **Enhanced PDF Processing** 
+✅ **Fixed**: PDF uploads no longer fail with "Cannot find module pdf.js" error
+✅ **Fixed**: Runtime PDF symlink verification with automatic recovery
+✅ **Fixed**: Robust Dockerfile fixes for all environments
+✅ **Fixed**: Special characters in filenames now handled properly
+
+### 🛡️ **Regression Prevention**
+- **Multi-Layer Protection**: Dockerfile + runtime checks prevent PDF failures
+- **Auto-Recovery**: BM25 index rebuilds automatically if missing
+- **Health Monitoring**: Startup verification ensures core functionality
+- **Future-Proof**: Cannot regress to v3.0.2 search/PDF issues
+
+### 🚀 **Immediate Benefits**
+- Documents upload and process reliably across all environments
+- Search returns relevant results immediately after processing
+- AI Chat provides contextual responses from your documents
+- Zero manual fixes required for new installations
+
+---
+
 ## Contributing
 
 We welcome contributions! Please see our [contributing guidelines](.github/CONTRIBUTING.md) for details.
@@ -842,7 +891,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**🦙 AutoLlama v2.3.2**
+**🦙 AutoLlama v3.0.3**
 
 *Your Documents Have Context. Now Your RAG Does Too.*
 
