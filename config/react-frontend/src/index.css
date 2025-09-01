@@ -209,14 +209,17 @@
     0% {
       transform: translateX(-100%) scale(0.9);
       opacity: 0;
+      z-index: 20;
     }
     60% {
       transform: translateX(0) scale(1.05);
       opacity: 0.9;
+      z-index: 20;
     }
     100% {
       transform: translateX(0) scale(1);
       opacity: 1;
+      z-index: 1;
     }
   }
 
@@ -260,10 +263,11 @@
 
   @keyframes shift-right {
     0% {
-      transform: translateX(0);
+      transform: translateX(0) scale(1);
     }
     100% {
-      transform: translateX(4px);
+      transform: translateX(8px) scale(0.98);
+      z-index: 10;
     }
   }
 
@@ -288,18 +292,26 @@
   /* Animation utility classes */
   .animate-slide-in-from-left {
     animation: slide-in-from-left 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    position: relative;
+    z-index: 20;
   }
 
   .animate-highlight-new {
     animation: highlight-new-document 2s ease-in-out 1;
+    position: relative;
+    z-index: 15;
   }
 
   .animate-fade-to-normal {
     animation: fade-to-normal 1s ease-out forwards;
+    position: relative;
+    z-index: 10;
   }
 
   .animate-shift-right {
     animation: shift-right 0.3s ease-out forwards;
+    position: relative;
+    z-index: 5;
   }
 
   .animate-mempool-glow {
