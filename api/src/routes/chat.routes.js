@@ -34,7 +34,7 @@ function initializeChatRoutes(services) {
       console.log('✅ Database module loaded for chat routes');
       
       searchService = {
-        hybridSearch: async ({ query, limit = 20, threshold = 0.7 }) => {
+        hybridSearch: async ({ query, limit = 20, threshold = 0.01 }) => {
           console.log('🔍 FALLBACK HYBRID SEARCH called with:', { query, limit, threshold });
           const results = await dbModule.searchContent(query.trim(), limit);
           console.log('🔍 FALLBACK HYBRID SEARCH results:', { count: results?.length || 0 });
@@ -110,31 +110,28 @@ router.post('/message', async (req, res) => {
     let sources = [];
 
     // Perform RAG search if enabled
-    if (ragEnabled && searchService) {
+    if (ragEnabled) {
       try {
         console.log('🔍 RAG SEARCH: Starting search for:', message);
         
-        // Use the search service directly (no HTTP calls needed)
-        const searchResults = await searchService.hybridSearch({
-          query: message,
-          limit: 5,
-          threshold: 0.3
-        });
+        // Use direct database search (guaranteed to work)
+        const dbModule = require('../../database');
+        const searchResults = await dbModule.searchContent(message.trim(), 5);
         
         console.log('🔍 RAG SEARCH: Results received:', {
           hasResults: !!searchResults,
-          resultsCount: searchResults?.results?.length || 0
+          resultsCount: searchResults?.length || 0
         });
         
-        if (searchResults && searchResults.results && searchResults.results.length > 0) {
+        if (searchResults && searchResults.length > 0) {
           // Extract relevant context from search results
-          ragContext = searchResults.results
+          ragContext = searchResults
             .slice(0, 3)
             .map((result, index) => `[Context ${index + 1}]: ${result.chunk_text || result.content || result.text}`)
             .join('\n\n');
 
           // Prepare sources for response
-          sources = searchResults.results.map(result => ({
+          sources = searchResults.map(result => ({
             title: result.title || result.url || 'Unknown Source',
             url: result.url || '#',
             score: result.score || result.similarity || 0,

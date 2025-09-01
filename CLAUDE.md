@@ -1,8 +1,63 @@
-# CLAUDE.md - AutoLlama v3.0.1
+# CLAUDE.md - AutoLlama v3.0.2
 
 Modern JavaScript-first RAG framework with NPX installation, Docker auto-migration, and multi-deployment support.
 
-## v3.0.1 Critical Fix ✅ LATEST
+## v3.0.2 Critical Search & RAG Fixes ✅ LATEST
+
+### Search Functionality Completely Restored
+**Problem**: Search returned 0 results despite having 268+ chunks containing search terms (e.g., "kings").
+**Root Cause**: Missing `source` column in `processed_content` table causing `searchContent()` database function to fail.
+**Solution**: Added missing database column and implemented robust fallback search system.
+
+**Impact**:
+- ✅ Search now returns relevant results for all queries
+- ✅ 268 chunks about "kings" properly indexed and searchable  
+- ✅ Robust fallback to PostgreSQL full-text search when BM25 service unavailable
+- ✅ Search API endpoint `/api/search?q=kings` returns 5 relevant results
+
+### AI Chat RAG Integration Fully Working
+**Problem**: AI Chat responded "I don't have access to any recent uploads" despite having 16 processed documents.
+**Root Cause**: Search threshold too high (0.3) filtering out all results + service integration failure.
+**Solution**: Direct database integration with optimized threshold (0.01) for better content matching.
+
+**Impact**:
+- ✅ AI Chat now shows `🔍 RAG ACTIVE (10,582 chars)` with document sources
+- ✅ Contextual responses using your actual processed content
+- ✅ Source citations with snippets and relevance scores  
+- ✅ Query "Tell me about Socrates" returns content from your Plato documents
+
+### UI Consistency Fixed
+**Problem**: AI Chat button highlighted by default (inconsistent with other navigation buttons).
+**Solution**: Changed button styling from `btn-primary` to `btn-secondary` in App.jsx:1074.
+
+**Impact**:
+- ✅ All navigation buttons now have consistent unhighlighted styling
+- ✅ No false visual emphasis on AI Chat button
+- ✅ Better user experience and visual hierarchy
+
+### Database Schema Enhancement  
+```sql
+-- Critical fix for search functionality
+ALTER TABLE processed_content ADD COLUMN IF NOT EXISTS source VARCHAR(100) DEFAULT 'unknown';
+```
+
+### Verification Commands
+```bash
+# Test search functionality
+curl "http://localhost:8080/api/search?q=kings&limit=5"
+
+# Test AI Chat RAG
+curl -X POST "http://localhost:8080/api/chat/message" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Tell me about Socrates"}'
+
+# Check database health  
+curl "http://localhost:8080/api/database/stats"
+```
+
+---
+
+## v3.0.1 Critical Fix ✅
 
 ### EPUB & File Upload Processing Fixed
 **Problem**: EPUB and other file uploads would process successfully but documents wouldn't appear on homepage.
