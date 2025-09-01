@@ -120,8 +120,8 @@ describe('ContextService', () => {
       expect(mockOpenAIClient.chat.completions.create).toHaveBeenCalledWith(
         expect.objectContaining({
           model: 'gpt-4o-mini',
-          max_tokens: 100,
-          temperature: 0.3
+          max_tokens: 150,
+          temperature: 0.2
         })
       );
     });
