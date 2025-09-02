@@ -11,7 +11,7 @@ const { v4: uuidv4 } = require('uuid');
 const router = express.Router();
 
 // Database and services
-const db = require('/app/database');
+const db = require('../config/database');
 
 // Configure multer for chunk uploads
 const storage = multer.memoryStorage();
@@ -408,4 +408,10 @@ setInterval(async () => {
   }
 }, 60 * 60 * 1000); // Run every hour
 
+// Function to create routes with dependency injection
+function createRoutes(services = {}) {
+  return router;
+}
+
 module.exports = router;
+module.exports.createRoutes = createRoutes;

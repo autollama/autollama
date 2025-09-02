@@ -681,6 +681,92 @@ router.post('/stop-processing/:sessionId', async (req, res) => {
   }
 });
 
+// Processing status endpoint
+router.get('/processing/status/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Session ID is required'
+      });
+    }
+
+    const activeProcessingSessions = global.activeProcessingSessions || new Map();
+    const session = activeProcessingSessions.get(sessionId);
+    
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        sessionId
+      });
+    }
+
+    res.json({
+      success: true,
+      sessionId,
+      status: session.status || 'processing',
+      progress: {
+        chunksProcessed: session.chunksProcessed || 0,
+        totalChunks: session.totalChunks || 0,
+        percentage: session.totalChunks > 0 ? 
+          Math.round((session.chunksProcessed / session.totalChunks) * 100) : 0
+      },
+      metadata: {
+        startTime: session.startTime,
+        lastUpdate: session.lastUpdate,
+        filename: session.filename,
+        title: session.title
+      }
+    });
+    
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Processing queue status endpoint
+router.get('/processing/queue', async (req, res) => {
+  try {
+    const activeProcessingSessions = global.activeProcessingSessions || new Map();
+    const queueSize = activeProcessingSessions.size;
+    
+    const sessions = Array.from(activeProcessingSessions.values()).map(session => ({
+      sessionId: session.id,
+      status: session.status || 'processing',
+      filename: session.filename,
+      startTime: session.startTime,
+      progress: session.totalChunks > 0 ? 
+        Math.round((session.chunksProcessed / session.totalChunks) * 100) : 0
+    }));
+
+    res.json({
+      success: true,
+      queue: {
+        totalActive: queueSize,
+        sessions: sessions
+      },
+      metadata: {
+        timestamp: new Date().toISOString(),
+        queueSize
+      }
+    });
+    
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
   return router;
 }
 

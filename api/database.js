@@ -757,15 +757,16 @@ async function searchContent(searchQuery, limit = 50) {
                     url, title, summary, chunk_text, chunk_id, chunk_index,
                     sentiment, category, content_type, technical_level, main_topics,
                     tags, key_entities, processing_status, created_time, source, contextual_summary,
-                    -- Use indexed full-text search with ranking
-                    ts_rank_cd(to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(summary, '') || ' ' || COALESCE(tags, '')), plainto_tsquery('english', $1)) as rank
+                    -- Use indexed full-text search with ranking (including chunk_text)
+                    ts_rank_cd(to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(summary, '') || ' ' || COALESCE(tags, '') || ' ' || COALESCE(chunk_text, '')), plainto_tsquery('english', $1)) as rank
                 FROM processed_content
                 WHERE 
-                    -- Primary: Use GIN full-text search index (fastest)
-                    to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(summary, '') || ' ' || COALESCE(tags, '')) @@ plainto_tsquery('english', $1)
+                    -- Primary: Use GIN full-text search index (fastest) - including chunk_text
+                    to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(summary, '') || ' ' || COALESCE(tags, '') || ' ' || COALESCE(chunk_text, '')) @@ plainto_tsquery('english', $1)
                     -- Secondary: Use trigram indexes for fuzzy matching
                     OR title % $1
                     OR tags % $1
+                    OR chunk_text % $1
                 ORDER BY url, created_time DESC
             )
             SELECT 
